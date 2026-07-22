@@ -17,5 +17,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "luaparse": "^0.3.1"
+  },
+  "devDependencies": {
+    "@types/luaparse": "^0.2.13"
   }
 }

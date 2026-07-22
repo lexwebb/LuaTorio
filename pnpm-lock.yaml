@@ -27,7 +27,15 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      luaparse:
+        specifier: ^0.3.1
+        version: 0.3.1
+    devDependencies:
+      '@types/luaparse':
+        specifier: ^0.2.13
+        version: 0.2.13
 
 packages:
 
@@ -211,6 +219,9 @@ packages:
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
+
+  '@types/luaparse@0.2.13':
+    resolution: {integrity: sha512-nWs2m9b/zrMcAA2Rs+wTxdIsBkSYMo0+6ko8mpeqS5dhchU3hQN9kZGcSw96n497Vc7kGpDLtSicjdpaUrRAkw==}
 
   '@types/node@26.1.1':
     resolution: {integrity: sha512-nxAkRSVkN1Y0JC1W8ky/fTfkGsMmcrRsbx+3XoZE+rMOX71kLYTV7fLXpqud1GpbpP5TuffXFqfX7fH2GgZREw==}
@@ -472,6 +483,10 @@ packages:
   lightningcss@1.33.0:
     resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
     engines: {node: '>= 12.0.0'}
+
+  luaparse@0.3.1:
+    resolution: {integrity: sha512-b21h2bFEbtGXmVqguHogbyrMAA0wOHyp9u/rx+w6Yc9pW1t9YjhGUsp87lYcp7pFRqSWN/PhFkrdIqKEUzRjjQ==}
+    hasBin: true
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -763,6 +778,8 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
+  '@types/luaparse@0.2.13': {}
+
   '@types/node@26.1.1':
     dependencies:
       undici-types: 8.3.0
@@ -939,6 +956,8 @@ snapshots:
       lightningcss-linux-x64-musl: 1.33.0
       lightningcss-win32-arm64-msvc: 1.33.0
       lightningcss-win32-x64-msvc: 1.33.0
+
+  luaparse@0.3.1: {}
 
   magic-string@0.30.21:
     dependencies:
