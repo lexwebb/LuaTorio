@@ -19,6 +19,8 @@ export function compile(_source: string, _options?: CompileOptions): CompileResu
 
 export type { AnalyzedExpr, AnalyzedProgram, AnalyzedStatement } from "./analyze.js";
 export { analyze, SemanticError } from "./analyze.js";
+export type { CircuitEntity, CircuitGraph, CombinatorKind, WireEdge } from "./combinators.js";
+export { lowerToCombinators } from "./combinators.js";
 export type { IRModule, IRNode } from "./ir.js";
 export { lower } from "./lower.js";
 export { optimize } from "./optimize.js";
