@@ -22,6 +22,8 @@ export { analyze, SemanticError } from "./analyze.js";
 export type { CircuitEntity, CircuitGraph, CombinatorKind, WireEdge } from "./combinators.js";
 export { lowerToCombinators } from "./combinators.js";
 export type { IRModule, IRNode } from "./ir.js";
+export type { FactorioWire, LaidOutCircuit, PlacedEntity } from "./layout.js";
+export { layout } from "./layout.js";
 export { lower } from "./lower.js";
 export { optimize } from "./optimize.js";
 export type { Chunk } from "./parse.js";
