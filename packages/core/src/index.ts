@@ -17,5 +17,7 @@ export function compile(_source: string, _options?: CompileOptions): CompileResu
   throw new Error("not implemented");
 }
 
+export type { AnalyzedExpr, AnalyzedProgram, AnalyzedStatement } from "./analyze.js";
+export { analyze, SemanticError } from "./analyze.js";
 export type { Chunk } from "./parse.js";
 export { ParseError, parse } from "./parse.js";
