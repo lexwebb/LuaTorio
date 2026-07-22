@@ -21,5 +21,21 @@
       "!**/coverage",
       "!mcp-config.json"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "packages/core/src/ir.ts",
+        "packages/core/src/lower.ts",
+        "packages/core/src/lower.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noThenProperty": "off"
+          }
+        }
+      }
+    }
+  ]
 }

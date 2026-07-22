@@ -1,0 +1,369 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lower > desugars \`and\` into select(cond, right, 0), sharing one literal-0 node 1`] = `
+{
+  "inputs": [
+    {
+      "nodeId": "__t1",
+      "signal": "signal-A",
+    },
+    {
+      "nodeId": "__t2",
+      "signal": "signal-B",
+    },
+  ],
+  "nodes": [
+    {
+      "id": "__t1",
+      "kind": "input",
+      "signal": "signal-A",
+    },
+    {
+      "id": "__t2",
+      "kind": "input",
+      "signal": "signal-B",
+    },
+    {
+      "id": "__t3",
+      "kind": "literal",
+      "value": 0,
+    },
+    {
+      "cond": "__t1",
+      "else": "__t3",
+      "id": "__t4",
+      "kind": "select",
+      "then": "__t2",
+    },
+  ],
+  "outputs": [
+    {
+      "nodeId": "__t4",
+      "signal": "signal-C",
+    },
+  ],
+}
+`;
+
+exports[`lower > desugars \`or\` into select(cond, cond, right) reusing the left node id 1`] = `
+{
+  "inputs": [
+    {
+      "nodeId": "__t1",
+      "signal": "signal-A",
+    },
+    {
+      "nodeId": "__t2",
+      "signal": "signal-B",
+    },
+  ],
+  "nodes": [
+    {
+      "id": "__t1",
+      "kind": "input",
+      "signal": "signal-A",
+    },
+    {
+      "id": "__t2",
+      "kind": "input",
+      "signal": "signal-B",
+    },
+    {
+      "cond": "__t1",
+      "else": "__t2",
+      "id": "__t3",
+      "kind": "select",
+      "then": "__t1",
+    },
+  ],
+  "outputs": [
+    {
+      "nodeId": "__t3",
+      "signal": "signal-C",
+    },
+  ],
+}
+`;
+
+exports[`lower > lowers a clamp-style program (nested and/or) with multiple locals 1`] = `
+{
+  "inputs": [
+    {
+      "nodeId": "__t1",
+      "signal": "signal-A",
+    },
+  ],
+  "nodes": [
+    {
+      "id": "__t1",
+      "kind": "input",
+      "signal": "signal-A",
+    },
+    {
+      "id": "__t2",
+      "kind": "literal",
+      "value": 0,
+    },
+    {
+      "id": "__t3",
+      "kind": "cmp",
+      "left": "__t1",
+      "op": "<",
+      "right": "__t2",
+    },
+    {
+      "id": "__t4",
+      "kind": "literal",
+      "value": 0,
+    },
+    {
+      "id": "__t5",
+      "kind": "literal",
+      "value": 0,
+    },
+    {
+      "cond": "__t3",
+      "else": "__t5",
+      "id": "__t6",
+      "kind": "select",
+      "then": "__t4",
+    },
+    {
+      "id": "__t7",
+      "kind": "literal",
+      "value": 100,
+    },
+    {
+      "id": "__t8",
+      "kind": "cmp",
+      "left": "__t1",
+      "op": ">",
+      "right": "__t7",
+    },
+    {
+      "id": "__t9",
+      "kind": "literal",
+      "value": 100,
+    },
+    {
+      "cond": "__t8",
+      "else": "__t5",
+      "id": "__t10",
+      "kind": "select",
+      "then": "__t9",
+    },
+    {
+      "cond": "__t10",
+      "else": "__t1",
+      "id": "__t11",
+      "kind": "select",
+      "then": "__t10",
+    },
+    {
+      "cond": "__t6",
+      "else": "__t11",
+      "id": "__t12",
+      "kind": "select",
+      "then": "__t6",
+    },
+  ],
+  "outputs": [
+    {
+      "nodeId": "__t12",
+      "signal": "signal-B",
+    },
+  ],
+}
+`;
+
+exports[`lower > lowers a comparison to a cmp node 1`] = `
+{
+  "inputs": [
+    {
+      "nodeId": "__t1",
+      "signal": "signal-A",
+    },
+  ],
+  "nodes": [
+    {
+      "id": "__t1",
+      "kind": "input",
+      "signal": "signal-A",
+    },
+    {
+      "id": "__t2",
+      "kind": "literal",
+      "value": 0,
+    },
+    {
+      "id": "__t3",
+      "kind": "cmp",
+      "left": "__t1",
+      "op": ">",
+      "right": "__t2",
+    },
+  ],
+  "outputs": [
+    {
+      "nodeId": "__t3",
+      "signal": "signal-B",
+    },
+  ],
+}
+`;
+
+exports[`lower > lowers a two-input adder to a single binop node 1`] = `
+{
+  "inputs": [
+    {
+      "nodeId": "__t1",
+      "signal": "signal-A",
+    },
+    {
+      "nodeId": "__t2",
+      "signal": "signal-B",
+    },
+  ],
+  "nodes": [
+    {
+      "id": "__t1",
+      "kind": "input",
+      "signal": "signal-A",
+    },
+    {
+      "id": "__t2",
+      "kind": "input",
+      "signal": "signal-B",
+    },
+    {
+      "id": "__t3",
+      "kind": "binop",
+      "left": "__t1",
+      "op": "+",
+      "right": "__t2",
+    },
+  ],
+  "outputs": [
+    {
+      "nodeId": "__t3",
+      "signal": "signal-C",
+    },
+  ],
+}
+`;
+
+exports[`lower > reuses a single shared literal-0 node across multiple desugared \`and\`s 1`] = `
+{
+  "inputs": [
+    {
+      "nodeId": "__t1",
+      "signal": "signal-A",
+    },
+    {
+      "nodeId": "__t2",
+      "signal": "signal-B",
+    },
+    {
+      "nodeId": "__t3",
+      "signal": "signal-C",
+    },
+  ],
+  "nodes": [
+    {
+      "id": "__t1",
+      "kind": "input",
+      "signal": "signal-A",
+    },
+    {
+      "id": "__t2",
+      "kind": "input",
+      "signal": "signal-B",
+    },
+    {
+      "id": "__t3",
+      "kind": "input",
+      "signal": "signal-C",
+    },
+    {
+      "id": "__t4",
+      "kind": "literal",
+      "value": 0,
+    },
+    {
+      "cond": "__t1",
+      "else": "__t4",
+      "id": "__t5",
+      "kind": "select",
+      "then": "__t2",
+    },
+    {
+      "cond": "__t1",
+      "else": "__t4",
+      "id": "__t6",
+      "kind": "select",
+      "then": "__t3",
+    },
+  ],
+  "outputs": [
+    {
+      "nodeId": "__t5",
+      "signal": "signal-D",
+    },
+    {
+      "nodeId": "__t6",
+      "signal": "signal-E",
+    },
+  ],
+}
+`;
+
+exports[`lower > supports multiple outputs sharing a common sub-expression 1`] = `
+{
+  "inputs": [
+    {
+      "nodeId": "__t1",
+      "signal": "signal-A",
+    },
+    {
+      "nodeId": "__t2",
+      "signal": "signal-B",
+    },
+  ],
+  "nodes": [
+    {
+      "id": "__t1",
+      "kind": "input",
+      "signal": "signal-A",
+    },
+    {
+      "id": "__t2",
+      "kind": "input",
+      "signal": "signal-B",
+    },
+    {
+      "id": "__t3",
+      "kind": "binop",
+      "left": "__t1",
+      "op": "+",
+      "right": "__t2",
+    },
+    {
+      "id": "__t4",
+      "kind": "binop",
+      "left": "__t3",
+      "op": "-",
+      "right": "__t1",
+    },
+  ],
+  "outputs": [
+    {
+      "nodeId": "__t3",
+      "signal": "signal-C",
+    },
+    {
+      "nodeId": "__t4",
+      "signal": "signal-D",
+    },
+  ],
+}
+`;
