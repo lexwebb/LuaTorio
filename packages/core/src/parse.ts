@@ -28,6 +28,10 @@ export function parse(source: string): Chunk {
     return luaparse.parse(source, {
       locations: true,
       luaVersion: "5.3",
+      // luaparse's default "none" encoding mode discards StringLiteral.value (leaves it
+      // null) and only keeps `raw`. Signal names (input()/output() string literals) are
+      // read from `.value` during semantic analysis, so decode strings properly.
+      encodingMode: "pseudo-latin1",
     });
   } catch (error) {
     if (isLuaparseSyntaxError(error)) {
