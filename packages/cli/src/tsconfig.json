@@ -1,0 +1,6 @@
+{
+  // Vitest/oxc only — do not use for build
+  "extends": "../tsconfig.json",
+  "include": ["**/*.ts"],
+  "exclude": []
+}
