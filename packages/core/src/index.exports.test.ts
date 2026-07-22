@@ -8,7 +8,8 @@ describe("@luatorio/core exports", () => {
     expect(() => parse("local =")).toThrow(ParseError);
   });
 
-  it("keeps compile stub", () => {
-    expect(() => compile("")).toThrowError("not implemented");
+  it("compiles a program end to end into a blueprint string", () => {
+    const result = compile(`output("signal-B", input("signal-A"))`);
+    expect(result.blueprint.startsWith("0")).toBe(true);
   });
 });
