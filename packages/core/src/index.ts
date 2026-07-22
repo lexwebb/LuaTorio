@@ -21,5 +21,6 @@ export type { AnalyzedExpr, AnalyzedProgram, AnalyzedStatement } from "./analyze
 export { analyze, SemanticError } from "./analyze.js";
 export type { IRModule, IRNode } from "./ir.js";
 export { lower } from "./lower.js";
+export { optimize } from "./optimize.js";
 export type { Chunk } from "./parse.js";
 export { ParseError, parse } from "./parse.js";

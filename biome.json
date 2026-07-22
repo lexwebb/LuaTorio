@@ -27,7 +27,9 @@
       "includes": [
         "packages/core/src/ir.ts",
         "packages/core/src/lower.ts",
-        "packages/core/src/lower.test.ts"
+        "packages/core/src/lower.test.ts",
+        "packages/core/src/optimize.ts",
+        "packages/core/src/optimize.test.ts"
       ],
       "linter": {
         "rules": {
