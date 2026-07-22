@@ -19,7 +19,9 @@
       "!**/dist",
       "!**/node_modules",
       "!**/coverage",
-      "!mcp-config.json"
+      "!mcp-config.json",
+      "!.worktrees",
+      "!.worktrees/**"
     ]
   },
   "overrides": [
