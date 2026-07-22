@@ -1,5 +1,5 @@
-import luaparse from "luaparse";
 import type { Chunk } from "luaparse";
+import luaparse from "luaparse";
 
 export type { Chunk };
 
@@ -15,9 +15,7 @@ export class ParseError extends Error {
   }
 }
 
-function isLuaparseSyntaxError(
-  error: unknown,
-): error is Error & { line: number; column: number } {
+function isLuaparseSyntaxError(error: unknown): error is Error & { line: number; column: number } {
   return (
     error instanceof Error &&
     typeof (error as { line?: unknown }).line === "number" &&

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parse, ParseError } from "./parse.js";
+import { ParseError, parse } from "./parse.js";
 
 describe("parse", () => {
   it("parses a simple local assignment", () => {
