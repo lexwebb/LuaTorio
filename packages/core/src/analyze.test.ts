@@ -155,7 +155,50 @@ describe("analyze", () => {
     }
   });
 
-  it("rejects bare if statements, pointing to the and/or idiom, planned for v2", () => {
+  it("accepts if/else that assigns memory next-state (v2 phase 2)", () => {
+    const ast = parse(`
+      local x = 0
+      local c = input("signal-C")
+      if c then
+        x = x + 1
+      else
+        x = x - 1
+      end
+      output("signal-A", x)
+    `);
+
+    const program = analyze(ast);
+    expect(program.statements).toEqual([
+      expect.objectContaining({ kind: "local", name: "x" }),
+      expect.objectContaining({ kind: "local", name: "c" }),
+      expect.objectContaining({
+        kind: "if",
+        thenAssigns: [expect.objectContaining({ name: "x" })],
+        elseAssigns: [expect.objectContaining({ name: "x" })],
+      }),
+    ]);
+  });
+
+  it("accepts if-then without else (hold when false)", () => {
+    const ast = parse(`
+      local x = 0
+      local c = input("signal-C")
+      if c then
+        x = 1
+      end
+      output("signal-A", x)
+    `);
+
+    const program = analyze(ast);
+    const ifStmt = program.statements.find((s) => s.kind === "if");
+    expect(ifStmt).toMatchObject({
+      kind: "if",
+      thenAssigns: [expect.objectContaining({ name: "x" })],
+      elseAssigns: [],
+    });
+  });
+
+  it("rejects output() inside if bodies", () => {
     const ast = parse(`
       local x = 1
       if x then
@@ -163,12 +206,36 @@ describe("analyze", () => {
       end
     `);
 
-    expect(() => analyze(ast)).toThrow(/and\/or/i);
-    try {
-      analyze(ast);
-    } catch (error) {
-      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v2" });
-    }
+    expect(() => analyze(ast)).toThrow(/only contain assignments/i);
+  });
+
+  it("rejects elseif in v2 phase 2", () => {
+    const ast = parse(`
+      local x = 0
+      local c = input("signal-C")
+      if c then
+        x = 1
+      elseif c then
+        x = 2
+      end
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/elseif/i);
+  });
+
+  it("rejects a second next-state site when if already assigned the variable", () => {
+    const ast = parse(`
+      local x = 0
+      local c = input("signal-C")
+      if c then
+        x = 1
+      end
+      x = 2
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/next-state assignment/i);
   });
 
   it("rejects non-literal signal names in input()", () => {

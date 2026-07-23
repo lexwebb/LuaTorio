@@ -123,9 +123,14 @@
 
 ---
 
-### Task 10 (phase 2, later): `if`/`else` control-flow stores
+### Task 10 (phase 2): `if`/`else` control-flow stores (issue #27)
 
-- [ ] Design detail + implement when starting phase 2
+**Files:** `analyze.ts`, `lower.ts`, tests, `examples/`, README, design spec phase-2 section
+
+- [ ] Spec: muxed next-state via `select` (hold when branch omits assign)
+- [ ] Analyze: allow if/else; bodies = assignments only; no elseif/nested if
+- [ ] Lower: one `store` per cell with `select(cond, then, else|hold)`
+- [ ] Example + golden + README; close #27
 
 ---
 

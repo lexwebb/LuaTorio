@@ -176,4 +176,51 @@ describe("lower", () => {
       inputs: [],
     });
   });
+
+  it("lowers if/else assigns to a select-muxed store", () => {
+    const module = lowerSource(`
+      local x = 0
+      local c = input("signal-C")
+      if c then
+        x = 1
+      else
+        x = 2
+      end
+      output("signal-A", x)
+    `);
+
+    expect(module.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "memory", cell: "x" }),
+        expect.objectContaining({
+          kind: "select",
+          then: expect.any(String),
+          else: expect.any(String),
+        }),
+        expect.objectContaining({ kind: "store", cell: "x" }),
+      ]),
+    );
+    const store = module.nodes.find((n) => n.kind === "store");
+    const select = module.nodes.find((n) => n.kind === "select");
+    expect(store).toMatchObject({ kind: "store", value: select?.id });
+  });
+
+  it("lowers if-then without else as select(cond, then, memory) hold", () => {
+    const module = lowerSource(`
+      local x = 0
+      local c = input("signal-C")
+      if c then
+        x = 1
+      end
+      output("signal-A", x)
+    `);
+
+    const memory = module.nodes.find((n) => n.kind === "memory");
+    const select = module.nodes.find((n) => n.kind === "select");
+    expect(memory).toBeDefined();
+    expect(select).toMatchObject({
+      kind: "select",
+      else: memory?.id,
+    });
+  });
 });

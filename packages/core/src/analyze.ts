@@ -70,16 +70,39 @@ export type AnalyzedExpr =
       column: number;
     };
 
-export type AnalyzedStatement = {
-  kind: "local" | "assign";
+export type AnalyzedAssign = {
   name: string;
   expr: AnalyzedExpr;
   line: number;
   column: number;
 };
 
+export type AnalyzedStatement =
+  | {
+      kind: "local";
+      name: string;
+      expr: AnalyzedExpr;
+      line: number;
+      column: number;
+    }
+  | {
+      kind: "assign";
+      name: string;
+      expr: AnalyzedExpr;
+      line: number;
+      column: number;
+    }
+  | {
+      kind: "if";
+      cond: AnalyzedExpr;
+      thenAssigns: AnalyzedAssign[];
+      elseAssigns: AnalyzedAssign[];
+      line: number;
+      column: number;
+    };
+
 export interface AnalyzedProgram {
-  /** Ordered locals and assignments — enough for IR lowering */
+  /** Ordered locals, assignments, and if mux-stores — enough for IR lowering */
   statements: AnalyzedStatement[];
   outputs: Array<{ signal: string; expr: AnalyzedExpr; line: number; column: number }>;
   inputs: Array<{ signal: string; line: number; column: number }>;
@@ -117,7 +140,7 @@ function rejectTick(calleeName: string | undefined, line: number, column: number
 }
 
 /**
- * Walks a luaparse `Chunk` and enforces the language subset (v1 + v2 phase 1 reassignment),
+ * Walks a luaparse `Chunk` and enforces the language subset (v1 + v2 phase 1–2),
  * returning a validated, minimally-typed program model. Throws `SemanticError` (with
  * line/column and, where the construct is on the roadmap, a `plannedVersion`) for anything
  * outside the supported subset.
@@ -161,6 +184,9 @@ function analyzeStatement(
     case "AssignmentStatement":
       analyzeAssignmentStatement(statement, declared, reassigned, statements, inputs);
       return;
+    case "IfStatement":
+      analyzeIfStatement(statement, declared, reassigned, statements, inputs);
+      return;
     case "WhileStatement":
       throw new SemanticError(
         "unsupported construct: while loop; planned for v2 phase 3 (tick scheduler)",
@@ -185,16 +211,149 @@ function analyzeStatement(
       );
     case "FunctionDeclaration":
       throw new SemanticError("unsupported construct: function declaration", line, column, "v3");
-    case "IfStatement":
-      throw new SemanticError(
-        "unsupported construct: if/else statement; use the `a and b or c` and/or idiom for conditional values, or wait for v2 phase 2",
-        line,
-        column,
-        "v2",
-      );
     default:
       throw new SemanticError(`unsupported construct: ${statement.type}`, line, column);
   }
+}
+
+function markReassigned(name: string, reassigned: Set<string>, line: number, column: number): void {
+  if (reassigned.has(name)) {
+    throw new SemanticError(
+      `variable '${name}' already has a next-state assignment; only one reassignment per variable is supported in v2 phase 1–2`,
+      line,
+      column,
+    );
+  }
+  reassigned.add(name);
+}
+
+function analyzeBranchAssign(
+  statement: Statement,
+  declared: Set<string>,
+  inputs: AnalyzedProgram["inputs"],
+): AnalyzedAssign {
+  const { line, column } = locOf(statement);
+  if (statement.type !== "AssignmentStatement") {
+    throw new SemanticError(
+      "if/else bodies may only contain assignments to declared locals in v2 phase 2",
+      line,
+      column,
+    );
+  }
+
+  const target = statement.variables.length === 1 ? statement.variables[0] : undefined;
+  const initExpr = statement.init.length === 1 ? statement.init[0] : undefined;
+  if (!target || !initExpr) {
+    throw new SemanticError(
+      "assignments may assign exactly one variable from one expression",
+      line,
+      column,
+    );
+  }
+  if (target.type !== "Identifier") {
+    throw new SemanticError(
+      `unsupported assignment target '${describeAssignmentTarget(target)}'`,
+      line,
+      column,
+    );
+  }
+  if (!declared.has(target.name)) {
+    throw new SemanticError(`undefined variable '${target.name}'`, line, column);
+  }
+
+  return {
+    name: target.name,
+    expr: analyzeExpr(initExpr, declared, inputs),
+    line,
+    column,
+  };
+}
+
+function analyzeIfStatement(
+  statement: Extract<Statement, { type: "IfStatement" }>,
+  declared: Set<string>,
+  reassigned: Set<string>,
+  statements: AnalyzedStatement[],
+  inputs: AnalyzedProgram["inputs"],
+): void {
+  const { line, column } = locOf(statement);
+
+  if (statement.clauses.length === 0) {
+    throw new SemanticError("if statement has no clauses", line, column);
+  }
+
+  const first = statement.clauses[0];
+  if (first?.type !== "IfClause") {
+    throw new SemanticError("if statement must start with an if clause", line, column);
+  }
+
+  if (statement.clauses.some((clause) => clause.type === "ElseifClause")) {
+    throw new SemanticError(
+      "unsupported construct: elseif; use nested if/else or and/or in v2 phase 2",
+      line,
+      column,
+    );
+  }
+
+  if (statement.clauses.length > 2) {
+    throw new SemanticError(
+      "if statement may have at most one else clause in v2 phase 2",
+      line,
+      column,
+    );
+  }
+
+  const elseClause = statement.clauses[1];
+  if (elseClause && elseClause.type !== "ElseClause") {
+    throw new SemanticError("unexpected clause after if", line, column);
+  }
+
+  const cond = analyzeExpr(first.condition, declared, inputs);
+  const thenAssigns = first.body.map((bodyStmt) => analyzeBranchAssign(bodyStmt, declared, inputs));
+  const elseAssigns = elseClause
+    ? elseClause.body.map((bodyStmt) => analyzeBranchAssign(bodyStmt, declared, inputs))
+    : [];
+
+  if (thenAssigns.length === 0 && elseAssigns.length === 0) {
+    throw new SemanticError("if/else must assign at least one variable", line, column);
+  }
+
+  // One assign per name within a branch; names across branches share one next-state slot.
+  const thenNames = new Set<string>();
+  for (const assign of thenAssigns) {
+    if (thenNames.has(assign.name)) {
+      throw new SemanticError(
+        `variable '${assign.name}' is assigned more than once in the then branch`,
+        assign.line,
+        assign.column,
+      );
+    }
+    thenNames.add(assign.name);
+  }
+  const elseNames = new Set<string>();
+  for (const assign of elseAssigns) {
+    if (elseNames.has(assign.name)) {
+      throw new SemanticError(
+        `variable '${assign.name}' is assigned more than once in the else branch`,
+        assign.line,
+        assign.column,
+      );
+    }
+    elseNames.add(assign.name);
+  }
+
+  for (const name of new Set([...thenNames, ...elseNames])) {
+    markReassigned(name, reassigned, line, column);
+  }
+
+  statements.push({
+    kind: "if",
+    cond,
+    thenAssigns,
+    elseAssigns,
+    line,
+    column,
+  });
 }
 
 function analyzeAssignmentStatement(
@@ -230,7 +389,7 @@ function analyzeAssignmentStatement(
   }
   if (reassigned.has(name)) {
     throw new SemanticError(
-      `variable '${name}' already has a next-state assignment; only one reassignment per variable is supported in v2 phase 1`,
+      `variable '${name}' already has a next-state assignment; only one reassignment per variable is supported in v2 phase 1–2`,
       line,
       column,
     );

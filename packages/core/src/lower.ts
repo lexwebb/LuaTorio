@@ -1,4 +1,9 @@
-import type { AnalyzedExpr, AnalyzedProgram, AnalyzedStatement } from "./analyze.js";
+import type {
+  AnalyzedAssign,
+  AnalyzedExpr,
+  AnalyzedProgram,
+  AnalyzedStatement,
+} from "./analyze.js";
 import type { IRModule, IRNode } from "./ir.js";
 
 interface LowerContext {
@@ -97,26 +102,63 @@ function lowerExpr(
   }
 }
 
+function assignMap(assigns: AnalyzedAssign[]): Map<string, AnalyzedAssign> {
+  return new Map(assigns.map((assign) => [assign.name, assign]));
+}
+
 function reassignedNames(statements: AnalyzedStatement[]): Set<string> {
   const names = new Set<string>();
   for (const statement of statements) {
     if (statement.kind === "assign") {
       names.add(statement.name);
+    } else if (statement.kind === "if") {
+      for (const assign of statement.thenAssigns) names.add(assign.name);
+      for (const assign of statement.elseAssigns) names.add(assign.name);
     }
   }
   return names;
 }
 
+function lowerIfStore(
+  statement: Extract<AnalyzedStatement, { kind: "if" }>,
+  memoryIdByCell: ReadonlyMap<string, string>,
+  env: ReadonlyMap<string, string>,
+  ctx: LowerContext,
+): void {
+  const condId = lowerExpr(statement.cond, env, ctx);
+  const thenByName = assignMap(statement.thenAssigns);
+  const elseByName = assignMap(statement.elseAssigns);
+  const cells = new Set([...thenByName.keys(), ...elseByName.keys()]);
+
+  for (const cell of cells) {
+    if (!memoryIdByCell.has(cell)) {
+      throw new Error(`internal error: if-assign to '${cell}' without memory cell`);
+    }
+    const memId = memoryIdByCell.get(cell) as string;
+    const thenAssign = thenByName.get(cell);
+    const elseAssign = elseByName.get(cell);
+    const thenId = thenAssign ? lowerExpr(thenAssign.expr, env, ctx) : memId;
+    const elseId = elseAssign ? lowerExpr(elseAssign.expr, env, ctx) : memId;
+    const valueId = pushNode(ctx, {
+      kind: "select",
+      id: nextId(ctx),
+      cond: condId,
+      then: thenId,
+      else: elseId,
+    });
+    pushNode(ctx, { kind: "store", id: nextId(ctx), cell, value: valueId });
+  }
+}
+
 /**
  * Lowers an analyzed program into the IR DAG. Locals that are later reassigned become
- * `memory` cells (env binds the memory id); the assignment becomes a `store`. Unreassigned
- * locals stay combinational SSA (env binds the initializer node id).
+ * `memory` cells (env binds the memory id); assignments and if/else become `store`s
+ * (if uses `select` to mux then/else/hold). Unreassigned locals stay combinational SSA.
  */
 export function lower(program: AnalyzedProgram): IRModule {
   const ctx: LowerContext = { nodes: [], inputs: [], nextTempId: 1, zeroNodeId: undefined };
   const env = new Map<string, string>();
   const memoryCells = reassignedNames(program.statements);
-  /** cell name → memory node id (filled when the local is lowered). */
   const memoryIdByCell = new Map<string, string>();
 
   for (const statement of program.statements) {
@@ -140,6 +182,15 @@ export function lower(program: AnalyzedProgram): IRModule {
         const valueId = lowerExpr(statement.expr, env, ctx);
         pushNode(ctx, { kind: "store", id: nextId(ctx), cell: statement.name, value: valueId });
         break;
+      }
+      case "if":
+        lowerIfStore(statement, memoryIdByCell, env, ctx);
+        break;
+      default: {
+        const unreachable: never = statement;
+        throw new Error(
+          `internal error: unhandled statement kind '${JSON.stringify(unreachable)}'`,
+        );
       }
     }
   }

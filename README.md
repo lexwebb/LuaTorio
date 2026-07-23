@@ -80,6 +80,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`comparison-chain.lua`](examples/comparison-chain.lua) | Comparisons (`<`) chained with `and` |
 | [`counter.lua`](examples/counter.lua) | v2 memory: free-running counter (`x = x + 1`) |
 | [`accumulator.lua`](examples/accumulator.lua) | v2 memory: accumulate `signal-A` each tick |
+| [`conditional-counter.lua`](examples/conditional-counter.lua) | v2 if/else: muxed next-state (`if c then x+1 else x-1`) |
 
 ## Language Reference
 
@@ -93,6 +94,7 @@ Programs are a flat sequence of statements. See the
 |---|---|
 | `local x = <expr>` | Every local must be initialized |
 | `x = <expr>` | Next-state assignment (at most one per variable); promotes `x` to a memory cell |
+| `if cond then … else … end` | Muxes next-state stores (`select`); omitted branch holds previous value |
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | Arithmetic: `+ - * / %` | Lowers to arithmetic combinators |
@@ -104,10 +106,13 @@ Programs are a flat sequence of statements. See the
 see the previous game-tick value; the assignment is the next-state function evaluated every
 tick. Unreassigned locals stay combinational (v1 SSA).
 
-Not yet supported: `while` / `for` / `repeat` and `tick()` (v2 phases 2–3), `if` statements
-(v2 phase 2; use `and`/`or` for values), `function` (v3), tables and multi-signal bundles (v4),
-entity placement (v5). Unsupported constructs raise a `SemanticError` naming the construct and
-its planned version.
+**If/else (v2 phase 2):** Branch bodies may only assign declared locals. The compiler builds
+`select(cond, thenVal, elseVal)` (or hold via the memory id when a branch omits the assign).
+No `elseif` or nested `if` yet.
+
+Not yet supported: `while` / `for` / `repeat` and `tick()` (v2 phase 3), `function` (v3),
+tables and multi-signal bundles (v4), entity placement (v5). Unsupported constructs raise a
+`SemanticError` naming the construct and its planned version.
 
 ### `input()` / `output()` API
 

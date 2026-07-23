@@ -103,9 +103,31 @@ Concrete shape: treat the memory entity as the cycle break point; wire `store` p
 | Lower | Emit `memory`+`store` for reassigned names; env refs resolve to `memory.id` |
 | Optimize | Exhaustive switches for new kinds; **do not** fold across `memory`/`store` |
 
-## Phase 2 sketch (`if`)
+## Phase 2 (`if` / `else` next-state)
 
-Bare `if`/`else` gates next-state stores (write-enable from condition). Still no loops. May introduce multiple stores per cell with mutually exclusive enables, or a single muxed next-value.
+Bare `if`/`else` muxes next-state stores. Still one `store` per memory cell; the store value is a `select`.
+
+```lua
+local x = 0
+local c = input("signal-C")
+if c then
+  x = x + 1
+else
+  x = x - 1
+end
+output("signal-A", x)
+```
+
+### Rules
+
+1. `if cond then … end` and `if cond then … else … end` only (no `elseif`; no nested `if`).
+2. Branch bodies may contain **only** assignments to already-declared locals (no `local`, `output()`, loops, nested `if`).
+3. Each assigned name counts as that variable’s **one** next-state site (same phase-1 rule: no second top-level assign or second `if` writing the same cell).
+4. Per cell, the next value is:
+   - both branches assign → `select(cond, thenVal, elseVal)`
+   - then only → `select(cond, thenVal, memory)` (hold when false)
+   - else only → `select(cond, memory, elseVal)` (hold when true)
+5. A variable assigned only inside `if` is still promoted to a memory cell (init from its `local`).
 
 ## Phase 3 sketch (`tick` + loops)
 
