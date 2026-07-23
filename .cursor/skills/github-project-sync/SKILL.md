@@ -90,6 +90,10 @@ Invoke this skill's sync steps **before** the final user-facing message when any
 
 If you almost forgot: stop, sync, then report — include the issue URL and new Status in the summary.
 
+## When a design introduces new work (mandatory prompt)
+
+If a design/spec adds a new milestone slice, feature area, or multi-step delivery (e.g. web playground), **prompt the user in that same design turn** to create GitHub issues + add them to the LuaTorio project — do not wait until after the spec is approved or until the user asks. Offer a concrete issue checklist from the design's tracking section and create them on approval.
+
 ## Out of scope
 
 - Creating the project or milestones (see `docs/github-project-setup.md`)
