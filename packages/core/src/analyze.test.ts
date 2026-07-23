@@ -328,19 +328,62 @@ describe("analyze", () => {
     expect(() => analyze(ast)).toThrow(/only contain assignments/i);
   });
 
-  it("rejects elseif in v2 phase 2", () => {
+  it("desugars elseif chains into nested select assignments", () => {
     const ast = parse(`
       local x = 0
-      local c = input("signal-C")
-      if c then
+      local a = input("signal-A")
+      local b = input("signal-B")
+      if a then
         x = 1
-      elseif c then
+      elseif b then
         x = 2
       end
       output("signal-A", x)
     `);
 
-    expect(() => analyze(ast)).toThrow(/elseif/i);
+    const program = analyze(ast);
+    const ifStmt = program.statements.find((statement) => statement.kind === "if");
+    expect(ifStmt).toMatchObject({
+      kind: "if",
+      thenAssigns: [expect.objectContaining({ name: "x" })],
+      elseAssigns: [expect.objectContaining({ name: "x" })],
+    });
+    if (ifStmt?.kind !== "if") throw new Error("expected an analyzed if statement");
+    const elseifExpr = ifStmt.elseAssigns[0]?.expr;
+    expect(elseifExpr).toMatchObject({ kind: "select" });
+    if (elseifExpr?.kind !== "select") throw new Error("expected desugared elseif select");
+    expect(elseifExpr.then).toMatchObject({ kind: "literal", value: 2 });
+    expect(elseifExpr.else).toMatchObject({ kind: "ref", name: "x" });
+  });
+
+  it("desugars nested ifs in branches while preserving omitted-branch holds", () => {
+    const ast = parse(`
+      local x = 0
+      local a = input("signal-A")
+      local b = input("signal-B")
+      if a then
+        if b then
+          x = 1
+        end
+      else
+        x = 2
+      end
+      output("signal-X", x)
+    `);
+
+    const program = analyze(ast);
+    const ifStmt = program.statements.find((statement) => statement.kind === "if");
+    expect(ifStmt).toMatchObject({
+      kind: "if",
+      thenAssigns: [expect.objectContaining({ name: "x" })],
+      elseAssigns: [expect.objectContaining({ name: "x" })],
+    });
+    if (ifStmt?.kind !== "if") throw new Error("expected an analyzed if statement");
+    const nestedExpr = ifStmt.thenAssigns[0]?.expr;
+    expect(nestedExpr).toMatchObject({ kind: "select" });
+    if (nestedExpr?.kind !== "select") throw new Error("expected desugared nested if select");
+    expect(nestedExpr.then).toMatchObject({ kind: "literal", value: 1 });
+    expect(nestedExpr.else).toMatchObject({ kind: "ref", name: "x" });
   });
 
   it("rejects a second next-state site when if already assigned the variable", () => {
@@ -422,6 +465,44 @@ describe("analyze", () => {
     expect(program.statements[3].expr.kind).toBe("cmp");
     expect(program.inputs).toHaveLength(2);
     expect(program.outputs).toHaveLength(2);
+  });
+
+  it("tracks bag locals and permits pairwise bag arithmetic", () => {
+    const program = analyze(
+      parse(`
+        local left = bag_const("signal-A", 10, "signal-B", 5)
+        local right = bag_const("signal-A", 2, "signal-B", 5)
+        local result = bag_arith("/", left, right)
+        output("signal-A", result)
+      `),
+    );
+
+    expect(program.statements[2]).toMatchObject({
+      kind: "local",
+      name: "result",
+      expr: { kind: "bag_binop", op: "/" },
+    });
+  });
+
+  it("rejects bag/scalar mixes with a bag-local error", () => {
+    expect(() =>
+      analyze(
+        parse(`
+          local bag = bag_const("signal-A", 10)
+          output("signal-B", bag + 1)
+        `),
+      ),
+    ).toThrow(/bag local 'bag'.*bag_arith/i);
+
+    expect(() =>
+      analyze(
+        parse(`
+          local scalar = 1
+          local bag = bag_arith("/", scalar, bag_const("signal-A", 2))
+          output("signal-A", bag)
+        `),
+      ),
+    ).toThrow(/left operand must be a bag/i);
   });
 
   it("includes line and column information from the AST", () => {

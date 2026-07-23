@@ -168,7 +168,7 @@ export function evalConstant(entity: CircuitEntity): SignalBag {
 
 /**
  * Arithmetic with optional EACH:
- * - ONE operand may be `signal-each` → apply op per present signal
+ * - One or both operands may be `signal-each` → apply op per present signal
  * - Output `signal-each` → map results per signal; otherwise sum onto the output signal
  * - Per-operand `*_signal_networks` select red / green / both (#40)
  */
@@ -190,9 +190,6 @@ export function evalArithmetic(entity: CircuitEntity, net: EvalNet): SignalBag {
   const eachOnSecond = secondName === SIGNAL_EACH;
 
   if (eachOnFirst || eachOnSecond) {
-    if (eachOnFirst && eachOnSecond) {
-      throw new Error("simulate: arithmetic cannot use signal-each on both operands");
-    }
     const eachNet = eachOnFirst ? firstNet : secondNet;
     let sum = 0;
     for (const name of presentSignals(eachNet)) {
@@ -201,7 +198,7 @@ export function evalArithmetic(entity: CircuitEntity, net: EvalNet): SignalBag {
         ? eachVal
         : readOperand(firstNet, "first_signal", "first_constant", c);
       const right = eachOnSecond
-        ? eachVal
+        ? bagGet(secondNet, name)
         : readOperand(secondNet, "second_signal", "second_constant", c);
       const result = evalArithOp(op, left, right);
       if (output === SIGNAL_EACH) {

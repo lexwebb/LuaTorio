@@ -181,6 +181,16 @@ function constantFold(module: IRModule): IRModule {
           })),
         });
         break;
+      case "bag_const":
+        nodes.push(node);
+        break;
+      case "bag_binop":
+        nodes.push({
+          ...node,
+          left: resolve(node.left, alias),
+          right: resolve(node.right, alias),
+        });
+        break;
       case "signal_at":
         nodes.push({
           ...node,
@@ -227,6 +237,10 @@ function structuralKey(node: IRNode): string {
       return `each_latch:${node.entries
         .map((e) => `${e.level}:${e.signal}:${e.buffer}:${e.tag}`)
         .join("|")}`;
+    case "bag_const":
+      return `bag_const:${node.entries.map((e) => `${e.signal}:${e.count}`).join("|")}`;
+    case "bag_binop":
+      return `bag_binop:${node.op}:${node.left}:${node.right}`;
     case "signal_at":
       return `signal_at:${node.index}:${node.ascending ? "asc" : "desc"}:${node.args.join(":")}`;
     default: {
@@ -273,6 +287,10 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
           level: resolve(entry.level, alias),
         })),
       };
+    case "bag_const":
+      return node;
+    case "bag_binop":
+      return { ...node, left: resolve(node.left, alias), right: resolve(node.right, alias) };
     case "signal_at":
       return { ...node, args: node.args.map((arg) => resolve(arg, alias)) };
     default: {
@@ -331,6 +349,10 @@ function childIds(node: IRNode): string[] {
       return [...node.args];
     case "each_latch":
       return node.entries.map((entry) => entry.level);
+    case "bag_const":
+      return [];
+    case "bag_binop":
+      return [node.left, node.right];
     case "signal_at":
       return [...node.args];
     default: {

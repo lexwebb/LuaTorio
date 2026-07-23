@@ -29,6 +29,10 @@ export type IRNode =
       id: string;
       entries: Array<{ level: string; signal: string; buffer: number; tag: number }>;
     }
+  /** Constant multi-signal bag. */
+  | { kind: "bag_const"; id: string; entries: Array<{ signal: string; count: number }> }
+  /** Pairwise EACH arithmetic: left on red, right on green, result on EACH. */
+  | { kind: "bag_binop"; id: string; op: ArithOp; left: string; right: string }
   /**
    * Selector rank/index (#47): pick the Nth nonzero arg by value.
    * `ascending` → Factorio `select_max: false` (index 0 = minimum).

@@ -32,6 +32,21 @@ describe("simulate", () => {
     }
   });
 
+  it("elseif_nested selects priority branches and holds when none match", () => {
+    const graph = graphOf(loadExample("elseif_nested.lua"));
+    const result = simulate(graph, {
+      ticks: 4,
+      inputs: (tick) => [
+        { "signal-A": 1, "signal-B": 1, "signal-C": 1 },
+        { "signal-A": 1, "signal-B": 0, "signal-C": 1 },
+        { "signal-A": 0, "signal-B": 0, "signal-C": 1 },
+        { "signal-A": 0, "signal-B": 0, "signal-C": 0 },
+      ][tick] ?? {},
+    });
+
+    expect(result.ticks.map((tick) => tick.outputs["signal-X"])).toEqual([1, 2, 3, 3]);
+  });
+
   it("sr_latch sets, holds, then resets", () => {
     const graph = graphOf(loadExample("sr_latch.lua"));
     const result = simulate(graph, {
@@ -125,5 +140,36 @@ describe("simulate", () => {
         tick < 2 ? { "level-A": 0, "level-B": 20 } : { "level-A": 10, "level-B": 20 },
     });
     expect(clear.ticks[3]?.outputs["signal-A"] ?? 0).toBe(0);
+  });
+
+  it("bag_arith emits cookbook EACH/EACH division over red and green bags", () => {
+    const source = `
+      local left = bag_const("signal-A", 10, "signal-B", 15)
+      local right = bag_const("signal-A", 2, "signal-B", 3)
+      local result = bag_arith("/", left, right)
+      output("signal-A", result)
+      output("signal-B", result)
+    `;
+    const graph = graphOf(source);
+    const arithmetic = graph.entities.filter((entity) => entity.kind === "arithmetic");
+
+    expect(arithmetic).toHaveLength(1);
+    expect(arithmetic[0]?.control_behavior.arithmetic_conditions).toMatchObject({
+      first_signal: { name: "signal-each" },
+      first_signal_networks: { red: true, green: false },
+      operation: "/",
+      second_signal: { name: "signal-each" },
+      second_signal_networks: { red: false, green: true },
+      output_signal: { name: "signal-each" },
+    });
+    expect(graph.wires).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: "red" }),
+        expect.objectContaining({ color: "green" }),
+      ]),
+    );
+
+    const result = simulate(graph, { ticks: 2 });
+    expect(result.ticks[1]?.outputs).toMatchObject({ "signal-A": 5, "signal-B": 5 });
   });
 });

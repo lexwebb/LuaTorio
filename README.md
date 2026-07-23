@@ -81,9 +81,11 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`counter.lua`](examples/counter.lua) | v2 memory: free-running counter (`x = x + 1`) |
 | [`accumulator.lua`](examples/accumulator.lua) | v2 memory: accumulate `signal-A` each tick |
 | [`conditional-counter.lua`](examples/conditional-counter.lua) | v2 if/else: muxed next-state (`if c then x+1 else x-1`) |
+| [`elseif_nested.lua`](examples/elseif_nested.lua) | v2 `elseif` priority and nested `if` next-state muxes |
 | [`while_count.lua`](examples/while_count.lua) | v2 clocked while: count up to `signal-L` (`tick()` barrier) |
 | [`sr_latch.lua`](examples/sr_latch.lua) | Cookbook SR via `sr(q, set, reset)` — one decider latch |
 | [`each_latch.lua`](examples/each_latch.lua) | EACH-tag sticky hysteresis bag — 1 constant + 1 decider |
+| [`bag_arith.lua`](examples/bag_arith.lua) | Cookbook 1 math: pairwise `EACH / EACH` bags over red/green |
 | [`signal_at.lua`](examples/signal_at.lua) | Pick Nth-largest input via `signal_at` → selector `select` |
 | [`signal_at_asc.lua`](examples/signal_at_asc.lua) | Nth-smallest among present (`signal_at_asc`) — priority ranks |
 | [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
@@ -104,7 +106,7 @@ Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain mac
 |---|---|
 | `local x = <expr>` | Every local must be initialized |
 | `x = <expr>` | Next-state assignment (at most one per variable); promotes `x` to a memory cell |
-| `if cond then … else … end` | Muxes next-state stores (`select`); omitted branch holds previous value |
+| `if` / `elseif` / `else` | Muxes next-state stores (`select`); nested `if` allowed; omitted branch holds previous value |
 | `while cond do … tick() end` | Clocked loop: at most one per program; body ends with `tick()` |
 | `for i = lo, hi do … tick() end` | Numeric for only; optional step must be literal `1`; `i` not assignable in body |
 | `tick()` | Syntactic barrier only (no IR); required as last statement of a while/for body |
@@ -112,6 +114,8 @@ Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain mac
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
 | `each_latch(level, signal, high, …)` | Sticky multi-signal hysteresis bag (EACH tags); `output(signal, bag)` |
+| `bag_const(signal, count, …)` | Constant multi-signal bag; signal/count pairs are literals |
+| `bag_arith(op, left, right)` | Pairwise bag arithmetic (`+ - * / %`); left red, right green, output EACH |
 | `signal_at(index, a, b, …)` | Value of Nth-largest nonzero arg; selector `select` (`select_max`) |
 | `signal_at_asc(index, a, b, …)` | Value of Nth-smallest nonzero arg; selector `select` ascending |
 | `signal_count(a, b, …)` | Count nonzero args; emits one selector combinator (`operation: "count"`) |
@@ -129,15 +133,13 @@ loop. One Factorio game tick = one loop iteration (`tick()` is the barrier).
 see the previous game-tick value; the assignment is the next-state function evaluated every
 tick. Unreassigned locals stay combinational (v1 SSA).
 
-**If/else (v2 phase 2):** Branch bodies may only assign declared locals. The compiler builds
-`select(cond, thenVal, elseVal)` (or hold via the memory id when a branch omits the assign).
-No `elseif` or nested `if` yet.
+**If/else (v2 phase 2):** Branch leaves may only assign declared locals; nested `if` and
+`elseif` chains desugar into nested `select` values. An omitted branch holds via the memory id.
 
 **Clocked loops (v2 phase 3):** `while`/`for` desugar onto flat IR with a synthetic `__run`
 latch and enable-gated stores (no CFG/phi). `repeat` and generic `for` are rejected.
 
-Not yet supported: `elseif` / nested if ([#65](https://github.com/lexwebb/LuaTorio/issues/65)),
-first-class bags ([#66](https://github.com/lexwebb/LuaTorio/issues/66)), `function` (v3:
+Not yet supported: `function` (v3:
 [#67](https://github.com/lexwebb/LuaTorio/issues/67)/[#68](https://github.com/lexwebb/LuaTorio/issues/68)),
 tables (v4: [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70)),
 recursion ([#71](https://github.com/lexwebb/LuaTorio/issues/71)), entity placement (v5:
@@ -150,6 +152,10 @@ Unsupported constructs raise a `SemanticError` naming the construct and its plan
   virtual signal, or an item/fluid name like `"iron-plate"`). Returns the signal's numeric value.
 - `output("signal-name", expr)` — same string-literal rule; must appear as a top-level statement
   (not nested in an expression). A program needs **at least one** `output()` call.
+- Bags are multi-signal values. `output("signal-name", bag)` samples that named channel; use one
+  output per required boundary channel. Bag locals cannot be used in scalar arithmetic,
+  comparisons, or memory assignments. `bag_const` and `bag_arith` explicitly encode the
+  red/green cookbook pattern and unblock v4 table constructors as constant bags.
 
 ### Errors
 

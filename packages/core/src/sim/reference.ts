@@ -65,6 +65,9 @@ function evalExpr(
       return toInt32(inputs[expr.signal] ?? 0);
     case "each_latch":
       throw new Error("reference: each_latch is a signal bag, not a scalar");
+    case "bag_const":
+    case "bag_binop":
+      throw new Error(`reference: ${expr.kind} is a signal bag, not a scalar`);
     case "ref": {
       const value = env.get(expr.name);
       if (value === undefined) {

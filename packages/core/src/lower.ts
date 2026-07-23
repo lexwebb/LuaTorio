@@ -114,6 +114,13 @@ function lowerExpr(
       }));
       return pushNode(ctx, { kind: "each_latch", id: nextId(ctx), entries });
     }
+    case "bag_const":
+      return pushNode(ctx, { kind: "bag_const", id: nextId(ctx), entries: expr.entries });
+    case "bag_binop": {
+      const left = lowerExpr(expr.left, env, ctx);
+      const right = lowerExpr(expr.right, env, ctx);
+      return pushNode(ctx, { kind: "bag_binop", id: nextId(ctx), op: expr.op, left, right });
+    }
     case "signal_at": {
       const args = expr.args.map((arg) => lowerExpr(arg, env, ctx));
       return pushNode(ctx, {

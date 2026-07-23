@@ -1484,6 +1484,61 @@ function lowerEachLatch(node: Extract<IRNode, { kind: "each_latch" }>): {
   };
 }
 
+/** Multi-signal constant bag: one Factorio constant combinator. */
+function lowerBagConst(node: Extract<IRNode, { kind: "bag_const" }>): CircuitEntity {
+  return {
+    id: node.id,
+    kind: "constant",
+    name: "constant-combinator",
+    outputSignal: node.id,
+    label: "bag_const",
+    control_behavior: {
+      sections: {
+        sections: [
+          {
+            index: 1,
+            filters: node.entries.map((entry, index) => ({
+              index: index + 1,
+              count: entry.count,
+              ...signalRef(entry.signal),
+            })),
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Cookbook 1 math: `EACH op EACH` with left on red and right on green.
+ * The input colors deliberately do not mix, and Factorio retains each signal name on output.
+ */
+function lowerBagBinop(node: Extract<IRNode, { kind: "bag_binop" }>): {
+  entity: CircuitEntity;
+  wires: WireEdge[];
+} {
+  return {
+    entity: {
+      id: node.id,
+      kind: "arithmetic",
+      name: "arithmetic-combinator",
+      outputSignal: SIGNAL_EACH,
+      label: `bag ${node.op}`,
+      control_behavior: {
+        arithmetic_conditions: {
+          first_signal: signalRef(SIGNAL_EACH),
+          first_signal_networks: NET_RED,
+          operation: node.op,
+          second_signal: signalRef(SIGNAL_EACH),
+          second_signal_networks: NET_GREEN,
+          output_signal: signalRef(SIGNAL_EACH),
+        },
+      },
+    },
+    wires: [redWire(node.left, node.id), greenWire(node.right, node.id)],
+  };
+}
+
 /**
  * Fuse `store(mem, select(en, next, mem))` into an enable/hold latch.
  *
@@ -2053,6 +2108,15 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         wires.push(...expanded.wires);
         break;
       }
+      case "bag_const":
+        entities.push(lowerBagConst(node));
+        break;
+      case "bag_binop": {
+        const lowered = lowerBagBinop(node);
+        entities.push(lowered.entity);
+        wires.push(...lowered.wires);
+        break;
+      }
       case "signal_at": {
         const { entity, wires: atWires } = lowerSignalAt(node);
         entities.push(entity);
@@ -2145,6 +2209,13 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
+      case "bag_const":
+        break;
+      case "bag_binop":
+        if (node.left === id || node.right === id) {
+          users.push(node);
+        }
+        break;
       case "signal_at":
         if (node.args.includes(id)) {
           users.push(node);
@@ -2203,6 +2274,12 @@ function countNodeUses(module: IRModule): Map<string, number> {
         for (const entry of node.entries) {
           add(entry.level);
         }
+        break;
+      case "bag_const":
+        break;
+      case "bag_binop":
+        add(node.left);
+        add(node.right);
         break;
       case "signal_at":
         for (const arg of node.args) {
