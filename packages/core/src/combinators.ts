@@ -17,7 +17,7 @@ export type CircuitRole = "latch" | "mux-side";
  * is configured, but not *where* (layout) or how it's serialized (emit).
  */
 export interface CircuitEntity {
-  /** IR node id, synthetic `__oN` output marker, or mux-side id like `__t4__else`. */
+  /** IR node id, synthetic `__oN` output marker, or mux-side id like `__t4__gate`. */
   id: string;
   kind: CombinatorKind;
   /** Factorio entity name, e.g. `"arithmetic-combinator"`. */
@@ -26,6 +26,11 @@ export interface CircuitEntity {
   /** Output signal name this entity produces (a temp signal like `__t3`, or a user signal). */
   outputSignal: string;
   role?: CircuitRole;
+  /**
+   * Human-facing name for UI (Lua local, port signal, “Δ → i”, …).
+   * Does not affect Factorio emit — wire signals stay `__tN`.
+   */
+  label?: string;
 }
 
 /** Factorio wire color. Compiled Lua stays green; import / hand graphs may use red (#40). */
@@ -1395,6 +1400,111 @@ function lowerOutput(output: IRModule["outputs"][number], index: number): Circui
  * when `next = mem + δ` that fusion is incremental (gate δ only).
  * Free-running `store(mem, mem+δ)` folds into one `Q+δ` latch (Factorio-accurate clock).
  */
+
+/** Strip compiler `__` noise for display (`__run` → `run`). */
+function prettyCellName(cell: string): string {
+  if (cell.startsWith("__")) {
+    return cell.slice(2);
+  }
+  return cell;
+}
+
+/**
+ * Attach human `label`s for the playground without renaming Factorio wire signals.
+ * Latches get Lua cell names; ports get signal names; mux-sides get short role tags.
+ */
+function annotateEntityLabels(module: IRModule, entities: CircuitEntity[], wires: WireEdge[]): void {
+  const byId = new Map(entities.map((entity) => [entity.id, entity]));
+
+  for (const node of module.nodes) {
+    if (node.kind === "memory") {
+      const entity = byId.get(node.id);
+      if (entity !== undefined) {
+        entity.label = prettyCellName(node.cell);
+      }
+    }
+  }
+
+  for (const input of module.inputs) {
+    const entity = byId.get(input.nodeId);
+    if (entity !== undefined) {
+      entity.label = input.signal;
+    }
+  }
+
+  for (let index = 0; index < module.outputs.length; index += 1) {
+    const output = module.outputs[index];
+    if (output === undefined) {
+      continue;
+    }
+    const entity = byId.get(`__o${index + 1}`);
+    if (entity !== undefined) {
+      entity.label = output.signal;
+    }
+  }
+
+  for (const entity of entities) {
+    if (entity.label !== undefined) {
+      continue;
+    }
+    if (entity.id.includes("__d")) {
+      const latchLabels = wires
+        .filter((wire) => wire.from === entity.id)
+        .map((wire) => byId.get(wire.to)?.label)
+        .filter((label): label is string => label !== undefined);
+      entity.label = latchLabels[0] !== undefined ? `Δ → ${latchLabels[0]}` : "Δ gate";
+      continue;
+    }
+    if (entity.id.includes("__gate")) {
+      entity.label = "gate";
+      continue;
+    }
+    if (entity.id.includes("__mux")) {
+      entity.label = "mux";
+      continue;
+    }
+    if (entity.kind === "constant") {
+      const sections = (
+        entity.control_behavior.sections as { sections?: Array<{ filters?: unknown[] }> } | undefined
+      )?.sections;
+      const filters = sections?.[0]?.filters ?? [];
+      if (filters.length === 1 && filters[0] !== null && typeof filters[0] === "object") {
+        const filter = filters[0] as { count?: number };
+        if (typeof filter.count === "number") {
+          entity.label = `const ${filter.count}`;
+          continue;
+        }
+      }
+      if (filters.length === 0) {
+        entity.label = "I/O pad";
+      }
+    }
+  }
+}
+
+/** Map wire/signal names → human labels for inspector slots (UI only). */
+export function signalLabelMap(graph: {
+  entities: CircuitEntity[];
+  inputs?: CircuitGraph["inputs"];
+  outputs?: CircuitGraph["outputs"];
+}): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const port of graph.inputs ?? []) {
+    map[port.signal] = port.signal;
+  }
+  for (const port of graph.outputs ?? []) {
+    map[port.signal] = port.signal;
+  }
+  for (const entity of graph.entities) {
+    if (entity.label === undefined) {
+      continue;
+    }
+    map[entity.id] = entity.label;
+    map[entity.outputSignal] = entity.label;
+  }
+  return map;
+}
+
 export function lowerToCombinators(module: IRModule): CircuitGraph {
   const storeValueByCell = new Map<string, string>();
   const nodeById = new Map(module.nodes.map((node) => [node.id, node]));
@@ -1751,7 +1861,10 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const known = new Set(entities.map((entity) => entity.id));
   const filteredWires = wires.filter((wire) => known.has(wire.from) && known.has(wire.to));
 
+  annotateEntityLabels(module, entities, filteredWires);
+
   return { entities, wires: filteredWires, outputs, inputs };
+
 }
 
 /** Nodes that reference `id` (as operands / store value / etc.). */

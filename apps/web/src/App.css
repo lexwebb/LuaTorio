@@ -782,9 +782,32 @@ body {
   color: #c4b79a;
 }
 
+.ft-meta-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff4e0;
+}
+
 .ft-meta-id {
   font-family: "JetBrains Mono", ui-monospace, monospace;
-  color: #f0e6d2;
+  color: #8a7f6a;
+  font-size: 0.8rem;
+}
+
+.ft-label-hint {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #4a4034;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #c4b79a;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.ft-label-hint code {
+  color: #ffb64d;
+  font-size: 0.85em;
 }
 
 .ft-meta-role {

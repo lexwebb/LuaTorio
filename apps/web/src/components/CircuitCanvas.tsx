@@ -1,4 +1,4 @@
-import type { LaidOutCircuit, PlacedEntity } from "@luatorio/core";
+import { type LaidOutCircuit, type PlacedEntity, signalLabelMap } from "@luatorio/core";
 import {
   type PointerEvent as ReactPointerEvent,
   useCallback,
@@ -254,6 +254,7 @@ export function CircuitCanvas({
     });
   };
 
+  const labels = useMemo(() => signalLabelMap(laidOut), [laidOut]);
   const selected = laidOut.entities.find((entity) => entity.id === selectedId);
 
   return (
@@ -347,7 +348,7 @@ export function CircuitCanvas({
                   pulsing ? " is-active-tick" : ""
                 }`}
                 style={{ left: x, top: y, width: TILE, height: TILE }}
-                title={`${entity.id} (${entity.role ?? entity.kind})`}
+                title={entity.label !== undefined ? `${entity.label} · ${entity.id}` : entity.id}
                 onClick={(event) => {
                   event.stopPropagation();
                   onSelect(entity.id);
@@ -356,8 +357,10 @@ export function CircuitCanvas({
               >
                 <img src={iconSrc(entity)} alt="" width={TILE - 20} height={TILE - 20} />
                 <span className="circuit-entity-caption">
-                  <span className="circuit-entity-caption-role">{entity.role ?? entity.kind}</span>
-                  <span className="circuit-entity-caption-id">{entity.outputSignal}</span>
+                  <span className="circuit-entity-caption-role">
+                    {entity.label ?? entity.role ?? entity.kind}
+                  </span>
+                  <span className="circuit-entity-caption-id">{entity.kind}</span>
                 </span>
               </button>
             );
@@ -371,10 +374,13 @@ export function CircuitCanvas({
             entity={selected}
             laidOut={laidOut}
             entityBags={entityBags}
+            labels={labels}
             onClose={() => onSelect(undefined)}
           />
         ) : (
-          <p className="sim-muted">Click a combinator to open its Factorio-style detail panel.</p>
+          <p className="sim-muted">
+            Click a combinator — labels are Lua names (i, run, signal-L); __t… are internal wires.
+          </p>
         )}
       </div>
     </div>

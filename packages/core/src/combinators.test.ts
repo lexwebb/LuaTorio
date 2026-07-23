@@ -17,6 +17,7 @@ describe("lowerToCombinators", () => {
       kind: "constant",
       name: "constant-combinator",
       outputSignal: "__t1",
+      label: "const 5",
       control_behavior: {
         sections: {
           sections: [
@@ -41,6 +42,7 @@ describe("lowerToCombinators", () => {
       kind: "constant",
       name: "constant-combinator",
       outputSignal: "__t1",
+      label: "signal-A",
       control_behavior: { sections: { sections: [] } },
     });
     expect(graph.inputs).toEqual([{ signal: "signal-A", entityId: "__t1" }]);
@@ -539,6 +541,7 @@ describe("lowerToCombinators", () => {
         kind: "constant",
         name: "constant-combinator",
         outputSignal: "signal-C",
+        label: "signal-C",
         control_behavior: { sections: { sections: [] } },
       },
       {
@@ -546,6 +549,7 @@ describe("lowerToCombinators", () => {
         kind: "constant",
         name: "constant-combinator",
         outputSignal: "signal-D",
+        label: "signal-D",
         control_behavior: { sections: { sections: [] } },
       },
     ]);

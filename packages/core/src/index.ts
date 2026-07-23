@@ -51,7 +51,7 @@ export type {
   WireColor,
   WireEdge,
 } from "./combinators.js";
-export { lowerToCombinators, redWire } from "./combinators.js";
+export { lowerToCombinators, redWire, signalLabelMap } from "./combinators.js";
 export type { EmitOptions, EmitResult } from "./emit.js";
 export { emitBlueprint } from "./emit.js";
 export type { IRModule, IRNode } from "./ir.js";

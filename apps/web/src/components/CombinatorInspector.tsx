@@ -1,12 +1,17 @@
 import type { LaidOutCircuit, PlacedEntity } from "@luatorio/core";
+import { createContext, useContext } from "react";
 
 export interface CombinatorInspectorProps {
   entity: PlacedEntity;
   laidOut: LaidOutCircuit;
   /** Output bags for every entity at the scrubbed tick (id → signal → count). */
   entityBags: Record<string, Record<string, number>> | undefined;
+  /** Wire/signal name → human label (Lua local, port, …). */
+  labels: Record<string, string>;
   onClose: () => void;
 }
+
+const LabelCtx = createContext<Record<string, string>>({});
 
 function iconSrc(entity: PlacedEntity): string {
   const base = `${import.meta.env.BASE_URL}factorio-icons/`;
@@ -30,6 +35,11 @@ function signalName(ref: unknown): string | undefined {
   }
   const name = (ref as { name?: unknown }).name;
   return typeof name === "string" ? name : undefined;
+}
+
+/** Prefer human label; fall back to a short wire id. */
+export function displaySignal(name: string, labels: Record<string, string>): string {
+  return labels[name] ?? signalShort(name);
 }
 
 /** Short label for a virtual / item signal (readable in a slot). */
@@ -110,13 +120,16 @@ export function inputBagForEntity(
 }
 
 function SignalSlot({ name, value, empty }: { name?: string; value?: number; empty?: boolean }) {
+  const labels = useContext(LabelCtx);
   if (empty || name === undefined) {
     return <div className="ft-slot ft-slot-empty" aria-hidden />;
   }
   const showValue = value !== undefined;
+  const shown = displaySignal(name, labels);
+  const title = shown === name ? name : `${shown}  (wire ${name})`;
   return (
-    <div className="ft-slot" title={name}>
-      <span className="ft-slot-glyph">{signalShort(name)}</span>
+    <div className="ft-slot" title={title}>
+      <span className="ft-slot-glyph">{shown}</span>
       {showValue ? <span className="ft-slot-count">{value}</span> : null}
     </div>
   );
@@ -357,42 +370,59 @@ export function CombinatorInspector({
   entity,
   laidOut,
   entityBags,
+  labels,
   onClose,
 }: CombinatorInspectorProps) {
   const inputBag = inputBagForEntity(laidOut, entity, entityBags);
   const outputBag = entityBags?.[entity.id] ?? {};
+  const human = entity.label ?? labels[entity.id] ?? labels[entity.outputSignal];
 
   return (
-    <aside className="ft-inspector" aria-label={`${kindTitle(entity.kind)} details`}>
-      <header className="ft-inspector-head">
-        <img className="ft-inspector-icon" src={iconSrc(entity)} alt="" width={40} height={40} />
-        <div className="ft-inspector-titles">
-          <h3>{kindTitle(entity.kind)}</h3>
-          <p className="ft-inspector-meta">
-            <span className="ft-meta-id">{entity.id}</span>
-            {entity.role !== undefined ? <span className="ft-meta-role">{entity.role}</span> : null}
-            <span className="ft-meta-drive">drives {entity.outputSignal}</span>
-          </p>
+    <LabelCtx.Provider value={labels}>
+      <aside className="ft-inspector" aria-label={`${kindTitle(entity.kind)} details`}>
+        <header className="ft-inspector-head">
+          <img className="ft-inspector-icon" src={iconSrc(entity)} alt="" width={40} height={40} />
+          <div className="ft-inspector-titles">
+            <h3>{kindTitle(entity.kind)}</h3>
+            <p className="ft-inspector-meta">
+              {human !== undefined ? <span className="ft-meta-label">{human}</span> : null}
+              {entity.role !== undefined ? (
+                <span className="ft-meta-role">{entity.role}</span>
+              ) : null}
+              <span className="ft-meta-id" title="Compiler wire / entity id">
+                wire {entity.outputSignal}
+              </span>
+            </p>
+          </div>
+          <button type="button" className="ft-close" onClick={onClose} aria-label="Close details">
+            ×
+          </button>
+        </header>
+
+        <p className="ft-label-hint">
+          Names like <code>i</code> / <code>run</code> are Lua locals. Grey <code>__t…</code> ids
+          are the compiler&apos;s internal wire signals (Factorio still uses those on the wire).
+        </p>
+
+        <section className="ft-config-panel">
+          <h4 className="ft-panel-title">Configuration</h4>
+          {entity.kind === "arithmetic" ? (
+            <ArithmeticConfig entity={entity} inputBag={inputBag} />
+          ) : null}
+          {entity.kind === "decider" ? <DeciderConfig entity={entity} inputBag={inputBag} /> : null}
+          {entity.kind === "constant" ? <ConstantConfig entity={entity} /> : null}
+          {entity.kind === "selector" ? <SelectorConfig entity={entity} /> : null}
+        </section>
+
+        <div className="ft-io-row">
+          <SignalGrid label="Input signals" bag={inputBag} emptyHint="No signals on input wires" />
+          <SignalGrid
+            label="Output signals"
+            bag={outputBag}
+            emptyHint="Nothing emitted this tick"
+          />
         </div>
-        <button type="button" className="ft-close" onClick={onClose} aria-label="Close details">
-          ×
-        </button>
-      </header>
-
-      <section className="ft-config-panel">
-        <h4 className="ft-panel-title">Configuration</h4>
-        {entity.kind === "arithmetic" ? (
-          <ArithmeticConfig entity={entity} inputBag={inputBag} />
-        ) : null}
-        {entity.kind === "decider" ? <DeciderConfig entity={entity} inputBag={inputBag} /> : null}
-        {entity.kind === "constant" ? <ConstantConfig entity={entity} /> : null}
-        {entity.kind === "selector" ? <SelectorConfig entity={entity} /> : null}
-      </section>
-
-      <div className="ft-io-row">
-        <SignalGrid label="Input signals" bag={inputBag} emptyHint="No signals on input wires" />
-        <SignalGrid label="Output signals" bag={outputBag} emptyHint="Nothing emitted this tick" />
-      </div>
-    </aside>
+      </aside>
+    </LabelCtx.Provider>
   );
 }
