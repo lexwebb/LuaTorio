@@ -47,7 +47,7 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
       next[signal] = defaultInputValue(signal);
     }
     setInputValues(next);
-  }, [discoveredInputs, source]);
+  }, [discoveredInputs]);
 
   useEffect(() => {
     void runToken;
