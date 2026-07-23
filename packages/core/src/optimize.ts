@@ -225,7 +225,7 @@ function structuralKey(node: IRNode): string {
       return `signal_count:${node.args.join(":")}`;
     case "each_latch":
       return `each_latch:${node.entries
-        .map((e) => `${e.stock}:${e.recipe}:${e.buffer}:${e.tag}`)
+        .map((e) => `${e.level}:${e.signal}:${e.buffer}:${e.tag}`)
         .join("|")}`;
     case "signal_at":
       return `signal_at:${node.index}:${node.ascending ? "asc" : "desc"}:${node.args.join(":")}`;
