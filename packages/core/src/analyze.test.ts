@@ -243,6 +243,7 @@ describe("analyze", () => {
     expect(() => analyze(ast)).toThrow(/local declarations followed by return/);
   });
 
+  // v4 stack/tick decision: docs/superpowers/specs/2026-07-23-v4-recursion-design.md
   it("rejects recursive function cycles as planned for v4", () => {
     const ast = parse(`
       local function a(x)

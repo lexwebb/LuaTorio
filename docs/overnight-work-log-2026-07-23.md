@@ -82,3 +82,12 @@
   `clamp_fn.lua`, analyzer/simulation coverage, README language reference, and a clamp golden.
 
 ---
+
+## SKIPPED / morning
+
+### #71 — v4 recursive functions (DEFERRED)
+- Landed `docs/superpowers/specs/2026-07-23-v4-recursion-design.md`.
+- #68 is closed and already rejects direct and mutual recursive call cycles with
+  `plannedVersion: "v4"`; its analyzer test now points to the design note.
+- Full emit was intentionally skipped: morning review must select a bounded-stack model (or
+  permanent rejection) and define tick, memory/clock, overflow, and resource semantics first.
