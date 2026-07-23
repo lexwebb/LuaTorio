@@ -120,8 +120,8 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
           "decider_conditions": {
             "conditions": [
               {
-                "comparator": "<",
-                "constant": 0,
+                "comparator": ">",
+                "constant": 100,
                 "first_signal": {
                   "name": "__t1",
                   "type": "virtual",
@@ -132,7 +132,7 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
               {
                 "constant": 1,
                 "signal": {
-                  "name": "__t3",
+                  "name": "__t8",
                   "type": "virtual",
                 },
               },
@@ -151,19 +151,19 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
           "decider_conditions": {
             "conditions": [
               {
-                "comparator": ">",
-                "constant": 100,
+                "comparator": "≠",
+                "constant": 0,
                 "first_signal": {
-                  "name": "__t1",
+                  "name": "__t8",
                   "type": "virtual",
                 },
               },
             ],
             "outputs": [
               {
-                "constant": 1,
+                "constant": 100,
                 "signal": {
-                  "name": "__t8",
+                  "name": "__t10",
                   "type": "virtual",
                 },
               },
@@ -185,37 +185,6 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
                 "comparator": "≠",
                 "constant": 0,
                 "first_signal": {
-                  "name": "__t8",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "constant": 100,
-                "signal": {
-                  "name": "__t10",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 3,
-        "name": "decider-combinator",
-        "position": {
-          "x": 4,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "≠",
-                "constant": 0,
-                "first_signal": {
                   "name": "__t10",
                   "type": "virtual",
                 },
@@ -241,10 +210,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 4,
+        "entity_number": 3,
         "name": "decider-combinator",
         "position": {
-          "x": 6,
+          "x": 4,
           "y": 0,
         },
       },
@@ -266,122 +235,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             },
           },
         },
-        "entity_number": 5,
+        "entity_number": 4,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 8,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [
-              {
-                "filters": [
-                  {
-                    "count": 0,
-                    "index": 1,
-                    "name": "__t2",
-                    "type": "virtual",
-                  },
-                ],
-                "index": 1,
-              },
-            ],
-          },
-        },
-        "entity_number": 6,
-        "name": "constant-combinator",
-        "position": {
-          "x": 10,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "arithmetic_conditions": {
-            "first_signal": {
-              "name": "__t2",
-              "type": "virtual",
-            },
-            "operation": "+",
-            "output_signal": {
-              "name": "__t6",
-              "type": "virtual",
-            },
-            "second_constant": 0,
-          },
-        },
-        "entity_number": 7,
-        "name": "arithmetic-combinator",
-        "position": {
-          "x": 12,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "≠",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t6",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "else_outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
-                  "name": "__t11",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
-                  "name": "__t6",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 8,
-        "name": "decider-combinator",
-        "position": {
-          "x": 14,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "arithmetic_conditions": {
-            "first_signal": {
-              "name": "__t6",
-              "type": "virtual",
-            },
-            "operation": "+",
-            "output_signal": {
-              "name": "__t12",
-              "type": "virtual",
-            },
-            "second_signal": {
-              "name": "__t11",
-              "type": "virtual",
-            },
-          },
-        },
-        "entity_number": 9,
-        "name": "arithmetic-combinator",
-        "position": {
-          "x": 16,
+          "x": 6,
           "y": 0,
         },
       },
@@ -391,9 +248,15 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
     "label": "clamp",
     "wires": [
       [
-        6,
+        1,
+        4,
         2,
-        7,
+        2,
+      ],
+      [
+        2,
+        4,
+        3,
         2,
       ],
       [
@@ -406,42 +269,6 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         3,
         4,
         4,
-        2,
-      ],
-      [
-        3,
-        4,
-        4,
-        2,
-      ],
-      [
-        4,
-        4,
-        5,
-        2,
-      ],
-      [
-        7,
-        4,
-        8,
-        2,
-      ],
-      [
-        7,
-        4,
-        8,
-        2,
-      ],
-      [
-        5,
-        4,
-        8,
-        2,
-      ],
-      [
-        8,
-        4,
-        9,
         2,
       ],
     ],

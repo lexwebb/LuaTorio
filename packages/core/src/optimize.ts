@@ -122,13 +122,18 @@ function constantFold(module: IRModule): IRModule {
           alias.set(node.id, condValue !== 0 ? thenId : elseId);
           break;
         }
-        // select(c, x, x) → x
+        // select(c, x, x) → x (same node, or same literal value from distinct nodes)
         if (thenId === elseId) {
           alias.set(node.id, thenId);
           break;
         }
         const thenLit = literalValueOf.get(thenId);
         const elseLit = literalValueOf.get(elseId);
+        // `a and 0` lowers to select(a, 0₁, 0₂) with two literal-0 nodes — still a no-op.
+        if (thenLit !== undefined && thenLit === elseLit) {
+          alias.set(node.id, thenId);
+          break;
+        }
         // select(c, 1, 0) when c is already 0/1 → c (redundant truthify)
         if (thenLit === 1 && elseLit === 0 && booleanIds.has(cond)) {
           alias.set(node.id, cond);

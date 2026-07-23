@@ -133,6 +133,27 @@ describe("optimize", () => {
     expect(after.nodes.some((node) => node.kind === "select")).toBe(false);
   });
 
+  it("aliases select(c, 0ₐ, 0ᵦ) to a literal 0 when branches are equal values", () => {
+    // `x and 0` desugars with a dedicated then-literal and a shared else-literal.
+    const before: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-A" },
+        { kind: "literal", id: "__t2", value: 0 },
+        { kind: "cmp", id: "__t3", op: "<", left: "__t1", right: "__t2" },
+        { kind: "literal", id: "__t4", value: 0 },
+        { kind: "select", id: "__t5", cond: "__t3", then: "__t4", else: "__t2" },
+      ],
+      outputs: [{ signal: "signal-B", nodeId: "__t5" }],
+      inputs: [{ signal: "signal-A", nodeId: "__t1" }],
+    };
+
+    const after = optimize(before);
+    const outId = after.outputs[0]?.nodeId;
+    const outNode = after.nodes.find((node) => node.id === outId);
+    expect(outNode).toMatchObject({ kind: "literal", value: 0 });
+    expect(after.nodes.some((node) => node.kind === "select")).toBe(false);
+  });
+
   it("aliases select(cmp, 1, 0) to the cmp (redundant truthify)", () => {
     const before: IRModule = {
       nodes: [

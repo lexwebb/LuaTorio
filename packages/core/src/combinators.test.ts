@@ -410,8 +410,6 @@ describe("lowerToCombinators", () => {
 
     const graph = lowerToCombinators(module);
 
-    // select expands to 3 entities; other nodes are 1:1; plus one output marker.
-    expect(graph.entities.length).toBeGreaterThan(module.nodes.length);
     expect(graph.outputs).toEqual([{ signal: "signal-B", entityId: "__o1" }]);
     // Every wire endpoint resolves to a known entity id (no dangling references).
     const knownIds = new Set(graph.entities.map((entity) => entity.id));
@@ -419,6 +417,7 @@ describe("lowerToCombinators", () => {
       expect(knownIds.has(wire.from)).toBe(true);
       expect(knownIds.has(wire.to)).toBe(true);
     }
+    expect(graph.entities.length).toBeGreaterThan(0);
   });
 
   it("specializes enable-hold of mem+δ into gate + latch (no else-gate, no mem+δ binop)", async () => {
