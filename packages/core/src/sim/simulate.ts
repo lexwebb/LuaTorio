@@ -166,8 +166,7 @@ function latchEntitiesOf(graph: CircuitGraph): CircuitEntity[] {
 
 /** Upper bound on combo micro-steps needed to propagate through the non-latch cone. */
 export function comboSettleDepth(graph: CircuitGraph): number {
-  const n = comboEntities(graph).length;
-  return n === 0 ? 0 : n;
+  return comboEntities(graph).length;
 }
 
 function parallelUpdate(
@@ -184,21 +183,24 @@ function parallelUpdate(
   }
 }
 
-function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
+/** Shared entity maps, producer index, and seeded output bags for one simulation run. */
+function initSim(graph: CircuitGraph) {
   const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
   const producers = producersByConsumer(graph.wires);
-  const comboOrder = combinationalOrder(graph);
   const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
-  const latches = latchEntitiesOf(graph);
-
   const outputs = new Map<string, SignalBag>();
   for (const entity of graph.entities) {
     outputs.set(entity.id, emptyBag());
   }
-
   refreshConstants(graph, outputs, inputEntityIds);
   seedLatchOutputs(graph, entityById, producers, outputs);
+  return { entityById, producers, inputEntityIds, outputs };
+}
 
+function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
+  const { entityById, producers, inputEntityIds, outputs } = initSim(graph);
+  const comboOrder = combinationalOrder(graph);
+  const latches = latchEntitiesOf(graph);
   const ticks: SimulateTick[] = [];
 
   for (let tick = 0; tick < opts.ticks; tick += 1) {
@@ -226,19 +228,8 @@ function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): Simulate
  * True Factorio: every non-constant combinator double-buffers in parallel each API tick.
  */
 function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
-  const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
-  const producers = producersByConsumer(graph.wires);
-  const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
+  const { entityById, producers, inputEntityIds, outputs } = initSim(graph);
   const delayed = graph.entities.filter((entity) => entity.kind !== "constant");
-
-  const outputs = new Map<string, SignalBag>();
-  for (const entity of graph.entities) {
-    outputs.set(entity.id, emptyBag());
-  }
-
-  refreshConstants(graph, outputs, inputEntityIds);
-  seedLatchOutputs(graph, entityById, producers, outputs);
-
   const ticks: SimulateTick[] = [];
 
   for (let tick = 0; tick < opts.ticks; tick += 1) {
@@ -255,21 +246,10 @@ function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): S
  * Factorio delays on the combo cone (micro-steps), then clock all latches once per API tick.
  */
 function simulateFactorio(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
-  const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
-  const producers = producersByConsumer(graph.wires);
-  const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
+  const { entityById, producers, inputEntityIds, outputs } = initSim(graph);
   const combos = comboEntities(graph);
   const latches = latchEntitiesOf(graph);
-  const depth = comboSettleDepth(graph);
-
-  const outputs = new Map<string, SignalBag>();
-  for (const entity of graph.entities) {
-    outputs.set(entity.id, emptyBag());
-  }
-
-  refreshConstants(graph, outputs, inputEntityIds);
-  seedLatchOutputs(graph, entityById, producers, outputs);
-
+  const depth = combos.length;
   const ticks: SimulateTick[] = [];
 
   for (let tick = 0; tick < opts.ticks; tick += 1) {

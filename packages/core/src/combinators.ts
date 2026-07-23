@@ -796,6 +796,32 @@ function lowerMemory(
   return { entities: [entity], wires };
 }
 
+/** Latch arithmetic: `first + second` onto `id` (second may be a wired signal or literal). */
+function lowerLatch(
+  id: string,
+  firstSignal: string,
+  second: string | number,
+): CircuitEntity {
+  const arithmetic_conditions: Record<string, unknown> = {
+    first_signal: signalRef(firstSignal),
+    operation: "+",
+    output_signal: signalRef(id),
+  };
+  if (typeof second === "number") {
+    arithmetic_conditions.second_constant = second;
+  } else {
+    arithmetic_conditions.second_signal = signalRef(second);
+  }
+  return {
+    id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: id,
+    role: "latch",
+    control_behavior: { arithmetic_conditions },
+  };
+}
+
 /**
  * Free-running `store(mem, mem + δ)` → one latch `Q + δ` with Q feedback (no separate + binop).
  * Literal δ uses `second_constant` so no extra constant entity is required on the wire.
@@ -811,33 +837,11 @@ function lowerFreeRunningDeltaLatch(
   if (!initIsZero) {
     wires.push(greenWire(memory.init, memory.id));
   }
-
-  if (deltaLit !== undefined) {
-    return {
-      entities: [
-        {
-          id: memory.id,
-          kind: "arithmetic",
-          name: "arithmetic-combinator",
-          outputSignal: memory.id,
-          role: "latch",
-          control_behavior: {
-            arithmetic_conditions: {
-              first_signal: signalRef(memory.id),
-              second_constant: deltaLit,
-              operation: "+",
-              output_signal: signalRef(memory.id),
-            },
-          },
-        },
-      ],
-      wires,
-    };
+  if (deltaLit === undefined) {
+    wires.push(greenWire(deltaId, memory.id));
   }
-
-  wires.push(greenWire(deltaId, memory.id));
   return {
-    entities: [lowerLatch(memory.id, memory.id, deltaId)],
+    entities: [lowerLatch(memory.id, memory.id, deltaLit ?? deltaId)],
     wires,
   };
 }
@@ -859,28 +863,6 @@ function memPlusDelta(
     return thenNode.left;
   }
   return undefined;
-}
-
-function lowerLatch(
-  id: string,
-  firstSignal: string,
-  secondSignal: string,
-): CircuitEntity {
-  return {
-    id,
-    kind: "arithmetic",
-    name: "arithmetic-combinator",
-    outputSignal: id,
-    role: "latch",
-    control_behavior: {
-      arithmetic_conditions: {
-        first_signal: signalRef(firstSignal),
-        second_signal: signalRef(secondSignal),
-        operation: "+",
-        output_signal: signalRef(id),
-      },
-    },
-  };
 }
 
 /**
