@@ -194,10 +194,10 @@ function ArithmeticConfig({
   const rightLive = rightSig !== undefined ? inputBag[rightSig] : undefined;
 
   return (
-    <div className="ft-formula">
-      <div className="ft-formula-side">
+    <div className="ft-arith-grid">
+      <div className="ft-arith-panel">
         <span className="ft-formula-label">Input</span>
-        <div className="ft-formula-row">
+        <div className="ft-arith-row">
           {leftSig !== undefined ? (
             <SignalSlot name={leftSig} value={leftLive} />
           ) : (
@@ -211,12 +211,12 @@ function ArithmeticConfig({
           )}
         </div>
       </div>
-      <span className="ft-formula-arrow" aria-hidden>
+      <div className="ft-arith-divider" aria-hidden>
         →
-      </span>
-      <div className="ft-formula-side">
+      </div>
+      <div className="ft-arith-panel">
         <span className="ft-formula-label">Output</span>
-        <div className="ft-formula-row">
+        <div className="ft-arith-row">
           <SignalSlot name={out} />
         </div>
       </div>
@@ -245,7 +245,7 @@ function DeciderConfig({
         {conditions.length === 0 ? (
           <p className="ft-empty">No conditions</p>
         ) : (
-          <ul className="ft-cond-list">
+          <ul className="ft-cond-grid">
             {conditions.map((raw) => {
               if (raw === null || typeof raw !== "object") {
                 return null;
@@ -259,13 +259,23 @@ function DeciderConfig({
                 cond.compare_type !== undefined ? String(cond.compare_type).toUpperCase() : null;
               const leftLive = inputBag[left];
               const rightLive = rightSig !== undefined ? inputBag[rightSig] : undefined;
-              const key = `${left}${cmp}${right}:${String(cond.compare_type ?? "")}`;
+              const key = `${left}|${cmp}|${right}|${String(cond.compare_type ?? "")}`;
               return (
-                <li key={key} className="ft-cond-row">
-                  {join !== null ? <span className="ft-join">{join}</span> : null}
-                  <div className="ft-formula-row">
+                <li key={key} className="ft-cond-grid-row">
+                  <div className="ft-cond-join-cell">
+                    {join !== null ? (
+                      <span className="ft-join">{join}</span>
+                    ) : (
+                      <span className="ft-join ft-join-spacer" aria-hidden />
+                    )}
+                  </div>
+                  <div className="ft-cond-left-cell">
                     <SignalSlot name={left} value={leftLive} />
+                  </div>
+                  <div className="ft-cond-op-cell">
                     <OpBadge>{cmp}</OpBadge>
+                  </div>
+                  <div className="ft-cond-right-cell">
                     {rightSig !== undefined ? (
                       <SignalSlot name={rightSig} value={rightLive} />
                     ) : (
@@ -283,21 +293,23 @@ function DeciderConfig({
         {outputs.length === 0 && elses.length === 0 ? (
           <p className="ft-empty">No outputs</p>
         ) : (
-          <ul className="ft-cond-list">
+          <ul className="ft-out-grid">
             {outputs.map((raw) => {
               if (raw === null || typeof raw !== "object") {
                 return null;
               }
               const out = raw as Record<string, unknown>;
               const name = signalName(out.signal) ?? "?";
-              const mode =
-                out.copy_count_from_input === true
-                  ? "Input count"
-                  : `= ${String(out.constant ?? 1)}`;
+              const copy = out.copy_count_from_input === true;
+              const constant = String(out.constant ?? 1);
               return (
-                <li key={`then:${name}:${mode}`} className="ft-out-row">
+                <li key={`then:${name}:${copy}:${constant}`} className="ft-out-grid-row">
+                  <span className="ft-out-when">then</span>
                   <SignalSlot name={name} />
-                  <span className="ft-out-mode">{mode}</span>
+                  <div className="ft-out-modes">
+                    <span className={`ft-out-chip${copy ? "" : " is-active"}`}>= {constant}</span>
+                    <span className={`ft-out-chip${copy ? " is-active" : ""}`}>Input count</span>
+                  </div>
                 </li>
               );
             })}
@@ -307,12 +319,14 @@ function DeciderConfig({
               }
               const out = raw as Record<string, unknown>;
               const name = signalName(out.signal) ?? "?";
-              const mode = `= ${String(out.constant ?? 1)}`;
+              const constant = String(out.constant ?? 1);
               return (
-                <li key={`else:${name}:${mode}`} className="ft-out-row">
-                  <span className="ft-else-tag">else</span>
+                <li key={`else:${name}:${constant}`} className="ft-out-grid-row">
+                  <span className="ft-out-when ft-out-when-else">else</span>
                   <SignalSlot name={name} />
-                  <span className="ft-out-mode">{mode}</span>
+                  <div className="ft-out-modes">
+                    <span className="ft-out-chip is-active">= {constant}</span>
+                  </div>
                 </li>
               );
             })}
