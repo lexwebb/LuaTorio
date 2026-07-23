@@ -1,4 +1,4 @@
-import { ParseError, SemanticError, compile } from "@luatorio/core";
+import { compile, ParseError, SemanticError } from "@luatorio/core";
 
 export interface CompileIdle {
   status: "idle";
@@ -31,7 +31,12 @@ export function runCompile(source: string): CompileOutcome {
   try {
     const plain = compile(source, { json: false });
     const asJson = compile(source, { json: true });
-    return { status: "success", blueprint: plain.blueprint, json: asJson.blueprint, stats: plain.stats };
+    return {
+      status: "success",
+      blueprint: plain.blueprint,
+      json: asJson.blueprint,
+      stats: plain.stats,
+    };
   } catch (error) {
     if (error instanceof ParseError || error instanceof SemanticError) {
       return { status: "error", message: error.message, line: error.line, column: error.column };

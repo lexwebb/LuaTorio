@@ -15,6 +15,7 @@
   "files": {
     "includes": [
       "**/*.ts",
+      "**/*.tsx",
       "**/*.json",
       "!**/dist",
       "!**/node_modules",
