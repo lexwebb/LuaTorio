@@ -127,9 +127,13 @@ No `elseif` or nested `if` yet.
 **Clocked loops (v2 phase 3):** `while`/`for` desugar onto flat IR with a synthetic `__run`
 latch and enable-gated stores (no CFG/phi). `repeat` and generic `for` are rejected.
 
-Not yet supported: `function` (v3), tables and multi-signal bundles (v4), entity placement
-(v5). Unsupported constructs raise a `SemanticError` naming the construct and its planned
-version.
+Not yet supported: `elseif` / nested if ([#65](https://github.com/lexwebb/LuaTorio/issues/65)),
+first-class bags ([#66](https://github.com/lexwebb/LuaTorio/issues/66)), `function` (v3:
+[#67](https://github.com/lexwebb/LuaTorio/issues/67)/[#68](https://github.com/lexwebb/LuaTorio/issues/68)),
+tables (v4: [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70)),
+recursion ([#71](https://github.com/lexwebb/LuaTorio/issues/71)), entity placement (v5:
+[#72](https://github.com/lexwebb/LuaTorio/issues/72)/[#73](https://github.com/lexwebb/LuaTorio/issues/73)).
+Unsupported constructs raise a `SemanticError` naming the construct and its planned version.
 
 ### `input()` / `output()` API
 

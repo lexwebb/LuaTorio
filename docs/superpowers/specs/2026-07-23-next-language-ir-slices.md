@@ -1,8 +1,8 @@
 # Next Language / IR Slices (Emit Size + Interop Hooks)
 
 **Date:** 2026-07-23  
-**Status:** In progress (#38)  
-**Issues:** #38 (this), #39 selector, #40 red/green, #41 blueprint ingest
+**Status:** P0 done (#38); language roadmap issues filed  
+**Issues:** #38 (SR), #46/`each_latch`, #47/`signal_at`, #39–#41 interop; language track #65–#73
 
 ## Context
 
@@ -15,8 +15,8 @@ After #32/#33/#35–#37, Factorio emit tricks for the **current** Lua surface ar
 | **P0** | **Cookbook SR** — independent set & reset | One-decider latch; closes #33 deferral | Emit + tiny builtin/syntax |
 | **P1** | **Multi-signal channels / bundles** | EACH packing, fewer latches per channel; feeds #40 | IR bundle type; later colors |
 | **P2** | **Rank / index / pick-by-N** | Honest **selector** emit (#39) | Bundle or multi-signal bag |
-| P3 | `elseif`, richer if bodies | Ergonomics only (nested if already rejected) | Analyze only |
-| P3 | User `function` (v3) | Inlining / reuse | Large; not an emit-size lever first |
+| P3 | `elseif`, richer if bodies | Ergonomics only (nested if already rejected) | [#65](https://github.com/lexwebb/LuaTorio/issues/65) |
+| P3 | User `function` (v3) | Inlining / reuse | [#67](https://github.com/lexwebb/LuaTorio/issues/67) / [#68](https://github.com/lexwebb/LuaTorio/issues/68) |
 
 ### Why not selector or red/green first?
 
@@ -81,19 +81,48 @@ Plus Q feedback wire; nonzero init via existing latch seed.
 - [x] Example `examples/sr_latch.lua` + golden
 - [x] README note + safe-idiom warning for raw and/or
 
-## P1 — Channels (follow-up issue after P0)
+## P1 — Channels / bags
 
-Sketch only: multi-signal values on one wire (EACH packing), IR `bundle` or signal-list memory. Unlocks denser loops and natural red/green allocation (#40).
+- Shipped path: [`each_latch`](https://github.com/lexwebb/LuaTorio/issues/46) (variadic triples; output-only wire handle).
+- Bridge to tables: **first-class bag-typed values** — [#66](https://github.com/lexwebb/LuaTorio/issues/66).
+- Cookbook bag ops (arith / filters / hold / wildcards): [#58](https://github.com/lexwebb/LuaTorio/issues/58)–[#62](https://github.com/lexwebb/LuaTorio/issues/62).
 
-## P2 — Rank / index (feeds #39)
+## P2 — Rank / index
 
-Sketch only: e.g. `select_by_index(bag, n)` or “Nth largest signal”. Then selector combinator is the honest emit.
+[`signal_at` / `signal_at_asc`](https://github.com/lexwebb/LuaTorio/issues/47) — honest selector `select` emit (#39).
+
+## Language roadmap (toward tables and beyond)
+
+Suggested order (emit density first, then Lua surface growth):
+
+```text
+#66 first-class bags ─┬─► #58/#59/#60 bag ops
+                      └─► #69/#70 v4 tables
+#65 elseif / nested if          (independent ergonomics)
+#67 → #68 v3 functions ──► #71 v4 recursion
+#72 → #73 v5 place()            (after circuit surface stabilizes)
+```
+
+| Issue | Topic |
+|-------|--------|
+| [#65](https://github.com/lexwebb/LuaTorio/issues/65) | `elseif` + nested if |
+| [#66](https://github.com/lexwebb/LuaTorio/issues/66) | First-class bag-typed values |
+| [#67](https://github.com/lexwebb/LuaTorio/issues/67) | v3 design — functions (no recursion) |
+| [#68](https://github.com/lexwebb/LuaTorio/issues/68) | v3 implement functions |
+| [#69](https://github.com/lexwebb/LuaTorio/issues/69) | v4 design — tables as bags |
+| [#70](https://github.com/lexwebb/LuaTorio/issues/70) | v4 table constructors + field access |
+| [#71](https://github.com/lexwebb/LuaTorio/issues/71) | v4 recursive functions |
+| [#72](https://github.com/lexwebb/LuaTorio/issues/72) | v5 design — `place()` |
+| [#73](https://github.com/lexwebb/LuaTorio/issues/73) | v5 implement `place()` |
+
+Cookbook emit backlog (not language surface): [#57](https://github.com/lexwebb/LuaTorio/issues/57)–[#63](https://github.com/lexwebb/LuaTorio/issues/63).
 
 ## Tracking
 
-| Track | Issue | Board order |
+| Track | Issue | Notes |
 |---|---|---|
-| Language / emit size | **#38** | 1 — active |
-| Foreign BP + undirected nets | **#41** | 2 — interop |
-| Red/green split | **#40** | 3 — with/after #41 |
-| Selector | **#39** | 4 — after P2 IR exists |
+| SR / channels / rank | #38 → #46 / #47 | P0 done; P1/P2 in flight on feature branches |
+| Foreign BP + undirected nets | #41 | Done |
+| Red/green split | #40 | Done |
+| Selector VM | #39 | Done |
+| Language roadmap | **#65–#73** | Bags → tables; v3 functions; v5 place |
