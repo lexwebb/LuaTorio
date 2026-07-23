@@ -69,6 +69,9 @@ function evalExpr(
     case "bag_binop":
     case "bag_filter":
       throw new Error(`reference: ${expr.kind} is a signal bag, not a scalar`);
+    case "edge":
+    case "bag_test":
+      throw new Error(`reference: ${expr.kind} requires circuit-state evaluation`);
     case "ref": {
       const value = env.get(expr.name);
       if (value === undefined) {

@@ -4,6 +4,7 @@ import type {
   CallStatement,
   Chunk,
   Expression,
+  FunctionDeclaration,
   Identifier,
   IndexExpression,
   LocalStatement,
@@ -117,6 +118,21 @@ export type AnalyzedExpr =
       column: number;
     }
   | {
+      kind: "edge";
+      value: AnalyzedExpr;
+      line: number;
+      column: number;
+    }
+  | {
+      kind: "bag_test";
+      mode: "any" | "every";
+      op: CmpOp;
+      bag: AnalyzedExpr;
+      value: number;
+      line: number;
+      column: number;
+    }
+  | {
       kind: "signal_at";
       index: number;
       ascending: boolean;
@@ -200,6 +216,28 @@ interface AnalyzeContext {
   seenLoop: boolean;
   /** True after a top-level assign or if (free-running stores). */
   seenFreeRunningStore: boolean;
+  functions: ReadonlyMap<string, FunctionInfo>;
+  /** Names that are memory cells anywhere in the enclosing program. */
+  mutableNames: ReadonlySet<string>;
+}
+
+interface FunctionInfo {
+  name: string;
+  parameters: string[];
+  body: Statement[];
+  line: number;
+  column: number;
+}
+
+interface ExpressionOptions {
+  functions?: ReadonlyMap<string, FunctionInfo>;
+  mutableNames?: ReadonlySet<string>;
+  substitutions?: ReadonlyMap<string, AnalyzedExpr>;
+  inFunction?: boolean;
+}
+
+function expressionOptions(ctx: AnalyzeContext): ExpressionOptions {
+  return { functions: ctx.functions, mutableNames: ctx.mutableNames };
 }
 
 function locOf(node: Loc): { line: number; column: number } {
@@ -248,6 +286,7 @@ function rejectTickInExpression(
  * outside the supported subset.
  */
 export function analyze(ast: Chunk): AnalyzedProgram {
+  const { functions, body } = collectFunctionDeclarations(ast.body);
   const ctx: AnalyzeContext = {
     declared: new Set<string>(),
     reassigned: new Set<string>(),
@@ -257,9 +296,14 @@ export function analyze(ast: Chunk): AnalyzedProgram {
     inputs: [],
     seenLoop: false,
     seenFreeRunningStore: false,
+    functions,
+    mutableNames: collectMutableNames(body),
   };
 
-  for (const statement of ast.body) {
+  rejectRecursiveFunctions(functions);
+  validateFunctionBodies(functions, ctx.mutableNames);
+
+  for (const statement of body) {
     analyzeStatement(statement, ctx);
   }
 
@@ -269,6 +313,205 @@ export function analyze(ast: Chunk): AnalyzedProgram {
   }
 
   return { statements: ctx.statements, outputs: ctx.outputs, inputs: ctx.inputs };
+}
+
+function collectFunctionDeclarations(statements: Statement[]): {
+  functions: ReadonlyMap<string, FunctionInfo>;
+  body: Statement[];
+} {
+  const functions = new Map<string, FunctionInfo>();
+  let firstNonFunction = 0;
+  while (firstNonFunction < statements.length && statements[firstNonFunction]?.type === "FunctionDeclaration") {
+    const declaration = statements[firstNonFunction] as FunctionDeclaration;
+    const { line, column } = locOf(declaration);
+    const identifier = declaration.identifier;
+    if (!declaration.isLocal || identifier === null || identifier.type !== "Identifier") {
+      throw new SemanticError(
+        "function declarations must use 'local function name(...)'",
+        line,
+        column,
+      );
+    }
+    if (declaration.parameters.some((parameter) => parameter.type === "VarargLiteral")) {
+      throw new SemanticError("function declarations may not use varargs", line, column);
+    }
+    const name = identifier.name;
+    if (functions.has(name)) {
+      throw new SemanticError(`function '${name}' is already defined`, line, column);
+    }
+    const parameters = declaration.parameters.map((parameter) => {
+      if (parameter.type !== "Identifier") {
+        throw new SemanticError("function declarations may not use varargs", line, column);
+      }
+      return parameter.name;
+    });
+    if (new Set(parameters).size !== parameters.length) {
+      throw new SemanticError(`function '${name}' has duplicate parameters`, line, column);
+    }
+    functions.set(name, { name, parameters, body: declaration.body, line, column });
+    firstNonFunction += 1;
+  }
+
+  for (const statement of statements.slice(firstNonFunction)) {
+    if (statement.type === "FunctionDeclaration") {
+      const { line, column } = locOf(statement);
+      throw new SemanticError("function declarations must form a prefix of the program", line, column);
+    }
+  }
+  return { functions, body: statements.slice(firstNonFunction) };
+}
+
+function collectMutableNames(statements: Statement[]): Set<string> {
+  const mutable = new Set<string>();
+  const visit = (statement: Statement): void => {
+    if (statement.type === "AssignmentStatement") {
+      for (const target of statement.variables) {
+        if (target.type === "Identifier") mutable.add(target.name);
+      }
+      return;
+    }
+    if (statement.type === "IfStatement") {
+      for (const clause of statement.clauses) {
+        for (const nested of clause.body) visit(nested);
+      }
+      return;
+    }
+    if (statement.type === "WhileStatement" || statement.type === "ForNumericStatement") {
+      if (statement.type === "ForNumericStatement") mutable.add(statement.variable.name);
+      for (const nested of statement.body) visit(nested);
+    }
+  };
+  for (const statement of statements) visit(statement);
+  return mutable;
+}
+
+function directFunctionCalls(value: unknown, functions: ReadonlyMap<string, FunctionInfo>): string[] {
+  const result: string[] = [];
+  const visit = (node: unknown): void => {
+    if (typeof node !== "object" || node === null) return;
+    const record = node as Record<string, unknown>;
+    if (
+      record.type === "CallExpression" &&
+      typeof record.base === "object" &&
+      record.base !== null &&
+      (record.base as { type?: unknown }).type === "Identifier"
+    ) {
+      const name = (record.base as { name: string }).name;
+      if (functions.has(name)) result.push(name);
+    }
+    for (const child of Object.values(record)) {
+      if (Array.isArray(child)) {
+        for (const entry of child) visit(entry);
+      } else {
+        visit(child);
+      }
+    }
+  };
+  visit(value);
+  return result;
+}
+
+function rejectRecursiveFunctions(functions: ReadonlyMap<string, FunctionInfo>): void {
+  const visiting: string[] = [];
+  const visited = new Set<string>();
+  const visit = (name: string): void => {
+    const cycleAt = visiting.indexOf(name);
+    if (cycleAt !== -1) {
+      const path = [...visiting.slice(cycleAt), name];
+      const declaration = functions.get(name)!;
+      throw new SemanticError(
+        `recursive function call cycle: ${path.join(" -> ")}`,
+        declaration.line,
+        declaration.column,
+        "v4",
+      );
+    }
+    if (visited.has(name)) return;
+    visiting.push(name);
+    const declaration = functions.get(name)!;
+    for (const callee of directFunctionCalls(declaration.body, functions)) visit(callee);
+    visiting.pop();
+    visited.add(name);
+  };
+  for (const name of functions.keys()) visit(name);
+}
+
+function validateFunctionBodies(
+  functions: ReadonlyMap<string, FunctionInfo>,
+  mutableNames: ReadonlySet<string>,
+): void {
+  const builtinNames = new Set([
+    "input",
+    "output",
+    "tick",
+    "sr",
+    "signal_count",
+    "signal_at",
+    "signal_at_asc",
+    "each_latch",
+    "bag_const",
+    "bag_arith",
+    "bag_filter",
+    "bag_test",
+    "edge",
+  ]);
+  for (const declaration of functions.values()) {
+    const last = declaration.body.at(-1);
+    if (last?.type !== "ReturnStatement" || last.arguments.length !== 1) {
+      throw new SemanticError(
+        `function '${declaration.name}' body must end with exactly one return expression`,
+        declaration.line,
+        declaration.column,
+      );
+    }
+    const locals = new Set(declaration.parameters);
+    for (const statement of declaration.body.slice(0, -1)) {
+      const { line, column } = locOf(statement);
+      if (statement.type !== "LocalStatement") {
+        throw new SemanticError(
+          `function '${declaration.name}' body may only contain local declarations followed by return`,
+          line,
+          column,
+        );
+      }
+      const variable = statement.variables.length === 1 ? statement.variables[0] : undefined;
+      if (
+        variable === undefined ||
+        statement.init.length !== 1 ||
+        locals.has(variable.name)
+      ) {
+        throw new SemanticError("function local declarations must be unique single bindings", line, column);
+      }
+      locals.add(variable.name);
+    }
+
+    const visit = (node: unknown): void => {
+      if (typeof node !== "object" || node === null) return;
+      const record = node as Record<string, unknown>;
+      if (record.type === "CallExpression" && (record.base as { type?: string } | undefined)?.type === "Identifier") {
+        const { name } = record.base as { name: string };
+        const { line, column } = locOf(record as Loc);
+        if (name === "input" || name === "output" || name === "tick" || name === "sr") {
+          throw new SemanticError(`${name}() is not allowed in a function body`, line, column);
+        }
+      }
+      if (record.type === "Identifier") {
+        const { name } = record as { name: string };
+        if (!locals.has(name) && !functions.has(name) && !builtinNames.has(name) && mutableNames.has(name)) {
+          const { line, column } = locOf(record as Loc);
+          throw new SemanticError(`function may not capture mutable local '${name}'`, line, column);
+        }
+      }
+      for (const child of Object.values(record)) {
+        if (Array.isArray(child)) {
+          for (const entry of child) visit(entry);
+        } else {
+          visit(child);
+        }
+      }
+    };
+    visit(declaration.body);
+  }
 }
 
 function analyzeStatement(statement: Statement, ctx: AnalyzeContext): void {
@@ -347,7 +590,13 @@ function analyzeWhileStatement(
   const { line, column } = locOf(statement);
   requireClockedShape(ctx, line, column);
 
-  const cond = analyzeExpr(statement.condition, ctx.declared, ctx.inputs, ctx.bagLocals);
+  const cond = analyzeExpr(
+    statement.condition,
+    ctx.declared,
+    ctx.inputs,
+    ctx.bagLocals,
+    expressionOptions(ctx),
+  );
   forbidBagInScalar(cond, ctx.bagLocals, line, column);
   const body = analyzeLoopBody(statement.body, ctx, { line, column });
 
@@ -381,8 +630,20 @@ function analyzeForNumericStatement(
     );
   }
 
-  const start = analyzeExpr(statement.start, ctx.declared, ctx.inputs, ctx.bagLocals);
-  const stop = analyzeExpr(statement.end, ctx.declared, ctx.inputs, ctx.bagLocals);
+  const start = analyzeExpr(
+    statement.start,
+    ctx.declared,
+    ctx.inputs,
+    ctx.bagLocals,
+    expressionOptions(ctx),
+  );
+  const stop = analyzeExpr(
+    statement.end,
+    ctx.declared,
+    ctx.inputs,
+    ctx.bagLocals,
+    expressionOptions(ctx),
+  );
   forbidBagInScalar(start, ctx.bagLocals, line, column);
   forbidBagInScalar(stop, ctx.bagLocals, line, column);
 
@@ -435,6 +696,7 @@ function analyzeLoopBody(
         ctx.inputs,
         ctx.bagLocals,
         inductionVar,
+        expressionOptions(ctx),
       );
       markReassigned(assign.name, ctx.reassigned, assign.line, assign.column);
       result.push({ kind: "assign", ...assign });
@@ -519,6 +781,11 @@ function forbidBagInScalar(
       forbidBagInScalar(expr.set, bagLocals, line, column);
       forbidBagInScalar(expr.reset, bagLocals, line, column);
       return;
+    case "edge":
+      forbidBagInScalar(expr.value, bagLocals, line, column);
+      return;
+    case "bag_test":
+      return;
     case "signal_count":
     case "signal_at":
       for (const arg of expr.args) {
@@ -568,6 +835,7 @@ function analyzeBranchAssign(
   inputs: AnalyzedProgram["inputs"],
   bagLocals: ReadonlySet<string>,
   inductionVar?: string,
+  options: ExpressionOptions = {},
 ): AnalyzedAssign {
   const { line, column } = locOf(statement);
   if (statement.type !== "AssignmentStatement") {
@@ -612,7 +880,7 @@ function analyzeBranchAssign(
     );
   }
 
-  const expr = analyzeExpr(initExpr, declared, inputs, bagLocals);
+  const expr = analyzeExpr(initExpr, declared, inputs, bagLocals, options);
   forbidBagInScalar(expr, bagLocals, line, column);
   return {
     name: target.name,
@@ -687,7 +955,14 @@ function analyzeBranchBody(
   for (const statement of body) {
     if (statement.type === "AssignmentStatement") {
       assigns.push(
-        analyzeBranchAssign(statement, ctx.declared, ctx.inputs, ctx.bagLocals, inductionVar),
+        analyzeBranchAssign(
+          statement,
+          ctx.declared,
+          ctx.inputs,
+          ctx.bagLocals,
+          inductionVar,
+          expressionOptions(ctx),
+        ),
       );
       continue;
     }
@@ -732,7 +1007,13 @@ function analyzeIfClauses(
     throw new SemanticError("if statement must start with an if clause", line, column);
   }
 
-  const cond = analyzeExpr(first.condition, ctx.declared, ctx.inputs, ctx.bagLocals);
+  const cond = analyzeExpr(
+    first.condition,
+    ctx.declared,
+    ctx.inputs,
+    ctx.bagLocals,
+    expressionOptions(ctx),
+  );
   forbidBagInScalar(cond, ctx.bagLocals, locOf(first).line, locOf(first).column);
   const thenAssigns = analyzeBranchBody(first.body, ctx, inductionVar);
 
@@ -757,6 +1038,7 @@ function analyzeIfClauses(
       ctx.declared,
       ctx.inputs,
       ctx.bagLocals,
+      expressionOptions(ctx),
     );
     forbidBagInScalar(elseifCond, ctx.bagLocals, clauseLoc.line, clauseLoc.column);
     return desugarConditionalAssigns(
@@ -838,7 +1120,13 @@ function analyzeAssignmentStatement(
   }
   markReassigned(name, ctx.reassigned, line, column);
 
-  const expr = analyzeExpr(initExpr, ctx.declared, ctx.inputs, ctx.bagLocals);
+  const expr = analyzeExpr(
+    initExpr,
+    ctx.declared,
+    ctx.inputs,
+    ctx.bagLocals,
+    expressionOptions(ctx),
+  );
   if (expr.kind === "sr") {
     if (expr.state.kind !== "ref" || expr.state.name !== name) {
       throw new SemanticError(
@@ -880,7 +1168,13 @@ function analyzeLocalStatement(statement: LocalStatement, ctx: AnalyzeContext): 
     );
   }
 
-  const expr = analyzeExpr(initExpr, ctx.declared, ctx.inputs, ctx.bagLocals);
+  const expr = analyzeExpr(
+    initExpr,
+    ctx.declared,
+    ctx.inputs,
+    ctx.bagLocals,
+    expressionOptions(ctx),
+  );
   if (isBagExpr(expr, ctx.bagLocals)) {
     ctx.bagLocals.add(name);
   } else {
@@ -926,7 +1220,13 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
     throw new SemanticError("output() requires a value expression", line, column);
   }
 
-  const expr = analyzeExpr(valueArg, ctx.declared, ctx.inputs, ctx.bagLocals);
+  const expr = analyzeExpr(
+    valueArg,
+    ctx.declared,
+    ctx.inputs,
+    ctx.bagLocals,
+    expressionOptions(ctx),
+  );
   if (!isBagExpr(expr, ctx.bagLocals)) {
     forbidBagInScalar(expr, ctx.bagLocals, line, column);
   }
@@ -938,6 +1238,7 @@ function analyzeExpr(
   declared: Set<string>,
   inputs: AnalyzedProgram["inputs"],
   bagLocals: ReadonlySet<string> = new Set(),
+  options: ExpressionOptions = {},
 ): AnalyzedExpr {
   const { line, column } = locOf(expr);
 
@@ -953,24 +1254,33 @@ function analyzeExpr(
       return { kind: "literal", value: expr.value, line, column };
     }
     case "Identifier": {
+      const substitution = options.substitutions?.get(expr.name);
+      if (substitution !== undefined) return substitution;
+      if (options.inFunction && options.mutableNames?.has(expr.name)) {
+        throw new SemanticError(
+          `function may not capture mutable local '${expr.name}'`,
+          line,
+          column,
+        );
+      }
       if (!declared.has(expr.name)) {
         throw new SemanticError(`undefined variable '${expr.name}'`, line, column);
       }
       return { kind: "ref", name: expr.name, line, column };
     }
     case "BinaryExpression":
-      return analyzeBinaryExpr(expr, declared, inputs, bagLocals);
+      return analyzeBinaryExpr(expr, declared, inputs, bagLocals, options);
     case "LogicalExpression":
       return {
         kind: "logical",
         op: expr.operator,
-        left: analyzeExpr(expr.left, declared, inputs, bagLocals),
-        right: analyzeExpr(expr.right, declared, inputs, bagLocals),
+        left: analyzeExpr(expr.left, declared, inputs, bagLocals, options),
+        right: analyzeExpr(expr.right, declared, inputs, bagLocals, options),
         line,
         column,
       };
     case "CallExpression":
-      return analyzeCallExpr(expr, declared, inputs, bagLocals);
+      return analyzeCallExpr(expr, declared, inputs, bagLocals, options);
     case "StringLiteral":
       throw new SemanticError(
         "string literals are only allowed as input()/output() signal names in v1",
@@ -991,6 +1301,7 @@ function analyzeBinaryExpr(
   declared: Set<string>,
   inputs: AnalyzedProgram["inputs"],
   bagLocals: ReadonlySet<string> = new Set(),
+  options: ExpressionOptions = {},
 ): AnalyzedExpr {
   const { line, column } = locOf(expr);
 
@@ -998,8 +1309,8 @@ function analyzeBinaryExpr(
     throw new SemanticError(`unsupported operator '${expr.operator}'`, line, column);
   }
 
-  const left = analyzeExpr(expr.left, declared, inputs, bagLocals);
-  const right = analyzeExpr(expr.right, declared, inputs, bagLocals);
+  const left = analyzeExpr(expr.left, declared, inputs, bagLocals, options);
+  const right = analyzeExpr(expr.right, declared, inputs, bagLocals, options);
 
   if (ARITH_OPS.has(expr.operator)) {
     return { kind: "binop", op: expr.operator as ArithOp, left, right, line, column };
@@ -1007,11 +1318,110 @@ function analyzeBinaryExpr(
   return { kind: "cmp", op: expr.operator as CmpOp, left, right, line, column };
 }
 
+function inlineFunctionCall(
+  declaration: FunctionInfo,
+  call: CallExpression,
+  declared: Set<string>,
+  inputs: AnalyzedProgram["inputs"],
+  bagLocals: ReadonlySet<string>,
+  options: ExpressionOptions,
+  line: number,
+  column: number,
+): AnalyzedExpr {
+  if (call.arguments.length !== declaration.parameters.length) {
+    throw new SemanticError(
+      `function '${declaration.name}' requires exactly ${declaration.parameters.length} argument${declaration.parameters.length === 1 ? "" : "s"}`,
+      line,
+      column,
+    );
+  }
+
+  const substitutions = new Map(options.substitutions);
+  for (let index = 0; index < declaration.parameters.length; index += 1) {
+    substitutions.set(
+      declaration.parameters[index]!,
+      analyzeExpr(call.arguments[index]!, declared, inputs, bagLocals, options),
+    );
+  }
+
+  const functionDeclared = new Set(declared);
+  const functionBags = new Set(bagLocals);
+  const functionLocalNames = new Set(declaration.parameters);
+  for (const parameter of declaration.parameters) {
+    functionDeclared.add(parameter);
+  }
+
+  const body = declaration.body;
+  const last = body.at(-1);
+  if (last?.type !== "ReturnStatement") {
+    throw new SemanticError(
+      `function '${declaration.name}' body must end with exactly one return expression`,
+      declaration.line,
+      declaration.column,
+    );
+  }
+
+  for (const statement of body.slice(0, -1)) {
+    const { line: statementLine, column: statementColumn } = locOf(statement);
+    if (statement.type !== "LocalStatement") {
+      throw new SemanticError(
+        `function '${declaration.name}' body may only contain local declarations followed by return`,
+        statementLine,
+        statementColumn,
+      );
+    }
+    const variable = statement.variables.length === 1 ? statement.variables[0] : undefined;
+    const initializer = statement.init.length === 1 ? statement.init[0] : undefined;
+    if (variable === undefined || initializer === undefined) {
+      throw new SemanticError(
+        "function local declarations must declare one initialized variable",
+        statementLine,
+        statementColumn,
+      );
+    }
+    if (functionLocalNames.has(variable.name)) {
+      throw new SemanticError(
+        `function local '${variable.name}' is already defined`,
+        statementLine,
+        statementColumn,
+      );
+    }
+    const value = analyzeExpr(initializer, functionDeclared, inputs, functionBags, {
+      ...options,
+      substitutions,
+      inFunction: true,
+    });
+    if (isBagExpr(value, functionBags)) {
+      functionBags.add(variable.name);
+    } else {
+      forbidBagInScalar(value, functionBags, statementLine, statementColumn);
+    }
+    functionDeclared.add(variable.name);
+    functionLocalNames.add(variable.name);
+    substitutions.set(variable.name, value);
+  }
+
+  if (last.arguments.length !== 1) {
+    const { line: returnLine, column: returnColumn } = locOf(last);
+    throw new SemanticError(
+      `function '${declaration.name}' must return exactly one expression`,
+      returnLine,
+      returnColumn,
+    );
+  }
+  return analyzeExpr(last.arguments[0]!, functionDeclared, inputs, functionBags, {
+    ...options,
+    substitutions,
+    inFunction: true,
+  });
+}
+
 function analyzeCallExpr(
   expr: CallExpression,
   declared: Set<string>,
   inputs: AnalyzedProgram["inputs"],
   bagLocals: ReadonlySet<string> = new Set(),
+  options: ExpressionOptions = {},
 ): AnalyzedExpr {
   const { line, column } = locOf(expr);
   const calleeName = describeCallee(expr.base);
@@ -1026,13 +1436,35 @@ function analyzeCallExpr(
 
   rejectTickInExpression(calleeName, line, column);
 
+  if (calleeName === "input" && options.inFunction) {
+    throw new SemanticError("input() is only allowed at the top level", line, column);
+  }
+
+  if (calleeName === "sr" && options.inFunction) {
+    throw new SemanticError("sr() is not allowed in a function body", line, column);
+  }
+
+  const functionDeclaration = calleeName ? options.functions?.get(calleeName) : undefined;
+  if (functionDeclaration !== undefined) {
+    return inlineFunctionCall(
+      functionDeclaration,
+      expr,
+      declared,
+      inputs,
+      bagLocals,
+      options,
+      line,
+      column,
+    );
+  }
+
   if (calleeName === "sr") {
     if (expr.arguments.length !== 3) {
       throw new SemanticError("sr(state, set, reset) requires exactly 3 arguments", line, column);
     }
-    const state = analyzeExpr(expr.arguments[0]!, declared, inputs, bagLocals);
-    const set = analyzeExpr(expr.arguments[1]!, declared, inputs, bagLocals);
-    const reset = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals);
+    const state = analyzeExpr(expr.arguments[0]!, declared, inputs, bagLocals, options);
+    const set = analyzeExpr(expr.arguments[1]!, declared, inputs, bagLocals, options);
+    const reset = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals, options);
     return { kind: "sr", state, set, reset, line, column };
   }
 
@@ -1042,7 +1474,7 @@ function analyzeCallExpr(
     }
     return {
       kind: "signal_count",
-      args: expr.arguments.map((arg) => analyzeExpr(arg, declared, inputs, bagLocals)),
+      args: expr.arguments.map((arg) => analyzeExpr(arg, declared, inputs, bagLocals, options)),
       line,
       column,
     };
@@ -1077,7 +1509,7 @@ function analyzeCallExpr(
       ascending: calleeName === "signal_at_asc",
       args: expr.arguments
         .slice(1)
-        .map((arg) => analyzeExpr(arg, declared, inputs, bagLocals)),
+        .map((arg) => analyzeExpr(arg, declared, inputs, bagLocals, options)),
       line,
       column,
     };
@@ -1126,7 +1558,7 @@ function analyzeCallExpr(
           locOf(highArg).column,
         );
       }
-      const level = analyzeExpr(levelArg, declared, inputs, bagLocals);
+      const level = analyzeExpr(levelArg, declared, inputs, bagLocals, options);
       forbidBagInScalar(level, bagLocals, locOf(levelArg).line, locOf(levelArg).column);
       entries.push({
         level,
@@ -1190,8 +1622,8 @@ function analyzeCallExpr(
         locOf(opArg).column,
       );
     }
-    const left = analyzeExpr(expr.arguments[1]!, declared, inputs, bagLocals);
-    const right = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals);
+    const left = analyzeExpr(expr.arguments[1]!, declared, inputs, bagLocals, options);
+    const right = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals, options);
     if (!isBagExpr(left, bagLocals)) {
       throw new SemanticError("bag_arith left operand must be a bag expression", line, column);
     }
@@ -1220,8 +1652,8 @@ function analyzeCallExpr(
         locOf(modeArg).column,
       );
     }
-    const data = analyzeExpr(expr.arguments[1]!, declared, inputs, bagLocals);
-    const mask = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals);
+    const data = analyzeExpr(expr.arguments[1]!, declared, inputs, bagLocals, options);
+    const mask = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals, options);
     if (!isBagExpr(data, bagLocals)) {
       throw new SemanticError("bag_filter data operand must be a bag expression", line, column);
     }
@@ -1229,6 +1661,65 @@ function analyzeCallExpr(
       throw new SemanticError("bag_filter mask operand must be a bag expression", line, column);
     }
     return { kind: "bag_filter", mode: modeArg.value, data, mask, line, column };
+  }
+
+  if (calleeName === "bag_test") {
+    if (expr.arguments.length !== 4) {
+      throw new SemanticError(
+        'bag_test("any"|"every", op, bag, threshold) requires exactly 4 arguments',
+        line,
+        column,
+      );
+    }
+    const modeArg = expr.arguments[0]!;
+    const opArg = expr.arguments[1]!;
+    const bag = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals, options);
+    const thresholdArg = expr.arguments[3]!;
+    if (
+      modeArg.type !== "StringLiteral" ||
+      (modeArg.value !== "any" && modeArg.value !== "every")
+    ) {
+      throw new SemanticError(
+        'bag_test mode must be "any" or "every"',
+        locOf(modeArg).line,
+        locOf(modeArg).column,
+      );
+    }
+    if (opArg.type !== "StringLiteral" || !CMP_OPS.has(opArg.value)) {
+      throw new SemanticError(
+        'bag_test op must be "<", ">", "<=", ">=", "==", or "~="',
+        locOf(opArg).line,
+        locOf(opArg).column,
+      );
+    }
+    if (!isBagExpr(bag, bagLocals)) {
+      throw new SemanticError("bag_test bag operand must be a bag expression", line, column);
+    }
+    if (thresholdArg.type !== "NumericLiteral" || !Number.isInteger(thresholdArg.value)) {
+      throw new SemanticError(
+        "bag_test threshold must be an integer literal",
+        locOf(thresholdArg).line,
+        locOf(thresholdArg).column,
+      );
+    }
+    return {
+      kind: "bag_test",
+      mode: modeArg.value,
+      op: opArg.value as CmpOp,
+      bag,
+      value: thresholdArg.value,
+      line,
+      column,
+    };
+  }
+
+  if (calleeName === "edge") {
+    if (expr.arguments.length !== 1) {
+      throw new SemanticError("edge(value) requires exactly 1 argument", line, column);
+    }
+    const value = analyzeExpr(expr.arguments[0]!, declared, inputs, bagLocals, options);
+    forbidBagInScalar(value, bagLocals, line, column);
+    return { kind: "edge", value, line, column };
   }
 
   if (calleeName !== "input") {

@@ -476,6 +476,125 @@ exports[`golden examples > bag_filter > compiles to a blueprint JSON plan matchi
 }
 `;
 
+exports[`golden examples > bag_wildcards > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "sections": {
+            "sections": [
+              {
+                "filters": [
+                  {
+                    "count": 2,
+                    "index": 1,
+                    "name": "signal-A",
+                    "type": "virtual",
+                  },
+                  {
+                    "count": 5,
+                    "index": 2,
+                    "name": "signal-B",
+                    "type": "virtual",
+                  },
+                ],
+                "index": 1,
+              },
+            ],
+          },
+        },
+        "entity_number": 1,
+        "name": "constant-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": "<",
+                "constant": 3,
+                "first_signal": {
+                  "name": "signal-anything",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 1,
+                "signal": {
+                  "name": "__t2",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 2,
+        "name": "decider-combinator",
+        "position": {
+          "x": 2,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": ">",
+                "constant": 1,
+                "first_signal": {
+                  "name": "signal-everything",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 1,
+                "signal": {
+                  "name": "__t3",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 3,
+        "name": "decider-combinator",
+        "position": {
+          "x": 4,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "bag_wildcards",
+    "wires": [
+      [
+        1,
+        2,
+        2,
+        2,
+      ],
+      [
+        1,
+        2,
+        3,
+        2,
+      ],
+    ],
+  },
+}
+`;
+
 exports[`golden examples > clamp > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {
@@ -551,6 +670,162 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         1,
         4,
         2,
+        2,
+      ],
+    ],
+  },
+}
+`;
+
+exports[`golden examples > clamp_fn > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": ">",
+                "constant": 100,
+                "first_signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "else_outputs": [
+              {
+                "copy_count_from_input": true,
+                "signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 100,
+                "signal": {
+                  "name": "__t7",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 1,
+        "name": "decider-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "signal-each",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t11",
+              "type": "virtual",
+            },
+            "second_constant": 0,
+          },
+        },
+        "entity_number": 2,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 2,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": "<",
+                "constant": 2,
+                "first_signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "else_outputs": [
+              {
+                "copy_count_from_input": true,
+                "signal": {
+                  "name": "__t11",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 2,
+                "signal": {
+                  "name": "__t2",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 3,
+        "name": "decider-combinator",
+        "position": {
+          "x": 4,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "signal-each",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t12",
+              "type": "virtual",
+            },
+            "second_constant": 0,
+          },
+        },
+        "entity_number": 4,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 6,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "clamp_fn",
+    "wires": [
+      [
+        1,
+        4,
+        2,
+        2,
+      ],
+      [
+        2,
+        4,
+        3,
+        2,
+      ],
+      [
+        3,
+        4,
+        4,
         2,
       ],
     ],
@@ -965,6 +1240,90 @@ exports[`golden examples > each_latch > compiles to a blueprint JSON plan matchi
         3,
         2,
         1,
+      ],
+    ],
+  },
+}
+`;
+
+exports[`golden examples > edge > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "__t1",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t2__previous",
+              "type": "virtual",
+            },
+            "second_constant": 0,
+          },
+        },
+        "entity_number": 1,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": ">",
+                "first_signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": false,
+                  "red": true,
+                },
+                "second_signal": {
+                  "name": "__t2__previous",
+                  "type": "virtual",
+                },
+                "second_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 1,
+                "signal": {
+                  "name": "__t2",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 2,
+        "name": "decider-combinator",
+        "position": {
+          "x": 2,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "edge",
+    "wires": [
+      [
+        1,
+        4,
+        2,
+        2,
       ],
     ],
   },

@@ -206,4 +206,53 @@ describe("simulate", () => {
       "signal-C": 9,
     });
   });
+
+  it("edge emits a one-tick pulse for each rising scalar input", () => {
+    const graph = graphOf(`
+      local level = input("signal-L")
+      local pulse = edge(level)
+      output("signal-P", pulse)
+    `);
+    const edge = graph.entities.find((entity) => entity.label === "edge");
+    expect(edge?.control_behavior.decider_conditions).toMatchObject({
+      conditions: [
+        {
+          comparator: ">",
+          first_signal_networks: { red: true, green: false },
+          second_signal_networks: { red: false, green: true },
+        },
+      ],
+    });
+    const result = simulate(graph, {
+      ticks: 8,
+      entityOutputs: true,
+      inputs: (tick) => ({ "signal-L": [0, 3, 3, 0, 2, 2, 0, 0][tick] ?? 0 }),
+    });
+    expect(result.ticks.map((tick) => tick.entities?.[edge!.id]?.[edge!.outputSignal] ?? 0)).toEqual([
+      0, 1, 0, 0, 1, 0, 0, 0,
+    ]);
+  });
+
+  it("bag_test emits ANYTHING and EVERYTHING wildcard deciders", () => {
+    const graph = graphOf(`
+      local bag = bag_const("signal-A", 2, "signal-B", 5)
+      local any = bag_test("any", ">", bag, 4)
+      local every = bag_test("every", ">", bag, 1)
+      output("signal-A", any)
+      output("signal-B", every)
+    `);
+    const tests = graph.entities.filter((entity) => entity.label?.startsWith("bag "));
+    expect(tests[0]?.control_behavior.decider_conditions).toMatchObject({
+      conditions: [
+        expect.objectContaining({ first_signal: expect.objectContaining({ name: "signal-anything" }) }),
+      ],
+    });
+    expect(tests[1]?.control_behavior.decider_conditions).toMatchObject({
+      conditions: [
+        expect.objectContaining({ first_signal: expect.objectContaining({ name: "signal-everything" }) }),
+      ],
+    });
+    const result = simulate(graph, { ticks: 3 });
+    expect(result.ticks[2]?.outputs).toMatchObject({ "signal-A": 1, "signal-B": 1 });
+  });
 });

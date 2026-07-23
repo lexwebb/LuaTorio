@@ -69,6 +69,8 @@ export interface CircuitGraph {
 
 /** Factorio logic signal used for per-signal arithmetic (wiki EACH). */
 const SIGNAL_EACH = "signal-each";
+const SIGNAL_EVERYTHING = "signal-everything";
+const SIGNAL_ANYTHING = "signal-anything";
 
 function signalRef(name: string): { type: "virtual"; name: string } {
   return { type: "virtual", name };
@@ -1599,6 +1601,70 @@ function lowerBagFilter(node: Extract<IRNode, { kind: "bag_filter" }>): {
   };
 }
 
+/** Cookbook 19: compare a scalar value with its one-tick delayed copy. */
+function lowerEdge(node: Extract<IRNode, { kind: "edge" }>): {
+  entities: CircuitEntity[];
+  wires: WireEdge[];
+} {
+  const previousId = `${node.id}__previous`;
+  return {
+    entities: [
+      { ...lowerRename(previousId, node.value), role: "latch" },
+      {
+        id: node.id,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: node.id,
+        label: "edge",
+        control_behavior: {
+          decider_conditions: {
+            conditions: [
+              {
+                first_signal: signalRef(node.value),
+                first_signal_networks: NET_RED,
+                comparator: ">",
+                second_signal: signalRef(previousId),
+                second_signal_networks: NET_GREEN,
+              },
+            ],
+            outputs: [{ signal: signalRef(node.id), constant: 1 }],
+          },
+        },
+      },
+    ],
+    wires: [greenWire(node.value, previousId), redWire(node.value, node.id), greenWire(previousId, node.id)],
+  };
+}
+
+/** One wildcard decider: ANYTHING/EVERYTHING in, constant 1 when the predicate passes. */
+function lowerBagTest(node: Extract<IRNode, { kind: "bag_test" }>): {
+  entity: CircuitEntity;
+  wires: WireEdge[];
+} {
+  return {
+    entity: {
+      id: node.id,
+      kind: "decider",
+      name: "decider-combinator",
+      outputSignal: node.id,
+      label: `bag ${node.mode}`,
+      control_behavior: {
+        decider_conditions: {
+          conditions: [
+            {
+              first_signal: signalRef(node.mode === "any" ? SIGNAL_ANYTHING : SIGNAL_EVERYTHING),
+              comparator: COMPARATOR[node.op],
+              constant: node.value,
+            },
+          ],
+          outputs: [{ signal: signalRef(node.id), constant: 1 }],
+        },
+      },
+    },
+    wires: [greenWire(node.bag, node.id)],
+  };
+}
+
 /**
  * Fuse `store(mem, select(en, next, mem))` into an enable/hold latch.
  *
@@ -2183,6 +2249,18 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         wires.push(...lowered.wires);
         break;
       }
+      case "edge": {
+        const lowered = lowerEdge(node);
+        entities.push(...lowered.entities);
+        wires.push(...lowered.wires);
+        break;
+      }
+      case "bag_test": {
+        const lowered = lowerBagTest(node);
+        entities.push(lowered.entity);
+        wires.push(...lowered.wires);
+        break;
+      }
       case "signal_at": {
         const { entity, wires: atWires } = lowerSignalAt(node);
         entities.push(entity);
@@ -2287,6 +2365,16 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
+      case "edge":
+        if (node.value === id) {
+          users.push(node);
+        }
+        break;
+      case "bag_test":
+        if (node.bag === id) {
+          users.push(node);
+        }
+        break;
       case "signal_at":
         if (node.args.includes(id)) {
           users.push(node);
@@ -2355,6 +2443,12 @@ function countNodeUses(module: IRModule): Map<string, number> {
       case "bag_filter":
         add(node.data);
         add(node.mask);
+        break;
+      case "edge":
+        add(node.value);
+        break;
+      case "bag_test":
+        add(node.bag);
         break;
       case "signal_at":
         for (const arg of node.args) {

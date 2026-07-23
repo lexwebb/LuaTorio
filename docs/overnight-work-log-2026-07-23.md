@@ -62,4 +62,23 @@
   non-combinator entities and no automatic placed-entity wiring.
 - Linked the roadmap slice and README language reference; no emit work was started.
 
+### T5 — #60–#63 cookbook follow-ups
+- #60 deferred: cookbook 9 cannot replace an existing bag-memory emit with a clear size win;
+  design note records the `each_latch` + `bag_filter` composition recipe.
+- #61: shipped scalar `edge(value)` as the cookbook's arithmetic delay plus red/green decider;
+  pulse extension remains an `sr(edge(...), reset)` composition until stateful bags exist.
+- #62: shipped `bag_test("any"|"every", comparator, bag, threshold)`, one wildcard decider
+  using `ANYTHING`/`EVERYTHING`; added examples and simulator proof.
+- #63 deferred: `sr(active, level > high, level < low)` is already the two-combinator hysteresis
+  composition, so a dedicated builtin has no demonstrated win.
+- Verification blocker: full typecheck/test is currently red in pre-existing in-progress #67
+  function work (`analyze.ts` luaparse typing / `inlineFunctionCall`, and `clamp_fn` test).
+
+### T6 — #68 v3 user functions (DONE)
+- Added prefix-only `local function` declarations with pure local/return bodies.
+- Calls expand during analysis through parameter and function-local substitution into the existing
+  scalar/bag expression tree; no call IR or runtime support was added.
+- Added immutable capture validation, call-graph recursion-cycle detection (`v4` diagnostic),
+  `clamp_fn.lua`, analyzer/simulation coverage, README language reference, and a clamp golden.
+
 ---

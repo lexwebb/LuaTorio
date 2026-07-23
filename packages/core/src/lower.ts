@@ -126,6 +126,21 @@ function lowerExpr(
       const mask = lowerExpr(expr.mask, env, ctx);
       return pushNode(ctx, { kind: "bag_filter", id: nextId(ctx), mode: expr.mode, data, mask });
     }
+    case "edge": {
+      const value = lowerExpr(expr.value, env, ctx);
+      return pushNode(ctx, { kind: "edge", id: nextId(ctx), value });
+    }
+    case "bag_test": {
+      const bag = lowerExpr(expr.bag, env, ctx);
+      return pushNode(ctx, {
+        kind: "bag_test",
+        id: nextId(ctx),
+        mode: expr.mode,
+        op: expr.op,
+        bag,
+        value: expr.value,
+      });
+    }
     case "signal_at": {
       const args = expr.args.map((arg) => lowerExpr(arg, env, ctx));
       return pushNode(ctx, {

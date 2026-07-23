@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T22:26:23.397Z",
+  "generatedAt": "2026-07-23T22:32:50.916Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -72,6 +72,23 @@
       "muxShare": 0
     },
     {
+      "name": "bag_wildcards",
+      "source": "example",
+      "kind": "example",
+      "combinators": 5,
+      "wires": 4,
+      "buckets": {
+        "latch": 0,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 2,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
       "name": "clamp",
       "source": "example",
       "kind": "example",
@@ -83,6 +100,23 @@
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 1,
+        "constant_value": 0,
+        "placeholder_io": 2
+      },
+      "muxShare": 0.5
+    },
+    {
+      "name": "clamp_fn",
+      "source": "example",
+      "kind": "example",
+      "combinators": 6,
+      "wires": 6,
+      "buckets": {
+        "latch": 0,
+        "mux_side": 2,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 2,
         "constant_value": 0,
         "placeholder_io": 2
       },
@@ -153,6 +187,23 @@
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 4
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "edge",
+      "source": "example",
+      "kind": "example",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 1,
+        "arithmetic_other": 0,
+        "constant_value": 0,
+        "placeholder_io": 2
       },
       "muxShare": 0
     },
@@ -3713,30 +3764,30 @@
     }
   ],
   "totals": {
-    "programs": 218,
-    "combinators": 835,
+    "programs": 221,
+    "combinators": 850,
     "buckets": {
-      "latch": 203,
-      "mux_side": 51,
+      "latch": 204,
+      "mux_side": 53,
       "mux_merge": 0,
-      "decider_other": 5,
-      "arithmetic_other": 61,
-      "constant_value": 108,
-      "placeholder_io": 407
+      "decider_other": 8,
+      "arithmetic_other": 63,
+      "constant_value": 109,
+      "placeholder_io": 413
     },
-    "muxShareMean": 0.05871559633027523
+    "muxShareMean": 0.060180995475113123
   },
   "opportunities": [
     {
       "id": "latch-tricks",
       "title": "Tighter latches (EACH / SR / absorb more into latch)",
-      "evidence": "Latches are 47% of real entities (203 total). While-kind programs avg 4.0 combinators.",
+      "evidence": "Latches are 47% of real entities (204 total). While-kind programs avg 4.0 combinators.",
       "estimatedImpact": "high"
     },
     {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=61, other deciders=5 (graph; blueprints omit 407 I/O pads).",
+      "evidence": "Non-mux arith=63, other deciders=8 (graph; blueprints omit 413 I/O pads).",
       "estimatedImpact": "medium"
     },
     {

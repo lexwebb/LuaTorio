@@ -76,6 +76,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 |---|---|
 | [`adder.lua`](examples/adder.lua) | Two inputs, arithmetic (`+`) |
 | [`clamp.lua`](examples/clamp.lua) | Clamping a value into a range via `and`/`or` |
+| [`clamp_fn.lua`](examples/clamp_fn.lua) | v3 reusable `local function` clamp, inlined at calls |
 | [`mux.lua`](examples/mux.lua) | 2-to-1 multiplexer (`select`) via `and`/`or` |
 | [`comparison-chain.lua`](examples/comparison-chain.lua) | Comparisons (`<`) chained with `and` |
 | [`counter.lua`](examples/counter.lua) | v2 memory: free-running counter (`x = x + 1`) |
@@ -109,6 +110,7 @@ Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain mac
 | Construct | Notes |
 |---|---|
 | `local x = <expr>` | Every local must be initialized |
+| `local function f(params) local x = <expr> … return <expr> end` | Prefix-only pure helper declaration; calls are fully inlined, with immutable outer-local captures |
 | `x = <expr>` | Next-state assignment (at most one per variable); promotes `x` to a memory cell |
 | `if` / `elseif` / `else` | Muxes next-state stores (`select`); nested `if` allowed; omitted branch holds previous value |
 | `while cond do … tick() end` | Clocked loop: at most one per program; body ends with `tick()` |
@@ -144,9 +146,13 @@ tick. Unreassigned locals stay combinational (v1 SSA).
 **Clocked loops (v2 phase 3):** `while`/`for` desugar onto flat IR with a synthetic `__run`
 latch and enable-gated stores (no CFG/phi). `repeat` and generic `for` are rejected.
 
-Not yet supported: `function` (v3:
-[#67](https://github.com/lexwebb/LuaTorio/issues/67)/[#68](https://github.com/lexwebb/LuaTorio/issues/68)),
-tables (v4: [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70)),
+**Functions (v3):** `local function` declarations must be a program prefix. Their bodies contain
+only immutable `local` declarations followed by one `return` expression. They cannot use I/O,
+assignments, control flow, `tick()`, `sr()`, or capture mutable locals. Functions may call other
+declared helpers, but recursion is rejected (planned for v4); every call is expanded into the
+existing scalar/bag expression graph.
+
+Not yet supported: tables (v4: [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70)),
 recursion ([#71](https://github.com/lexwebb/LuaTorio/issues/71)), entity placement (v5:
 [#72](https://github.com/lexwebb/LuaTorio/issues/72)/[#73](https://github.com/lexwebb/LuaTorio/issues/73)).
 Unsupported constructs raise a `SemanticError` naming the construct and its planned version.

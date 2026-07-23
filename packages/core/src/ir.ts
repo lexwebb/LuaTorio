@@ -41,6 +41,10 @@ export type IRNode =
       data: string;
       mask: string;
     }
+  /** Scalar rising edge: current input is greater than its one-tick delayed value. */
+  | { kind: "edge"; id: string; value: string }
+  /** Test all or any present channels in a bag against a literal threshold. */
+  | { kind: "bag_test"; id: string; mode: "any" | "every"; op: CmpOp; bag: string; value: number }
   /**
    * Selector rank/index (#47): pick the Nth nonzero arg by value.
    * `ascending` → Factorio `select_max: false` (index 0 = minimum).

@@ -174,19 +174,91 @@ describe("analyze", () => {
     expect(() => analyze(ast)).toThrow(/assignments and if/i);
   });
 
-  it("rejects function declarations as planned for v3", () => {
+  it("inlines local function calls into their callers", () => {
     const ast = parse(`
-      function f(x)
-        return x
+      local function clamp(value, lo, hi)
+        local below = value < lo
+        local above = value > hi
+        return below and lo or (above and hi or value)
       end
-      output("signal-A", 1)
+      local raw = input("signal-A")
+      output("signal-B", clamp(raw, 0, 100))
     `);
 
-    expect(() => analyze(ast)).toThrow(/function/i);
+    const program = analyze(ast);
+    expect(program.statements).toHaveLength(1);
+    expect(program.outputs[0]).toMatchObject({
+      signal: "signal-B",
+      expr: { kind: "logical" },
+    });
+  });
+
+  it("allows an immutable outer-local capture", () => {
+    const ast = parse(`
+      local function capped(x)
+        return x < scale and x or scale
+      end
+      local scale = 10
+      output("signal-A", capped(input("signal-B")))
+    `);
+
+    expect(() => analyze(ast)).not.toThrow();
+  });
+
+  it("inlines bag-valued helper returns in bag contexts", () => {
+    const ast = parse(`
+      local function included(data, mask)
+        return bag_filter("include", data, mask)
+      end
+      local data = bag_const("signal-A", 5)
+      local mask = bag_const("signal-A", 1)
+      output("signal-A", included(data, mask))
+    `);
+
+    expect(analyze(ast).outputs[0]?.expr).toMatchObject({ kind: "bag_filter", mode: "include" });
+  });
+
+  it("rejects mutable function captures", () => {
+    const ast = parse(`
+      local function bad(x)
+        return x + total
+      end
+      local total = 0
+      total = total + 1
+      output("signal-A", bad(1))
+    `);
+
+    expect(() => analyze(ast)).toThrow(/mutable local 'total'/);
+  });
+
+  it("rejects function bodies other than locals followed by return", () => {
+    const ast = parse(`
+      local function bad(x)
+        x = x + 1
+        return x
+      end
+      output("signal-A", bad(1))
+    `);
+
+    expect(() => analyze(ast)).toThrow(/local declarations followed by return/);
+  });
+
+  it("rejects recursive function cycles as planned for v4", () => {
+    const ast = parse(`
+      local function a(x)
+        return b(x)
+      end
+      local function b(x)
+        return a(x)
+      end
+      output("signal-A", a(1))
+    `);
+
+    expect(() => analyze(ast)).toThrow(/recursive function call cycle: a -> b -> a/);
     try {
       analyze(ast);
     } catch (error) {
-      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v3" });
+      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v4" });
     }
   });
 
