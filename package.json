@@ -13,7 +13,8 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "dev:web": "pnpm --filter @luatorio/web dev",
-    "build:web": "pnpm --filter @luatorio/core build && pnpm --filter @luatorio/web build"
+    "build:web": "pnpm --filter @luatorio/core build && pnpm --filter @luatorio/web build",
+    "rip:cookbook": "node scripts/rip-cookbook-2.0.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",

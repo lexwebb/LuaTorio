@@ -30,6 +30,8 @@
         "packages/core/src/combinators.ts",
         "packages/core/src/combinators.test.ts",
         "packages/core/src/ir.ts",
+        "packages/core/src/ir-match.ts",
+        "packages/core/src/ir-match.test.ts",
         "packages/core/src/lower.ts",
         "packages/core/src/lower.test.ts",
         "packages/core/src/optimize.ts",

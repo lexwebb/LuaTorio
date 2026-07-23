@@ -64,7 +64,7 @@ function sumInputNets(
 
 /**
  * Seed latch Q from non-empty constants that share an input net with the latch.
- * Same semantics as directed `seedLatchOutputs`.
+ * Same semantics as directed `seedLatchOutputs` (incl. multi-signal `latchSeeds`).
  */
 function seedLatchOutputs(
   circuit: ImportedCircuit,
@@ -73,6 +73,14 @@ function seedLatchOutputs(
 ): void {
   for (const entity of circuit.entities) {
     if (entity.role !== "latch") {
+      continue;
+    }
+    const bag = emptyBag();
+    if (entity.latchSeeds !== undefined) {
+      for (const [signal, count] of Object.entries(entity.latchSeeds)) {
+        bagSet(bag, signal, count);
+      }
+      outputs.set(entity.id, bag);
       continue;
     }
     let seed = 0;
@@ -87,7 +95,6 @@ function seedLatchOutputs(
         found = true;
       }
     });
-    const bag = emptyBag();
     if (found) {
       bagSet(bag, entity.outputSignal, seed);
     }
@@ -133,11 +140,31 @@ function readOutputPort(
   port: { signal: string; entityId: string },
   circuit: ImportedCircuit,
   outputs: ReadonlyMap<string, SignalBag>,
+  entityById: ReadonlyMap<string, CircuitEntity>,
 ): number {
   const net = sumInputNets(port.entityId, circuit, outputs);
-  const named = bagGet(net, port.signal);
-  if (named !== 0 || net.has(port.signal)) {
-    return named;
+  if (net.has(port.signal)) {
+    return bagGet(net, port.signal);
+  }
+  let fromEachBag = false;
+  forEachProducerOnInputNets(port.entityId, circuit, (producerId) => {
+    if (entityById.get(producerId)?.outputSignal === "signal-each") {
+      fromEachBag = true;
+    }
+  });
+  if (fromEachBag) {
+    return 0;
+  }
+  // Prefer the producer's declared output signal (fused clocks also emit `__run`, etc.).
+  const preferred: number[] = [];
+  forEachProducerOnInputNets(port.entityId, circuit, (producerId) => {
+    const sig = entityById.get(producerId)?.outputSignal;
+    if (sig !== undefined && net.has(sig)) {
+      preferred.push(bagGet(net, sig));
+    }
+  });
+  if (preferred.length > 0) {
+    return preferred[0] ?? 0;
   }
   let sum = 0;
   for (const count of net.values()) {
@@ -149,10 +176,11 @@ function readOutputPort(
 function sampleOutputs(
   circuit: ImportedCircuit,
   outputs: ReadonlyMap<string, SignalBag>,
+  entityById: ReadonlyMap<string, CircuitEntity>,
 ): Record<string, number> {
   const tickOutputs: Record<string, number> = {};
   for (const port of circuit.outputs) {
-    tickOutputs[port.signal] = readOutputPort(port, circuit, outputs);
+    tickOutputs[port.signal] = readOutputPort(port, circuit, outputs, entityById);
   }
   return tickOutputs;
 }
@@ -217,7 +245,7 @@ function simulateLatchSync(circuit: ImportedCircuit, opts: SimulateOptions): Sim
     }
     sequentialUpdate(latches, circuit, outputs);
 
-    ticks.push({ outputs: sampleOutputs(circuit, outputs) });
+    ticks.push({ outputs: sampleOutputs(circuit, outputs, entityById) });
   }
 
   return { ticks };
@@ -232,7 +260,7 @@ function simulateFactorioParallel(circuit: ImportedCircuit, opts: SimulateOption
     applyInputInjection(circuit, entityById, outputs, resolveInputs(opts.inputs, tick));
     refreshConstants(circuit, outputs, inputEntityIds);
     parallelUpdate(delayed, circuit, outputs);
-    ticks.push({ outputs: sampleOutputs(circuit, outputs) });
+    ticks.push({ outputs: sampleOutputs(circuit, outputs, entityById) });
   }
 
   return { ticks };
@@ -254,7 +282,7 @@ function simulateFactorio(circuit: ImportedCircuit, opts: SimulateOptions): Simu
     }
     parallelUpdate(latches, circuit, outputs);
 
-    ticks.push({ outputs: sampleOutputs(circuit, outputs) });
+    ticks.push({ outputs: sampleOutputs(circuit, outputs, entityById) });
   }
 
   return { ticks };

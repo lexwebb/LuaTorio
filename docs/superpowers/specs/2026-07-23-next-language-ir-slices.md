@@ -1,7 +1,7 @@
 # Next Language / IR Slices (Emit Size + Interop Hooks)
 
 **Date:** 2026-07-23  
-**Status:** P0 done (#38); language roadmap issues filed  
+**Status:** P0–P2 landed on main (integration); language roadmap issues filed  
 **Issues:** #38 (SR), #46/`each_latch`, #47/`signal_at`, #39–#41 interop; language track #65–#73
 
 ## Context
@@ -81,15 +81,19 @@ Plus Q feedback wire; nonzero init via existing latch seed.
 - [x] Example `examples/sr_latch.lua` + golden
 - [x] README note + safe-idiom warning for raw and/or
 
-## P1 — Channels / bags
+## P1 — Channels / `each_latch` (#46)
 
-- Shipped path: [`each_latch`](https://github.com/lexwebb/LuaTorio/issues/46) (variadic triples; output-only wire handle).
+First ship: **`each_latch`** — multi-signal EACH-tag hysteresis bag (circuit primitive). Design: `2026-07-23-each-latch-design.md`. Research: `2026-07-23-each-tag-catalog-research.md`.
+
 - Bridge to tables: **first-class bag-typed values** — [#66](https://github.com/lexwebb/LuaTorio/issues/66).
 - Cookbook bag ops (arith / filters / hold / wildcards): [#58](https://github.com/lexwebb/LuaTorio/issues/58)–[#62](https://github.com/lexwebb/LuaTorio/issues/62).
+- Later: general bundle / EACH packing memory for denser loops.
 
-## P2 — Rank / index
+## P2 — Rank / index (#47)
 
-[`signal_at` / `signal_at_asc`](https://github.com/lexwebb/LuaTorio/issues/47) — honest selector `select` emit (#39).
+`signal_at` / `signal_at_asc` — design `2026-07-23-signal-at-design.md`. Honest selector `select` emit (not mux).
+
+Constant-table → rank → remap pipelines stay **composed** from primitives (`signal_at_asc` + constants/selectors); no domain-named builtins. Priority **value** pick: `examples/signal_at_asc.lua`.
 
 ## Language roadmap (toward tables and beyond)
 
@@ -121,7 +125,8 @@ Cookbook emit backlog (not language surface): [#57](https://github.com/lexwebb/L
 
 | Track | Issue | Notes |
 |---|---|---|
-| SR / channels / rank | #38 → #46 / #47 | P0 done; P1/P2 in flight on feature branches |
+| SR / channels / rank | #38 → #46 / #47 | Landed (each_latch, signal_at, loop clocks) |
+| Cookbook rip + ir-match | #52 / #54 | Landed |
 | Foreign BP + undirected nets | #41 | Done |
 | Red/green split | #40 | Done |
 | Selector VM | #39 | Done |

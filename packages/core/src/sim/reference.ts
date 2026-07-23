@@ -29,6 +29,30 @@ function truthy(n: number): boolean {
   return n !== 0;
 }
 
+function evalEachLatch(
+  expr: Extract<AnalyzedExpr, { kind: "each_latch" }>,
+  held: Set<string>,
+  env: ReadonlyMap<string, number>,
+  inputs: Record<string, number>,
+): Map<string, number> {
+  const bag = new Map<string, number>();
+  const nextHeld = new Set<string>();
+  for (const entry of expr.entries) {
+    const stock = evalExpr(entry.level, env, inputs);
+    const set = stock === 0;
+    const hold = stock < entry.buffer && held.has(entry.signal);
+    if (set || hold) {
+      bag.set(entry.signal, 1);
+      nextHeld.add(entry.signal);
+    }
+  }
+  held.clear();
+  for (const recipe of nextHeld) {
+    held.add(recipe);
+  }
+  return bag;
+}
+
 function evalExpr(
   expr: AnalyzedExpr,
   env: ReadonlyMap<string, number>,
@@ -39,6 +63,8 @@ function evalExpr(
       return toInt32(expr.value);
     case "input":
       return toInt32(inputs[expr.signal] ?? 0);
+    case "each_latch":
+      throw new Error("reference: each_latch is a signal bag, not a scalar");
     case "ref": {
       const value = env.get(expr.name);
       if (value === undefined) {
@@ -106,6 +132,25 @@ function evalExpr(
     }
     case "signal_count":
       return expr.args.filter((arg) => evalExpr(arg, env, inputs) !== 0).length;
+    case "signal_at": {
+      const scored = expr.args
+        .map((arg, index) => ({ index, value: evalExpr(arg, env, inputs) }))
+        .filter((entry) => entry.value !== 0);
+      if (scored.length === 0) {
+        return 0;
+      }
+      // Factorio: a lone candidate always passes (wiki / evalSelectorSelect).
+      if (scored.length === 1) {
+        return scored[0]!.value;
+      }
+      scored.sort((a, b) => {
+        if (a.value !== b.value) {
+          return expr.ascending ? a.value - b.value : b.value - a.value;
+        }
+        return a.index - b.index;
+      });
+      return scored[expr.index]?.value ?? 0;
+    }
     default: {
       const unreachable: never = expr;
       throw new Error(`reference: bad expr '${JSON.stringify(unreachable)}'`);
@@ -239,13 +284,21 @@ export function reference(
 
   const reassigned = collectReassigned(program.statements);
   const env = new Map<string, number>();
+  const bagEnv = new Map<string, Map<string, number>>();
+  const eachLatchHeld = new Map<string, Set<string>>();
   let clocked: AnalyzedStatement | undefined;
   const initInputs = resolveInputs(opts.inputs, 0);
 
   for (const statement of program.statements) {
     switch (statement.kind) {
       case "local":
-        env.set(statement.name, evalExpr(statement.expr, env, initInputs));
+        if (statement.expr.kind === "each_latch") {
+          // Sticky held set starts empty; first tick evaluates the bag (like Factorio Q=0).
+          eachLatchHeld.set(statement.name, new Set());
+          bagEnv.set(statement.name, new Map());
+        } else {
+          env.set(statement.name, evalExpr(statement.expr, env, initInputs));
+        }
         break;
       case "for":
         env.set(statement.name, evalExpr(statement.start, env, initInputs));
@@ -279,7 +332,13 @@ export function reference(
 
     for (const statement of program.statements) {
       if (statement.kind === "local" && !reassigned.has(statement.name)) {
-        env.set(statement.name, evalExpr(statement.expr, env, inputs));
+        if (statement.expr.kind === "each_latch") {
+          const held = eachLatchHeld.get(statement.name) ?? new Set<string>();
+          eachLatchHeld.set(statement.name, held);
+          bagEnv.set(statement.name, evalEachLatch(statement.expr, held, env, inputs));
+        } else {
+          env.set(statement.name, evalExpr(statement.expr, env, inputs));
+        }
       }
     }
 
@@ -313,7 +372,17 @@ export function reference(
 
     const outputs: Record<string, number> = {};
     for (const output of program.outputs) {
-      outputs[output.signal] = evalExpr(output.expr, env, inputs);
+      if (output.expr.kind === "each_latch") {
+        const heldKey = `__inline_out_${output.signal}`;
+        const held = eachLatchHeld.get(heldKey) ?? new Set<string>();
+        eachLatchHeld.set(heldKey, held);
+        const bag = evalEachLatch(output.expr, held, env, inputs);
+        outputs[output.signal] = bag.get(output.signal) ?? 0;
+      } else if (output.expr.kind === "ref" && bagEnv.has(output.expr.name)) {
+        outputs[output.signal] = bagEnv.get(output.expr.name)?.get(output.signal) ?? 0;
+      } else {
+        outputs[output.signal] = evalExpr(output.expr, env, inputs);
+      }
     }
     ticks.push({ outputs });
   }

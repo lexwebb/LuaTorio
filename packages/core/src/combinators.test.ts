@@ -349,7 +349,9 @@ describe("lowerToCombinators", () => {
       role: "mux-side",
       control_behavior: {
         decider_conditions: {
-          else_outputs: [{ signal: { type: "virtual", name: "__t3" }, copy_count_from_input: true }],
+          else_outputs: [
+            { signal: { type: "virtual", name: "__t3" }, copy_count_from_input: true },
+          ],
         },
       },
     });
@@ -415,7 +417,7 @@ describe("lowerToCombinators", () => {
     });
   });
 
-  it("fuses store(mem, select(c, mem+1, mem-1)) into delta decider + latch", () => {
+  it("fuses store(mem, select(c, mem+1, mem-1)) into one copy±δ decider latch", () => {
     const module: IRModule = {
       nodes: [
         { kind: "literal", id: "__t1", value: 0 },
@@ -435,19 +437,22 @@ describe("lowerToCombinators", () => {
     expect(graph.entities.find((entity) => entity.id === "__t5")).toBeUndefined();
     expect(graph.entities.find((entity) => entity.id === "__t7")).toBeUndefined();
     expect(graph.entities.find((entity) => entity.id === "__t8")).toBeUndefined();
-    expect(graph.entities.find((entity) => entity.id === "__t8__d")).toMatchObject({
+    expect(graph.entities.find((entity) => entity.id === "__t8__d")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t2")).toMatchObject({
       kind: "decider",
-      role: "mux-side",
+      role: "latch",
       control_behavior: {
         decider_conditions: {
-          outputs: [{ signal: { type: "virtual", name: "__t8__d" }, constant: 1 }],
-          else_outputs: [{ signal: { type: "virtual", name: "__t8__d" }, constant: -1 }],
+          outputs: [
+            { signal: { type: "virtual", name: "__t2" }, copy_count_from_input: true },
+            { signal: { type: "virtual", name: "__t2" }, constant: 1 },
+          ],
+          else_outputs: [
+            { signal: { type: "virtual", name: "__t2" }, copy_count_from_input: true },
+            { signal: { type: "virtual", name: "__t2" }, constant: -1 },
+          ],
         },
       },
-    });
-    expect(graph.entities.find((entity) => entity.id === "__t2")).toMatchObject({
-      kind: "arithmetic",
-      role: "latch",
     });
   });
 
@@ -593,7 +598,7 @@ describe("lowerToCombinators", () => {
     expect(graph.entities.length).toBeGreaterThan(0);
   });
 
-  it("specializes enable-hold of mem+δ into gate + latch (no else-gate, no mem+δ binop)", async () => {
+  it("specializes while i=i+1 into fused sticky+copy-increment decider clock", async () => {
     const { analyze } = await import("./analyze.js");
     const { lower } = await import("./lower.js");
     const { optimize } = await import("./optimize.js");
@@ -618,21 +623,19 @@ describe("lowerToCombinators", () => {
     const graph = lowerToCombinators(module);
     const latches = graph.entities.filter((entity) => entity.role === "latch");
     const muxSides = graph.entities.filter((entity) => entity.role === "mux-side");
-    // Body cell incremental hold + sticky __run latch (enable AND absorbed).
-    // Loop cond cmp is inlined into sticky + hold gate.
-    expect(graph.entities.length).toBe(6);
-    expect(muxSides.length).toBe(1);
-    expect(latches.length).toBe(2);
-    expect(latches.some((entity) => entity.kind === "decider")).toBe(true);
-    const iLatch = latches.find((entity) => {
-      const cond = entity.control_behavior.arithmetic_conditions as
-        | { first_signal?: { name?: string }; second_signal?: { name?: string } }
-        | undefined;
-      return cond?.first_signal?.name === entity.id;
-    });
-    expect(iLatch).toBeDefined();
+    // Fused __run + i clock + init const + I/O pads.
+    expect(graph.entities.length).toBe(4);
+    expect(muxSides.length).toBe(0);
+    expect(latches.length).toBe(1);
+    const clock = latches[0];
+    expect(clock).toMatchObject({ kind: "decider", role: "latch" });
+    const decider = clock?.control_behavior.decider_conditions as
+      | { outputs?: unknown[]; else_outputs?: unknown[] }
+      | undefined;
+    expect(decider?.outputs).toHaveLength(3);
+    expect(decider?.else_outputs).toHaveLength(1);
     expect(graph.wires).toEqual(
-      expect.arrayContaining([{ from: iLatch!.id, to: iLatch!.id, color: "green" }]),
+      expect.arrayContaining([{ from: clock!.id, to: clock!.id, color: "green" }]),
     );
   });
 
@@ -758,5 +761,4 @@ describe("lowerToCombinators", () => {
       },
     });
   });
-
 });

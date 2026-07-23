@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T14:45:20.222Z",
+  "generatedAt": "2026-07-23T21:40:41.703Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -75,18 +75,18 @@
       "name": "conditional-counter",
       "source": "example",
       "kind": "example",
-      "combinators": 4,
-      "wires": 4,
+      "combinators": 3,
+      "wires": 3,
       "buckets": {
         "latch": 1,
-        "mux_side": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 0,
         "placeholder_io": 2
       },
-      "muxShare": 0.5
+      "muxShare": 0
     },
     {
       "name": "counter",
@@ -106,21 +106,38 @@
       "muxShare": 0
     },
     {
+      "name": "each_latch",
+      "source": "example",
+      "kind": "example",
+      "combinators": 6,
+      "wires": 6,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 4
+      },
+      "muxShare": 0
+    },
+    {
       "name": "for_sum",
       "source": "example",
       "kind": "example",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "mux",
@@ -157,6 +174,57 @@
       "muxShare": 0
     },
     {
+      "name": "signal_at",
+      "source": "example",
+      "kind": "example",
+      "combinators": 5,
+      "wires": 4,
+      "buckets": {
+        "latch": 0,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 1,
+        "constant_value": 0,
+        "placeholder_io": 4
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "signal_at_asc",
+      "source": "example",
+      "kind": "example",
+      "combinators": 5,
+      "wires": 4,
+      "buckets": {
+        "latch": 0,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 1,
+        "constant_value": 0,
+        "placeholder_io": 4
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "signal_count",
+      "source": "example",
+      "kind": "example",
+      "combinators": 5,
+      "wires": 4,
+      "buckets": {
+        "latch": 0,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 1,
+        "constant_value": 0,
+        "placeholder_io": 4
+      },
+      "muxShare": 0
+    },
+    {
       "name": "sr_latch",
       "source": "example",
       "kind": "example",
@@ -177,18 +245,18 @@
       "name": "while_count",
       "source": "example",
       "kind": "example",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     }
   ],
   "fuzz": [
@@ -230,18 +298,18 @@
       "name": "fuzz-2-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-3-counter",
@@ -264,18 +332,18 @@
       "name": "fuzz-4-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-5-combinational",
@@ -332,18 +400,18 @@
       "name": "fuzz-8-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-9-counter",
@@ -366,35 +434,35 @@
       "name": "fuzz-10-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-11-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-12-combinational",
@@ -417,8 +485,25 @@
       "name": "fuzz-13-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-14-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -426,26 +511,9 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-14-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-15-combinational",
@@ -468,18 +536,18 @@
       "name": "fuzz-16-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-17-combinational",
@@ -502,25 +570,8 @@
       "name": "fuzz-18-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-19-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -528,9 +579,26 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-19-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-20-counter",
@@ -553,18 +621,18 @@
       "name": "fuzz-21-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-22-combinational",
@@ -587,25 +655,8 @@
       "name": "fuzz-23-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-24-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -613,9 +664,26 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-24-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-25-counter",
@@ -638,18 +706,18 @@
       "name": "fuzz-26-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-27-combinational",
@@ -689,18 +757,18 @@
       "name": "fuzz-29-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-30-combinational",
@@ -740,18 +808,18 @@
       "name": "fuzz-32-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-33-counter",
@@ -774,18 +842,18 @@
       "name": "fuzz-34-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-35-combinational",
@@ -808,59 +876,25 @@
       "name": "fuzz-36-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-37-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-38-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-39-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -868,9 +902,43 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-38-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
+      "buckets": {
+        "latch": 2,
+        "mux_side": 1,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 1
+      },
+      "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-39-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-40-counter",
@@ -893,52 +961,52 @@
       "name": "fuzz-41-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-42-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-43-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-44-combinational",
@@ -961,18 +1029,18 @@
       "name": "fuzz-45-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-46-counter",
@@ -1012,52 +1080,52 @@
       "name": "fuzz-48-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-49-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-50-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-51-combinational",
@@ -1097,69 +1165,69 @@
       "name": "fuzz-53-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-54-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-55-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-56-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-57-counter",
@@ -1182,35 +1250,35 @@
       "name": "fuzz-58-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-59-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-60-combinational",
@@ -1250,8 +1318,25 @@
       "name": "fuzz-62-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-63-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -1259,26 +1344,9 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-63-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-64-counter",
@@ -1301,69 +1369,69 @@
       "name": "fuzz-65-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-66-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-67-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-68-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-69-combinational",
@@ -1403,18 +1471,18 @@
       "name": "fuzz-71-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-72-combinational",
@@ -1454,25 +1522,8 @@
       "name": "fuzz-74-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-75-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -1480,9 +1531,26 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-75-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-76-counter",
@@ -1505,18 +1573,18 @@
       "name": "fuzz-77-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-78-counter",
@@ -1539,18 +1607,18 @@
       "name": "fuzz-79-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-80-combinational",
@@ -1573,18 +1641,18 @@
       "name": "fuzz-81-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-82-counter",
@@ -1607,35 +1675,35 @@
       "name": "fuzz-83-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-84-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-85-counter",
@@ -1692,18 +1760,18 @@
       "name": "fuzz-88-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-89-counter",
@@ -1760,18 +1828,18 @@
       "name": "fuzz-92-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-93-combinational",
@@ -1794,8 +1862,25 @@
       "name": "fuzz-94-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-95-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -1803,26 +1888,9 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-95-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-96-combinational",
@@ -1862,18 +1930,18 @@
       "name": "fuzz-98-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-99-counter",
@@ -1896,8 +1964,25 @@
       "name": "fuzz-100-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-101-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -1905,26 +1990,9 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-101-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-102-counter",
@@ -1981,18 +2049,18 @@
       "name": "fuzz-105-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-106-counter",
@@ -2015,25 +2083,8 @@
       "name": "fuzz-107-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-108-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -2041,26 +2092,43 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-108-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-109-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-110-combinational",
@@ -2083,8 +2151,25 @@
       "name": "fuzz-111-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-112-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -2092,26 +2177,9 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-112-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-113-combinational",
@@ -2151,18 +2219,18 @@
       "name": "fuzz-115-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-116-combinational",
@@ -2185,18 +2253,18 @@
       "name": "fuzz-117-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-118-combinational",
@@ -2236,18 +2304,18 @@
       "name": "fuzz-120-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-121-combinational",
@@ -2287,18 +2355,18 @@
       "name": "fuzz-123-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-124-counter",
@@ -2355,18 +2423,18 @@
       "name": "fuzz-127-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-128-combinational",
@@ -2406,76 +2474,8 @@
       "name": "fuzz-130-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-131-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-132-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-133-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-134-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -2483,9 +2483,77 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-131-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
+      "buckets": {
+        "latch": 2,
+        "mux_side": 1,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 1
+      },
+      "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-132-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
+      "buckets": {
+        "latch": 2,
+        "mux_side": 1,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 1
+      },
+      "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-133-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
+      "buckets": {
+        "latch": 2,
+        "mux_side": 1,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 1
+      },
+      "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-134-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-135-combinational",
@@ -2559,59 +2627,42 @@
       "name": "fuzz-139-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-140-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-141-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-142-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -2619,26 +2670,43 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-142-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-143-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-144-counter",
@@ -2661,18 +2729,18 @@
       "name": "fuzz-145-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-146-combinational",
@@ -2712,18 +2780,18 @@
       "name": "fuzz-148-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-149-combinational",
@@ -2763,18 +2831,18 @@
       "name": "fuzz-151-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-152-counter",
@@ -2882,103 +2950,103 @@
       "name": "fuzz-158-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-159-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-160-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-161-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-162-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-163-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-164-counter",
@@ -3035,18 +3103,18 @@
       "name": "fuzz-167-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-168-counter",
@@ -3137,18 +3205,18 @@
       "name": "fuzz-173-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-174-combinational",
@@ -3188,25 +3256,8 @@
       "name": "fuzz-176-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 1
-      },
-      "muxShare": 0.3333333333333333
-    },
-    {
-      "name": "fuzz-177-while",
-      "source": "fuzz",
-      "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -3214,9 +3265,26 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
+        "placeholder_io": 1
       },
       "muxShare": 0.25
+    },
+    {
+      "name": "fuzz-177-while",
+      "source": "fuzz",
+      "kind": "while",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
     },
     {
       "name": "fuzz-178-counter",
@@ -3273,18 +3341,18 @@
       "name": "fuzz-181-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-182-combinational",
@@ -3341,18 +3409,18 @@
       "name": "fuzz-185-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
       "buckets": {
-        "latch": 2,
-        "mux_side": 1,
+        "latch": 1,
+        "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 2
       },
-      "muxShare": 0.25
+      "muxShare": 0
     },
     {
       "name": "fuzz-186-counter",
@@ -3409,8 +3477,25 @@
       "name": "fuzz-189-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-190-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -3418,26 +3503,9 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-190-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-191-counter",
@@ -3477,8 +3545,25 @@
       "name": "fuzz-193-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-194-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -3486,26 +3571,9 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-194-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-195-combinational",
@@ -3528,8 +3596,25 @@
       "name": "fuzz-196-while",
       "source": "fuzz",
       "kind": "while",
-      "combinators": 6,
-      "wires": 10,
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "fuzz-197-for",
+      "source": "fuzz",
+      "kind": "for",
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
         "latch": 2,
         "mux_side": 1,
@@ -3537,43 +3622,26 @@
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
-        "placeholder_io": 2
-      },
-      "muxShare": 0.25
-    },
-    {
-      "name": "fuzz-197-for",
-      "source": "fuzz",
-      "kind": "for",
-      "combinators": 7,
-      "wires": 13,
-      "buckets": {
-        "latch": 3,
-        "mux_side": 2,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-198-for",
       "source": "fuzz",
       "kind": "for",
-      "combinators": 7,
-      "wires": 13,
+      "combinators": 5,
+      "wires": 6,
       "buckets": {
-        "latch": 3,
-        "mux_side": 2,
+        "latch": 2,
+        "mux_side": 1,
         "mux_merge": 0,
         "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 1,
         "placeholder_io": 1
       },
-      "muxShare": 0.3333333333333333
+      "muxShare": 0.25
     },
     {
       "name": "fuzz-199-combinational",
@@ -3594,36 +3662,30 @@
     }
   ],
   "totals": {
-    "programs": 211,
-    "combinators": 988,
+    "programs": 215,
+    "combinators": 808,
     "buckets": {
-      "latch": 301,
-      "mux_side": 149,
+      "latch": 202,
+      "mux_side": 48,
       "mux_merge": 0,
       "decider_other": 2,
-      "arithmetic_other": 54,
-      "constant_value": 100,
-      "placeholder_io": 382
+      "arithmetic_other": 57,
+      "constant_value": 101,
+      "placeholder_io": 398
     },
-    "muxShareMean": 0.1437598736176934
+    "muxShareMean": 0.05813953488372093
   },
   "opportunities": [
     {
-      "id": "mux-tricks",
-      "title": "Cheaper mux / enable-hold (selector or multi-condition)",
-      "evidence": "Mux-related entities are 25% of non-placeholder combinators (sides=149, merges=0).",
-      "estimatedImpact": "high"
-    },
-    {
       "id": "latch-tricks",
       "title": "Tighter latches (EACH / SR / absorb more into latch)",
-      "evidence": "Latches are 50% of real entities (301 total). While-kind programs avg 6.0 combinators.",
+      "evidence": "Latches are 49% of real entities (202 total). While-kind programs avg 4.0 combinators.",
       "estimatedImpact": "high"
     },
     {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=54, other deciders=2 (graph; blueprints omit 382 I/O pads).",
+      "evidence": "Non-mux arith=57, other deciders=2 (graph; blueprints omit 398 I/O pads).",
       "estimatedImpact": "medium"
     },
     {

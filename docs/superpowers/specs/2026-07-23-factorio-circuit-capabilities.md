@@ -71,6 +71,7 @@ It is **not** a general if/else mux for two arbitrary values. It is for ranking/
 - **Memory:** decider self-loop (input count, condition ≠0 or >0) holds a value; arith `EACH+0` loop is the classic register.
 - **SR / RS latch:** cookbook says **one decider** can do SR in 2.0 with multi-condition set/reset.
 - **Clocks / pulses / edge detect:** feedback + 1-tick delay; less relevant to our SSA-style emit today.
+- **EACH-tag catalog (Reddit):** constant recipe tags on green + sticky multi-OR decider with red feedback — N recipes in 2 entities. Research: `2026-07-23-each-tag-catalog-research.md`.
 
 ## What LuaTorio uses today
 
