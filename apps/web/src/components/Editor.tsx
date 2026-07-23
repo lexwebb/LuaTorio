@@ -1,7 +1,7 @@
 import { StreamLanguage } from "@codemirror/language";
 import { lua } from "@codemirror/legacy-modes/mode/lua";
 import { EditorState } from "@codemirror/state";
-import { EditorView, basicSetup } from "codemirror";
+import { basicSetup, EditorView } from "codemirror";
 import { useEffect, useRef } from "react";
 
 export interface EditorProps {
@@ -21,6 +21,7 @@ export function Editor({ value, onChange }: EditorProps) {
 
   // Create the CodeMirror view once; external `value` changes are applied by the effect below
   // instead of tearing down and rebuilding the editor (which would lose cursor/scroll state).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-once CodeMirror bootstrap
   useEffect(() => {
     const container = containerRef.current;
     if (!container) {
@@ -48,7 +49,6 @@ export function Editor({ value, onChange }: EditorProps) {
       view.destroy();
       viewRef.current = undefined;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

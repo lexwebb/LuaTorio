@@ -11,8 +11,12 @@ import { decodeShareHash, encodeShareHash, type ViewMode } from "./lib/share.js"
 const DEFAULT_SOURCE = examples[0]?.source ?? 'local x = input("signal-A")\noutput("signal-B", x)';
 
 export function App() {
-  const [source, setSource] = useState(() => decodeShareHash(window.location.hash)?.source ?? DEFAULT_SOURCE);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => decodeShareHash(window.location.hash)?.mode ?? "blueprint");
+  const [source, setSource] = useState(
+    () => decodeShareHash(window.location.hash)?.source ?? DEFAULT_SOURCE,
+  );
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => decodeShareHash(window.location.hash)?.mode ?? "blueprint",
+  );
   const [outcome, setOutcome] = useState<CompileOutcome>({ status: "idle" });
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
 
@@ -50,8 +54,13 @@ export function App() {
         </span>
         <div>
           <h1>LuaTorio</h1>
-          <p>Write LuaTorio v1 source and compile it to a Factorio blueprint, entirely in your browser.</p>
-          <span className="playground-disclaimer">Fan-made playground — not affiliated with Wube Software.</span>
+          <p>
+            Write LuaTorio v1 source and compile it to a Factorio blueprint, entirely in your
+            browser.
+          </p>
+          <span className="playground-disclaimer">
+            Fan-made playground — not affiliated with Wube Software.
+          </span>
         </div>
       </header>
 

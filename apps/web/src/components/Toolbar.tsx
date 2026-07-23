@@ -16,13 +16,21 @@ const VIEW_MODES: Array<{ id: ViewMode; label: string }> = [
 ];
 
 /** Compile / view-mode toggle / copy actions above the editor and output panes. */
-export function Toolbar({ viewMode, onViewModeChange, onCompile, onCopy, copyDisabled, copyStatus }: ToolbarProps) {
+export function Toolbar({
+  viewMode,
+  onViewModeChange,
+  onCompile,
+  onCopy,
+  copyDisabled,
+  copyStatus,
+}: ToolbarProps) {
   return (
     <div className="toolbar">
       <button type="button" className="toolbar-button toolbar-button-primary" onClick={onCompile}>
         Compile
       </button>
-      <div className="toolbar-view-toggle" role="group" aria-label="Output view mode">
+      <fieldset className="toolbar-view-toggle">
+        <legend className="visually-hidden">Output view mode</legend>
         {VIEW_MODES.map(({ id, label }) => (
           <button
             key={id}
@@ -34,9 +42,13 @@ export function Toolbar({ viewMode, onViewModeChange, onCompile, onCopy, copyDis
             {label}
           </button>
         ))}
-      </div>
+      </fieldset>
       <button type="button" className="toolbar-button" onClick={onCopy} disabled={copyDisabled}>
-        {copyStatus === "copied" ? "Copied!" : copyStatus === "failed" ? "Copy failed" : "Copy blueprint"}
+        {copyStatus === "copied"
+          ? "Copied!"
+          : copyStatus === "failed"
+            ? "Copy failed"
+            : "Copy blueprint"}
       </button>
     </div>
   );
