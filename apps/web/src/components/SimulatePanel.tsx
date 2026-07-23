@@ -81,9 +81,15 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
     }
     setPlaying(false);
     setCurrentTick(0);
-    setSelectedId(undefined);
     setOutcome(runSimulate(source, { ticks, inputs }));
   }, [source, ticks, inputValues, discoveredInputs, runToken]);
+
+  // Only drop selection when the program identity changes (not on tick/input tweaks).
+  useEffect(() => {
+    void source;
+    void runToken;
+    setSelectedId(undefined);
+  }, [source, runToken]);
 
   const speedMs = SPEEDS_MS.find((s) => s.id === speedId)?.ms ?? 400;
 

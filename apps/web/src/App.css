@@ -580,6 +580,13 @@ body {
   will-change: transform;
 }
 
+.circuit-viewport-world .circuit-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
 .circuit-canvas {
   display: block;
   background: transparent;
@@ -599,22 +606,77 @@ body {
   stroke: #c43c3c;
 }
 
-.circuit-entity-hit {
-  fill: #1c1712;
-  stroke: #4a4034;
-  stroke-width: 1.5;
+.circuit-entity-button {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 4px;
+  border: 1.5px solid #4a4034;
+  border-radius: 4px;
+  background: #1c1712;
   cursor: pointer;
+  z-index: 2;
+  color: #e8dcc4;
 }
 
-.circuit-entity-hit.is-selected {
-  stroke: var(--ft-accent);
-  stroke-width: 2.5;
+.circuit-entity-button:hover {
+  border-color: #8a7a62;
 }
 
-.circuit-entity-hit.is-active-tick {
-  stroke: #ffb64d;
-  stroke-width: 2.5;
-  filter: drop-shadow(0 0 3px rgba(255, 182, 77, 0.7));
+.circuit-entity-button.is-selected {
+  border-color: var(--ft-accent);
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 182, 77, 0.35);
+}
+
+.circuit-entity-button.is-active-tick {
+  box-shadow: 0 0 0 2px rgba(255, 182, 77, 0.7);
+}
+
+.circuit-entity-button img {
+  pointer-events: none;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.circuit-entity-caption {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: max-content;
+  max-width: 96px;
+  pointer-events: none;
+  line-height: 1.15;
+}
+
+.circuit-entity-caption-role {
+  font-size: 10px;
+  font-weight: 700;
+  color: #e8dcc4;
+}
+
+.circuit-entity-caption-id {
+  font-size: 9px;
+  color: #b5a890;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.circuit-inspector-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  padding-top: 4px;
+  background: linear-gradient(180deg, transparent 0%, #14110e 12px);
 }
 
 .sim-playback {
