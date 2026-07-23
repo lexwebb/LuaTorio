@@ -83,6 +83,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`conditional-counter.lua`](examples/conditional-counter.lua) | v2 if/else: muxed next-state (`if c then x+1 else x-1`) |
 | [`while_count.lua`](examples/while_count.lua) | v2 clocked while: count up to `signal-L` (`tick()` barrier) |
 | [`sr_latch.lua`](examples/sr_latch.lua) | Cookbook SR via `sr(q, set, reset)` — one decider latch |
+| [`catalog_latch.lua`](examples/catalog_latch.lua) | EACH-tag sticky multi-recipe catalog — 1 constant + 1 decider |
 | [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
 | [`signal_count.lua`](examples/signal_count.lua) | Count nonzero inputs via `signal_count` → selector combinator |
 
@@ -105,6 +106,7 @@ Programs are a flat sequence of statements. See the
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
+| `catalog_latch(stock, recipe, buffer, …)` | Sticky multi-recipe bag (EACH-tag catalog); triples; output via `output(recipe, bag)` |
 | `signal_count(a, b, …)` | Count nonzero args; emits one selector combinator (`operation: "count"`) |
 | Arithmetic: `+ - * / %` | Lowers to arithmetic combinators |
 | Comparisons: `< > <= >= == ~=` | Lowers to a decider combinator (1/0 output) |

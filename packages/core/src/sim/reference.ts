@@ -29,6 +29,30 @@ function truthy(n: number): boolean {
   return n !== 0;
 }
 
+function evalCatalogLatch(
+  expr: Extract<AnalyzedExpr, { kind: "catalog_latch" }>,
+  held: Set<string>,
+  env: ReadonlyMap<string, number>,
+  inputs: Record<string, number>,
+): Map<string, number> {
+  const bag = new Map<string, number>();
+  const nextHeld = new Set<string>();
+  for (const entry of expr.entries) {
+    const stock = evalExpr(entry.stock, env, inputs);
+    const set = stock === 0;
+    const hold = stock < entry.buffer && held.has(entry.recipe);
+    if (set || hold) {
+      bag.set(entry.recipe, 1);
+      nextHeld.add(entry.recipe);
+    }
+  }
+  held.clear();
+  for (const recipe of nextHeld) {
+    held.add(recipe);
+  }
+  return bag;
+}
+
 function evalExpr(
   expr: AnalyzedExpr,
   env: ReadonlyMap<string, number>,
@@ -39,6 +63,8 @@ function evalExpr(
       return toInt32(expr.value);
     case "input":
       return toInt32(inputs[expr.signal] ?? 0);
+    case "catalog_latch":
+      throw new Error("reference: catalog_latch is a signal bag, not a scalar");
     case "ref": {
       const value = env.get(expr.name);
       if (value === undefined) {
@@ -239,13 +265,21 @@ export function reference(
 
   const reassigned = collectReassigned(program.statements);
   const env = new Map<string, number>();
+  const bagEnv = new Map<string, Map<string, number>>();
+  const catalogHeld = new Map<string, Set<string>>();
   let clocked: AnalyzedStatement | undefined;
   const initInputs = resolveInputs(opts.inputs, 0);
 
   for (const statement of program.statements) {
     switch (statement.kind) {
       case "local":
-        env.set(statement.name, evalExpr(statement.expr, env, initInputs));
+        if (statement.expr.kind === "catalog_latch") {
+          // Sticky held set starts empty; first tick evaluates the bag (like Factorio Q=0).
+          catalogHeld.set(statement.name, new Set());
+          bagEnv.set(statement.name, new Map());
+        } else {
+          env.set(statement.name, evalExpr(statement.expr, env, initInputs));
+        }
         break;
       case "for":
         env.set(statement.name, evalExpr(statement.start, env, initInputs));
@@ -279,7 +313,13 @@ export function reference(
 
     for (const statement of program.statements) {
       if (statement.kind === "local" && !reassigned.has(statement.name)) {
-        env.set(statement.name, evalExpr(statement.expr, env, inputs));
+        if (statement.expr.kind === "catalog_latch") {
+          const held = catalogHeld.get(statement.name) ?? new Set<string>();
+          catalogHeld.set(statement.name, held);
+          bagEnv.set(statement.name, evalCatalogLatch(statement.expr, held, env, inputs));
+        } else {
+          env.set(statement.name, evalExpr(statement.expr, env, inputs));
+        }
       }
     }
 
@@ -313,7 +353,17 @@ export function reference(
 
     const outputs: Record<string, number> = {};
     for (const output of program.outputs) {
-      outputs[output.signal] = evalExpr(output.expr, env, inputs);
+      if (output.expr.kind === "catalog_latch") {
+        const heldKey = `__inline_out_${output.signal}`;
+        const held = catalogHeld.get(heldKey) ?? new Set<string>();
+        catalogHeld.set(heldKey, held);
+        const bag = evalCatalogLatch(output.expr, held, env, inputs);
+        outputs[output.signal] = bag.get(output.signal) ?? 0;
+      } else if (output.expr.kind === "ref" && bagEnv.has(output.expr.name)) {
+        outputs[output.signal] = bagEnv.get(output.expr.name)?.get(output.signal) ?? 0;
+      } else {
+        outputs[output.signal] = evalExpr(output.expr, env, inputs);
+      }
     }
     ticks.push({ outputs });
   }

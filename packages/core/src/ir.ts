@@ -19,7 +19,16 @@ export type IRNode =
   /** Cookbook SR: Q' = (Q ∨ set) ∧ ¬reset → 0/1. */
   | { kind: "sr"; id: string; state: string; set: string; reset: string }
   /** Count nonzero unique arg signals → one selector combinator (`operation: "count"`). */
-  | { kind: "signal_count"; id: string; args: string[] };
+  | { kind: "signal_count"; id: string; args: string[] }
+  /**
+   * EACH-tag sticky catalog (#46): constant recipe tags + one multi-OR decider latch.
+   * `stock` is an IR node id; `recipe` is a Factorio signal name; `tag` is unique ≥ 1.
+   */
+  | {
+      kind: "catalog_latch";
+      id: string;
+      entries: Array<{ stock: string; recipe: string; buffer: number; tag: number }>;
+    };
 
 export interface IRModule {
   /** Flat node list; `id === temp signal name`. */

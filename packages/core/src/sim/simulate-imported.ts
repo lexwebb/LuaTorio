@@ -133,11 +133,20 @@ function readOutputPort(
   port: { signal: string; entityId: string },
   circuit: ImportedCircuit,
   outputs: ReadonlyMap<string, SignalBag>,
+  entityById: ReadonlyMap<string, CircuitEntity>,
 ): number {
   const net = sumInputNets(port.entityId, circuit, outputs);
-  const named = bagGet(net, port.signal);
-  if (named !== 0 || net.has(port.signal)) {
-    return named;
+  if (net.has(port.signal)) {
+    return bagGet(net, port.signal);
+  }
+  let fromEachBag = false;
+  forEachProducerOnInputNets(port.entityId, circuit, (producerId) => {
+    if (entityById.get(producerId)?.outputSignal === "signal-each") {
+      fromEachBag = true;
+    }
+  });
+  if (fromEachBag) {
+    return 0;
   }
   let sum = 0;
   for (const count of net.values()) {
@@ -149,10 +158,11 @@ function readOutputPort(
 function sampleOutputs(
   circuit: ImportedCircuit,
   outputs: ReadonlyMap<string, SignalBag>,
+  entityById: ReadonlyMap<string, CircuitEntity>,
 ): Record<string, number> {
   const tickOutputs: Record<string, number> = {};
   for (const port of circuit.outputs) {
-    tickOutputs[port.signal] = readOutputPort(port, circuit, outputs);
+    tickOutputs[port.signal] = readOutputPort(port, circuit, outputs, entityById);
   }
   return tickOutputs;
 }
@@ -217,7 +227,7 @@ function simulateLatchSync(circuit: ImportedCircuit, opts: SimulateOptions): Sim
     }
     sequentialUpdate(latches, circuit, outputs);
 
-    ticks.push({ outputs: sampleOutputs(circuit, outputs) });
+    ticks.push({ outputs: sampleOutputs(circuit, outputs, entityById) });
   }
 
   return { ticks };
@@ -232,7 +242,7 @@ function simulateFactorioParallel(circuit: ImportedCircuit, opts: SimulateOption
     applyInputInjection(circuit, entityById, outputs, resolveInputs(opts.inputs, tick));
     refreshConstants(circuit, outputs, inputEntityIds);
     parallelUpdate(delayed, circuit, outputs);
-    ticks.push({ outputs: sampleOutputs(circuit, outputs) });
+    ticks.push({ outputs: sampleOutputs(circuit, outputs, entityById) });
   }
 
   return { ticks };
@@ -254,7 +264,7 @@ function simulateFactorio(circuit: ImportedCircuit, opts: SimulateOptions): Simu
     }
     parallelUpdate(latches, circuit, outputs);
 
-    ticks.push({ outputs: sampleOutputs(circuit, outputs) });
+    ticks.push({ outputs: sampleOutputs(circuit, outputs, entityById) });
   }
 
   return { ticks };

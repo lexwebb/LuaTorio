@@ -1,8 +1,8 @@
 # Next Language / IR Slices (Emit Size + Interop Hooks)
 
 **Date:** 2026-07-23  
-**Status:** In progress (#38)  
-**Issues:** #38 (this), #39 selector, #40 red/green, #41 blueprint ingest
+**Status:** P0 done (#38); P1 implementing (#46)  
+**Issues:** #38 (SR), #46 (channels / `catalog_latch`), #47 (rank / WarDaft), #39 selector, #40 red/green, #41 blueprint ingest
 
 ## Context
 
@@ -81,11 +81,11 @@ Plus Q feedback wire; nonzero init via existing latch seed.
 - [x] Example `examples/sr_latch.lua` + golden
 - [x] README note + safe-idiom warning for raw and/or
 
-## P1 — Channels (follow-up issue after P0)
+## P1 — Channels / `catalog_latch` (#46)
 
-Sketch only: multi-signal values on one wire (EACH packing), IR `bundle` or signal-list memory. Unlocks denser loops and natural red/green allocation (#40).
+First ship: **`catalog_latch`** — multi-signal recipe bag without full v4 tables. Design: `2026-07-23-catalog-latch-design.md`. Research: `2026-07-23-each-tag-catalog-research.md`.
 
-**Emit-size target once bundles exist:** the Factorio 2.0 **EACH-tag catalog** pattern (1 constant + 1 multi-OR sticky decider for N recipes). Research: `docs/superpowers/specs/2026-07-23-each-tag-catalog-research.md`. Needs compile-path red/green coloring (today #40 is sim/import only).
+Later: general bundle / EACH packing memory for denser loops.
 
 ## P2 — Rank / index (feeds #39)
 

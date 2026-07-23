@@ -78,4 +78,32 @@ describe("simulate", () => {
     expect(result.ticks[9]?.outputs["signal-A"]).toBe(55);
     expect(result.ticks[15]?.outputs["signal-A"]).toBe(55);
   });
+
+  it("catalog_latch sets, holds below buffer, clears at buffer", async () => {
+    const { compile } = await import("../index.js");
+    const compiled = compile(loadExample("catalog_latch.lua"));
+    expect(compiled.stats.combinators).toBe(2);
+
+    const graph = graphOf(loadExample("catalog_latch.lua"));
+    const set = simulate(graph, {
+      ticks: 2,
+      inputs: { "item-A": 0, "item-B": 20 },
+    });
+    expect(set.ticks[1]?.outputs["recipe-A"]).toBe(1);
+    expect(set.ticks[1]?.outputs["recipe-B"] ?? 0).toBe(0);
+
+    const hold = simulate(graph, {
+      ticks: 4,
+      inputs: (tick) =>
+        tick < 2 ? { "item-A": 0, "item-B": 20 } : { "item-A": 5, "item-B": 20 },
+    });
+    expect(hold.ticks[3]?.outputs["recipe-A"]).toBe(1);
+
+    const clear = simulate(graph, {
+      ticks: 4,
+      inputs: (tick) =>
+        tick < 2 ? { "item-A": 0, "item-B": 20 } : { "item-A": 10, "item-B": 20 },
+    });
+    expect(clear.ticks[3]?.outputs["recipe-A"] ?? 0).toBe(0);
+  });
 });
