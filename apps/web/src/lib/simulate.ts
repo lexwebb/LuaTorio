@@ -1,16 +1,16 @@
 import {
   analyze,
-  type CircuitGraph,
-  type LaidOutCircuit,
   layout,
   lower,
   lowerToCombinators,
   optimize,
-  ParseError,
   parse,
+  ParseError,
   SemanticError,
-  type SimulateResult,
   simulate,
+  type CircuitGraph,
+  type LaidOutCircuit,
+  type SimulateResult,
 } from "@luatorio/core";
 
 export interface SimIdle {
@@ -46,7 +46,9 @@ export function buildGraph(source: string): CircuitGraph {
 }
 
 /** Input signal names for the Simulate panel, or a failure if source does not lower. */
-export function probeSimInputs(source: string): { status: "ok"; signals: string[] } | SimFailure {
+export function probeSimInputs(
+  source: string,
+): { status: "ok"; signals: string[] } | SimFailure {
   try {
     const graph = buildGraph(source);
     return { status: "ok", signals: graph.inputs.map((port) => port.signal) };
@@ -64,16 +66,16 @@ export function probeSimInputs(source: string): { status: "ok"; signals: string[
 }
 
 /**
- * Build graph → layout → simulate. Used by the Simulate view so validation does not depend
- * on the blueprint string path.
+ * Build graph → layered layout (canvas) → simulate with per-entity bags for the inspector.
  */
 export function runSimulate(source: string, opts: RunSimulateOptions): SimOutcome {
   try {
     const graph = buildGraph(source);
-    const laidOut = layout(graph);
+    const laidOut = layout(graph, { arrangement: "layered" });
     const result = simulate(graph, {
       ticks: Math.max(1, Math.min(opts.ticks, 256)),
       inputs: opts.inputs,
+      entityOutputs: true,
     });
     return {
       status: "success",

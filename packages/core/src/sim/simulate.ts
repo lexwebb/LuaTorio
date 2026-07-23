@@ -27,11 +27,15 @@ export interface SimulateOptions {
   inputs?: Record<string, number> | ((tick: number) => Record<string, number>);
   /** Timing model. Default `"factorio"`. */
   mode?: SimulateMode;
+  /** When true, each tick includes every entity's output signal bag (playground inspector). */
+  entityOutputs?: boolean;
 }
 
 export interface SimulateTick {
   /** Named output-port values after this tick (see delay note on `simulate`). */
   outputs: Record<string, number>;
+  /** Present when `entityOutputs: true` — entity id → signal name → count. */
+  entities?: Record<string, Record<string, number>>;
 }
 
 export interface SimulateResult {
@@ -163,6 +167,39 @@ function sampleOutputs(
 }
 
 /** Non-latch, non-constant entities (combinational cone under settle-then-clock). */
+
+function snapshotEntityOutputs(
+  graph: CircuitGraph,
+  outputs: ReadonlyMap<string, SignalBag>,
+): Record<string, Record<string, number>> {
+  const snap: Record<string, Record<string, number>> = {};
+  for (const entity of graph.entities) {
+    const bag = outputs.get(entity.id);
+    const rec: Record<string, number> = {};
+    if (bag !== undefined) {
+      for (const [name, count] of bag) {
+        rec[name] = count;
+      }
+    }
+    snap[entity.id] = rec;
+  }
+  return snap;
+}
+
+function pushTick(
+  ticks: SimulateTick[],
+  graph: CircuitGraph,
+  producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
+  outputs: ReadonlyMap<string, SignalBag>,
+  entityOutputs: boolean | undefined,
+): void {
+  const tick: SimulateTick = { outputs: sampleOutputs(graph, producersColor, outputs) };
+  if (entityOutputs) {
+    tick.entities = snapshotEntityOutputs(graph, outputs);
+  }
+  ticks.push(tick);
+}
+
 function comboEntities(graph: CircuitGraph): CircuitEntity[] {
   return graph.entities.filter((entity) => entity.kind !== "constant" && entity.role !== "latch");
 }
@@ -226,7 +263,7 @@ function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): Simulate
       outputs.set(latch.id, evalEntity(latch, inputBags(latch.id, producersColor, outputs)));
     }
 
-    ticks.push({ outputs: sampleOutputs(graph, producersColor, outputs) });
+    pushTick(ticks, graph, producersColor, outputs, opts.entityOutputs);
   }
 
   return { ticks };
@@ -244,7 +281,7 @@ function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): S
     applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
     refreshConstants(graph, outputs, inputEntityIds);
     parallelUpdate(delayed, producersColor, outputs);
-    ticks.push({ outputs: sampleOutputs(graph, producersColor, outputs) });
+    pushTick(ticks, graph, producersColor, outputs, opts.entityOutputs);
   }
 
   return { ticks };
@@ -269,7 +306,7 @@ function simulateFactorio(graph: CircuitGraph, opts: SimulateOptions): SimulateR
     }
     parallelUpdate(latches, producersColor, outputs);
 
-    ticks.push({ outputs: sampleOutputs(graph, producersColor, outputs) });
+    pushTick(ticks, graph, producersColor, outputs, opts.entityOutputs);
   }
 
   return { ticks };

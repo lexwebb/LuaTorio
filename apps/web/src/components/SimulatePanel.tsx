@@ -10,6 +10,12 @@ export interface SimulatePanelProps {
 
 const DEFAULT_TICKS = 12;
 
+const SPEEDS_MS = [
+  { id: "slow", label: "0.5×", ms: 800 },
+  { id: "norm", label: "1×", ms: 400 },
+  { id: "fast", label: "2×", ms: 200 },
+] as const;
+
 function tickRowKey(tickIndex: number, outputs: Record<string, number>): string {
   return `${tickIndex}:${JSON.stringify(outputs)}`;
 }
@@ -29,18 +35,33 @@ function defaultInputValue(signal: string): number {
   return 0;
 }
 
-/** Input editors, tick control, circuit canvas, and per-tick output table. */
+function bagsEqual(a: Record<string, number> | undefined, b: Record<string, number> | undefined): boolean {
+  const left = a ?? {};
+  const right = b ?? {};
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const key of keys) {
+    if ((left[key] ?? 0) !== (right[key] ?? 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Input editors, playback, layered canvas, inspector, and per-tick output table. */
 export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
   const [ticks, setTicks] = useState(DEFAULT_TICKS);
   const [inputValues, setInputValues] = useState<Record<string, number>>({});
   const [outcome, setOutcome] = useState<SimOutcome>({ status: "idle" });
+  const [currentTick, setCurrentTick] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speedId, setSpeedId] = useState<(typeof SPEEDS_MS)[number]["id"]>("norm");
+  const [selectedId, setSelectedId] = useState<string | undefined>();
 
   const discoveredInputs = useMemo(() => {
     const probed = probeSimInputs(source);
     return probed.status === "ok" ? probed.signals : [];
   }, [source]);
 
-  // Reset inputs whenever the program's input set changes (new example / edit).
   useEffect(() => {
     const next: Record<string, number> = {};
     for (const signal of discoveredInputs) {
@@ -55,8 +76,33 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
     for (const signal of discoveredInputs) {
       inputs[signal] = inputValues[signal] ?? defaultInputValue(signal);
     }
+    setPlaying(false);
+    setCurrentTick(0);
+    setSelectedId(undefined);
     setOutcome(runSimulate(source, { ticks, inputs }));
   }, [source, ticks, inputValues, discoveredInputs, runToken]);
+
+  const speedMs = SPEEDS_MS.find((s) => s.id === speedId)?.ms ?? 400;
+
+  useEffect(() => {
+    if (!playing || outcome.status !== "success") {
+      return;
+    }
+    const max = outcome.result.ticks.length - 1;
+    if (max < 0) {
+      return;
+    }
+    const id = window.setInterval(() => {
+      setCurrentTick((tick) => {
+        if (tick >= max) {
+          setPlaying(false);
+          return tick;
+        }
+        return tick + 1;
+      });
+    }, speedMs);
+    return () => window.clearInterval(id);
+  }, [playing, speedMs, outcome]);
 
   if (outcome.status === "idle") {
     return (
@@ -88,9 +134,25 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
       ? outcome.outputSignals
       : Object.keys(outcome.result.ticks[0]?.outputs ?? {});
 
-  const lastTick = outcome.result.ticks[outcome.result.ticks.length - 1];
+  const tickCount = outcome.result.ticks.length;
+  const safeTick = Math.min(currentTick, Math.max(0, tickCount - 1));
+  const viewTick = outcome.result.ticks[safeTick];
+  const prevTick = safeTick > 0 ? outcome.result.ticks[safeTick - 1] : undefined;
+
+  const activeIds = new Set<string>();
+  if (viewTick?.entities !== undefined) {
+    for (const [id, bag] of Object.entries(viewTick.entities)) {
+      if (!bagsEqual(bag, prevTick?.entities?.[id])) {
+        activeIds.add(id);
+      }
+    }
+  }
+
+  const selectedBag =
+    selectedId !== undefined ? viewTick?.entities?.[selectedId] : undefined;
+
   const allOutputsZero =
-    lastTick !== undefined && outputKeys.every((key) => (lastTick.outputs[key] ?? 0) === 0);
+    viewTick !== undefined && outputKeys.every((key) => (viewTick.outputs[key] ?? 0) === 0);
   const allInputsZero =
     discoveredInputs.length > 0 &&
     discoveredInputs.every((signal) => (inputValues[signal] ?? 0) === 0);
@@ -125,24 +187,98 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
         ))}
       </div>
 
+      <div className="sim-playback">
+        <button
+          type="button"
+          className="toolbar-button"
+          onClick={() => {
+            setPlaying(false);
+            setCurrentTick(0);
+          }}
+        >
+          ⏮ Reset
+        </button>
+        <button
+          type="button"
+          className="toolbar-button"
+          disabled={safeTick <= 0}
+          onClick={() => {
+            setPlaying(false);
+            setCurrentTick((t) => Math.max(0, t - 1));
+          }}
+        >
+          ◀ Step
+        </button>
+        <button
+          type="button"
+          className="toolbar-button toolbar-button-primary"
+          onClick={() => setPlaying((p) => !p)}
+        >
+          {playing ? "Pause" : "Play"}
+        </button>
+        <button
+          type="button"
+          className="toolbar-button"
+          disabled={safeTick >= tickCount - 1}
+          onClick={() => {
+            setPlaying(false);
+            setCurrentTick((t) => Math.min(tickCount - 1, t + 1));
+          }}
+        >
+          Step ▶
+        </button>
+        <label className="sim-field sim-field-inline">
+          <span>Speed</span>
+          <select
+            value={speedId}
+            onChange={(event) => setSpeedId(event.target.value as typeof speedId)}
+          >
+            {SPEEDS_MS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="sim-field sim-field-grow">
+          <span>
+            Tick {safeTick + 1} / {tickCount}
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={Math.max(0, tickCount - 1)}
+            value={safeTick}
+            onChange={(event) => {
+              setPlaying(false);
+              setCurrentTick(Number(event.target.value));
+            }}
+          />
+        </label>
+      </div>
+
       {allInputsZero && allOutputsZero ? (
         <p className="sim-hint">
           Outputs are all 0 because every input is 0. For <code>while_count</code>, set{" "}
-          <strong>signal-L</strong> to something like <strong>5</strong> (loop upper bound). For{" "}
-          <code>adder</code>, try A=3 and B=7. Free-running <code>counter</code> needs no inputs.
+          <strong>signal-L</strong> to something like <strong>5</strong>.
         </p>
       ) : null}
 
-      {lastTick !== undefined ? (
+      {viewTick !== undefined ? (
         <p className="sim-muted">
-          After {outcome.result.ticks.length} tick
-          {outcome.result.ticks.length === 1 ? "" : "s"}:{" "}
-          {outputKeys.map((key) => `${key}=${lastTick.outputs[key] ?? 0}`).join(", ") ||
+          Viewing tick {safeTick + 1}:{" "}
+          {outputKeys.map((key) => `${key}=${viewTick.outputs[key] ?? 0}`).join(", ") ||
             "(no outputs)"}
         </p>
       ) : null}
 
-      <CircuitCanvas laidOut={outcome.laidOut} />
+      <CircuitCanvas
+        laidOut={outcome.laidOut}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        selectedBag={selectedBag}
+        activeIds={activeIds}
+      />
 
       <div className="sim-table-wrap">
         <table className="sim-table">
@@ -156,7 +292,14 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
           </thead>
           <tbody>
             {outcome.result.ticks.map((tick, tickIndex) => (
-              <tr key={tickRowKey(tickIndex, tick.outputs)}>
+              <tr
+                key={tickRowKey(tickIndex, tick.outputs)}
+                className={tickIndex === safeTick ? "is-current-tick" : undefined}
+                onClick={() => {
+                  setPlaying(false);
+                  setCurrentTick(tickIndex);
+                }}
+              >
                 <td>{tickIndex + 1}</td>
                 {outputKeys.map((key) => (
                   <td key={key}>{tick.outputs[key] ?? 0}</td>
@@ -169,7 +312,8 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
 
       <p className="sim-icon-disclaimer">
         Combinator icons © Wube Software — vendored for this non-commercial fan playground only; not
-        for redistribution. See <code>factorio-icons/NOTICE</code>.
+        for redistribution. See <code>factorio-icons/NOTICE</code>. Layout uses layered placement for
+        the canvas (blueprint emit still uses a single row).
       </p>
     </div>
   );

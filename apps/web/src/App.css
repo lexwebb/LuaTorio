@@ -597,3 +597,100 @@ body {
   pointer-events: none;
   image-rendering: pixelated;
 }
+
+.sim-playback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: flex-end;
+}
+
+.sim-field-inline {
+  min-width: 5rem;
+}
+
+.sim-field-inline select {
+  padding: 5px 8px;
+  border-radius: 3px;
+  border: 1px solid #5a4f42;
+  background: #0a0806;
+  color: #f5ecd8;
+  font-family: var(--font-ui);
+}
+
+.sim-field-grow {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.sim-field-grow input[type="range"] {
+  width: 100%;
+}
+
+.sim-table tr.is-current-tick {
+  background: rgba(255, 182, 77, 0.18);
+}
+
+.sim-table tbody tr {
+  cursor: pointer;
+}
+
+.sim-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.circuit-entity-label {
+  fill: #c4b79a;
+  font-size: 9px;
+  font-family: var(--font-ui);
+}
+
+.circuit-entity-id {
+  fill: #8a7f6a;
+  font-size: 8px;
+}
+
+.circuit-entity-button.is-active-tick {
+  box-shadow: 0 0 0 2px rgba(255, 182, 77, 0.7);
+}
+
+.circuit-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #5a4f42;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #f0e6d2;
+  font-size: 0.88rem;
+}
+
+.circuit-inspector-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
+}
+
+.circuit-inspector-config,
+.circuit-inspector-bag ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  line-height: 1.45;
+}
+
+.circuit-inspector-bag-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ft-accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.circuit-wire {
+  stroke-width: 2.25;
+  opacity: 0.9;
+}

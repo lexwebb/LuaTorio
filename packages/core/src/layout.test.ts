@@ -158,4 +158,24 @@ describe("layout", () => {
     expect(xs).toEqual(xs.map((_, i) => i * 2));
     expect(laid.wires).toHaveLength(lowerToCombinators(module).wires.length);
   });
+
+  it("layered arrangement stacks same-rank entities on y", () => {
+    const graph: CircuitGraph = {
+      entities: [entity("a", "constant"), entity("b", "constant"), entity("sum", "arithmetic")],
+      wires: [
+        { from: "a", to: "sum", color: "green" },
+        { from: "b", to: "sum", color: "green" },
+      ],
+      outputs: [],
+      inputs: [
+        { signal: "signal-A", entityId: "a" },
+        { signal: "signal-B", entityId: "b" },
+      ],
+    };
+    const laid = layout(graph, { arrangement: "layered" });
+    const byId = Object.fromEntries(laid.entities.map((e) => [e.id, e.position]));
+    expect(byId.a?.x).toBe(byId.b?.x);
+    expect(byId.a?.y).not.toBe(byId.b?.y);
+    expect(byId.sum?.x).toBeGreaterThan(byId.a?.x ?? 0);
+  });
 });

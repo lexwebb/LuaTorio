@@ -14,8 +14,7 @@ export interface PlacedEntity extends CircuitEntity {
 
 /**
  * A Factorio 2.0 blueprint `wires` entry: `[src_entity_number, src_connector, dst_entity_number,
- * dst_connector]`. Connector ids are `defines.wire_connector_id` values (see `GREEN_WIRE_*`
- * below); v1/v2 phase 1 only ever emits green wires.
+ * dst_connector]`. Connector ids are `defines.wire_connector_id` values.
  */
 export type FactorioWire = [number, number, number, number];
 
@@ -26,13 +25,24 @@ export interface LaidOutCircuit {
   inputs: CircuitGraph["inputs"];
 }
 
+export type LayoutArrangement = "row" | "layered";
+
+export interface LayoutOptions {
+  /**
+   * - `row` (default): topo left-to-right on y=0 — stable for blueprint emit / goldens.
+   * - `layered`: rank by combo depth, stack within a column — clearer for the web canvas.
+   */
+  arrangement?: LayoutArrangement;
+}
+
 const RED_WIRE_INPUT = 1;
 const GREEN_WIRE_INPUT = 2;
 const RED_WIRE_OUTPUT = 3;
 const GREEN_WIRE_OUTPUT = 4;
 
-/** 2-tile spacing between successive entities' x positions. */
+/** Tile spacing between successive columns (and rows in layered mode). */
 const X_SPACING = 2;
+const Y_SPACING = 2;
 
 /** Wire connector id for `kind` on the given endpoint side of a colored `WireEdge`. */
 function wireConnector(kind: CombinatorKind, side: "from" | "to", color: WireColor): number {
@@ -60,7 +70,6 @@ function topologicalOrder(entities: CircuitEntity[], wires: WireEdge[]): Circuit
   const incoming = new Map(entities.map((entity) => [entity.id, 0]));
   const outgoing = new Map<string, string[]>(entities.map((entity) => [entity.id, []]));
   for (const wire of wires) {
-    // Break cycles at latch sinks: do not count wires that target a latch for Kahn degree.
     if (latchIds.has(wire.to)) {
       continue;
     }
@@ -79,7 +88,9 @@ function topologicalOrder(entities: CircuitEntity[], wires: WireEdge[]): Circuit
     for (const next of outgoing.get(id) ?? []) {
       const remaining = (incoming.get(next) ?? 0) - 1;
       incoming.set(next, remaining);
-      if (remaining === 0) ready.push(next);
+      if (remaining === 0) {
+        ready.push(next);
+      }
     }
   }
 
@@ -89,22 +100,109 @@ function topologicalOrder(entities: CircuitEntity[], wires: WireEdge[]): Circuit
   return order;
 }
 
+/** Longest-path rank ignoring edges into latches (same cycle break as topo). */
+function layeredRanks(entities: CircuitEntity[], wires: WireEdge[]): Map<string, number> {
+  const latchIds = new Set(
+    entities.filter((entity) => entity.role === "latch").map((entity) => entity.id),
+  );
+  const preds = new Map<string, string[]>(entities.map((entity) => [entity.id, []]));
+  for (const wire of wires) {
+    if (latchIds.has(wire.to)) {
+      continue;
+    }
+    preds.get(wire.to)?.push(wire.from);
+  }
+
+  const order = topologicalOrder(entities, wires);
+  const rank = new Map<string, number>();
+  for (const entity of order) {
+    let best = 0;
+    for (const from of preds.get(entity.id) ?? []) {
+      best = Math.max(best, (rank.get(from) ?? 0) + 1);
+    }
+    // Inputs / sources stay in column 0; latches prefer a column after their combo feeders
+    // when they only have feedback edges (preds empty under the latch break).
+    if (entity.role === "latch" && best === 0) {
+      best = 1;
+    }
+    rank.set(entity.id, best);
+  }
+  return rank;
+}
+
+function assignPositions(
+  ordered: CircuitEntity[],
+  ranks: Map<string, number> | undefined,
+): PlacedEntity[] {
+  if (ranks === undefined) {
+    return ordered.map((entity, index) => ({
+      ...entity,
+      entity_number: index + 1,
+      position: { x: index * X_SPACING, y: 0 },
+    }));
+  }
+
+  // Keep `__o*` output placeholders in a column past the combo cone (canvas L→R).
+  const outputIds = new Set(
+    ordered.filter((entity) => entity.id.startsWith("__o")).map((entity) => entity.id),
+  );
+  let maxComboRank = 0;
+  for (const [id, r] of ranks) {
+    if (!outputIds.has(id)) {
+      maxComboRank = Math.max(maxComboRank, r);
+    }
+  }
+  const outRank = maxComboRank + 1;
+  for (const id of outputIds) {
+    ranks.set(id, outRank);
+  }
+
+  const byRank = new Map<number, CircuitEntity[]>();
+  for (const entity of ordered) {
+    const r = ranks.get(entity.id) ?? 0;
+    const list = byRank.get(r) ?? [];
+    list.push(entity);
+    byRank.set(r, list);
+  }
+
+  const placed: PlacedEntity[] = [];
+  let number = 1;
+  const sortedRanks = [...byRank.keys()].sort((a, b) => a - b);
+  for (const r of sortedRanks) {
+    const column = byRank.get(r) ?? [];
+    column.forEach((entity, row) => {
+      placed.push({
+        ...entity,
+        entity_number: number,
+        position: { x: r * X_SPACING, y: row * Y_SPACING },
+      });
+      number += 1;
+    });
+  }
+  return placed;
+}
+
 /**
  * Assigns positions and Factorio `entity_number`s to a `CircuitGraph` and rewrites its
- * `WireEdge`s into `FactorioWire` tuples. Entities are placed in topological order along a
- * single row (y = 0), `X_SPACING` tiles apart. Feedback wires into latches are retained.
+ * `WireEdge`s into `FactorioWire` tuples. Default `row` placement matches historical emit.
+ * Use `arrangement: "layered"` for the playground canvas.
  */
-export function layout(graph: CircuitGraph): LaidOutCircuit {
+export function layout(graph: CircuitGraph, options?: LayoutOptions): LaidOutCircuit {
+  const arrangement = options?.arrangement ?? "row";
   const ordered = topologicalOrder(graph.entities, graph.wires);
+  const ranks = arrangement === "layered" ? layeredRanks(graph.entities, graph.wires) : undefined;
 
-  const entityNumberById = new Map(ordered.map((entity, index) => [entity.id, index + 1]));
-  const kindById = new Map(ordered.map((entity) => [entity.id, entity.kind]));
+  const entities =
+    arrangement === "layered"
+      ? assignPositions(ordered, ranks)
+      : ordered.map((entity, index) => ({
+          ...entity,
+          entity_number: index + 1,
+          position: { x: index * X_SPACING, y: 0 },
+        }));
 
-  const entities: PlacedEntity[] = ordered.map((entity, index) => ({
-    ...entity,
-    entity_number: index + 1,
-    position: { x: index * X_SPACING, y: 0 },
-  }));
+  const entityNumberById = new Map(entities.map((entity) => [entity.id, entity.entity_number]));
+  const kindById = new Map(entities.map((entity) => [entity.id, entity.kind]));
 
   const wires: FactorioWire[] = graph.wires.map((wire) => [
     entityNumberById.get(wire.from) as number,
