@@ -16,7 +16,7 @@ After #32/#33/#35–#37, Factorio emit tricks for the **current** Lua surface ar
 | **P1** | **Multi-signal channels / bundles** | EACH packing, fewer latches per channel; feeds #40 | IR bundle type; later colors |
 | **P2** | **Rank / index / pick-by-N** | Honest **selector** emit (#39) | Bundle or multi-signal bag |
 | P3 | `elseif`, richer if bodies | Ergonomics only (nested if already rejected) | [#65](https://github.com/lexwebb/LuaTorio/issues/65) |
-| P3 | User `function` (v3) | Inlining / reuse | [#67](https://github.com/lexwebb/LuaTorio/issues/67) / [#68](https://github.com/lexwebb/LuaTorio/issues/68) |
+| P3 | User `function` (v3) | Inlining / reuse | [#67](https://github.com/lexwebb/LuaTorio/issues/67) / [#68](https://github.com/lexwebb/LuaTorio/issues/68); [design](2026-07-23-v3-functions-design.md) |
 
 ### Why not selector or red/green first?
 
@@ -120,6 +120,8 @@ Suggested order (emit density first, then Lua surface growth):
 | [#73](https://github.com/lexwebb/LuaTorio/issues/73) | v5 implement `place()` |
 
 Cookbook emit backlog (not language surface): [#57](https://github.com/lexwebb/LuaTorio/issues/57)–[#63](https://github.com/lexwebb/LuaTorio/issues/63).
+
+Design notes: [v3 functions](2026-07-23-v3-functions-design.md), [v4 tables as bags](2026-07-23-v4-tables-as-bags-design.md), and [v5 `place()`](2026-07-23-v5-place-design.md).
 
 ## Tracking
 

@@ -86,6 +86,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`sr_latch.lua`](examples/sr_latch.lua) | Cookbook SR via `sr(q, set, reset)` — one decider latch |
 | [`each_latch.lua`](examples/each_latch.lua) | EACH-tag sticky hysteresis bag — 1 constant + 1 decider |
 | [`bag_arith.lua`](examples/bag_arith.lua) | Cookbook 1 math: pairwise `EACH / EACH` bags over red/green |
+| [`bag_filter.lua`](examples/bag_filter.lua) | Cookbook 3–5: include, exclude, and per-channel limit bags |
 | [`signal_at.lua`](examples/signal_at.lua) | Pick Nth-largest input via `signal_at` → selector `select` |
 | [`signal_at_asc.lua`](examples/signal_at_asc.lua) | Nth-smallest among present (`signal_at_asc`) — priority ranks |
 | [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
@@ -96,6 +97,9 @@ console.log(stats); // { combinators: 3, wires: 2 }
 Programs are a flat sequence of statements. See the
 [design spec](docs/superpowers/specs/2026-07-22-luatorio-design.md) and
 [v2 sequential design](docs/superpowers/specs/2026-07-23-v2-sequential-design.md) for the roadmap.
+Later roadmap designs: [v3 functions](docs/superpowers/specs/2026-07-23-v3-functions-design.md),
+[v4 tables as bags](docs/superpowers/specs/2026-07-23-v4-tables-as-bags-design.md), and
+[v5 `place()`](docs/superpowers/specs/2026-07-23-v5-place-design.md).
 
 Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain machines
 (foundries, assemblers, …) are examples that compose those primitives — not new language APIs.
@@ -116,6 +120,7 @@ Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain mac
 | `each_latch(level, signal, high, …)` | Sticky multi-signal hysteresis bag (EACH tags); `output(signal, bag)` |
 | `bag_const(signal, count, …)` | Constant multi-signal bag; signal/count pairs are literals |
 | `bag_arith(op, left, right)` | Pairwise bag arithmetic (`+ - * / %`); left red, right green, output EACH |
+| `bag_filter(mode, data, mask)` | Red bag filtered by green bag: `include`, `exclude`, or count `limit` |
 | `signal_at(index, a, b, …)` | Value of Nth-largest nonzero arg; selector `select` (`select_max`) |
 | `signal_at_asc(index, a, b, …)` | Value of Nth-smallest nonzero arg; selector `select` ascending |
 | `signal_count(a, b, …)` | Count nonzero args; emits one selector combinator (`operation: "count"`) |
@@ -154,8 +159,8 @@ Unsupported constructs raise a `SemanticError` naming the construct and its plan
   (not nested in an expression). A program needs **at least one** `output()` call.
 - Bags are multi-signal values. `output("signal-name", bag)` samples that named channel; use one
   output per required boundary channel. Bag locals cannot be used in scalar arithmetic,
-  comparisons, or memory assignments. `bag_const` and `bag_arith` explicitly encode the
-  red/green cookbook pattern and unblock v4 table constructors as constant bags.
+  comparisons, or memory assignments. `bag_const`, `bag_arith`, and `bag_filter` explicitly
+  encode red/green cookbook patterns and unblock v4 table constructors as constant bags.
 
 ### Errors
 

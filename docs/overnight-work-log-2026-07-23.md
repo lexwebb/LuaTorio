@@ -49,4 +49,17 @@
 - `pnpm typecheck` + 199 tests green.
 - Commit pending in this step → see git log.
 
+### T3 — #59 bag filters (DONE)
+- Added `bag_filter("include" | "exclude" | "limit", data, mask)` with shared `bag_filter` IR.
+- Emits one red-data / green-mask EACH decider; include/exclude use presence and limit uses `data <= mask`.
+- Added design note, `bag_filter.lua`, goldens, analyzer validation, and simulator coverage.
+
+### T4 — #67 + #69 + #72 design roadmap (DONE)
+- Added accepted v3 function, v4 tables-as-bags, and v5 `place()` designs, each mapped to its
+  existing implementation follow-up (#68, #70, #73).
+- v3 uses fully inlined, non-recursive pure functions with immutable captures; v4 chooses
+  bracketed string-literal signal keys for immutable constant bags; v5 starts with three placed
+  non-combinator entities and no automatic placed-entity wiring.
+- Linked the roadmap slice and README language reference; no emit work was started.
+
 ---
