@@ -6,3 +6,7 @@ coverage/
 .DS_Store
 mcp-config.json
 .superpowers/
+# Cookbook rip bulk dumps (catalog.json / patterns.md stay tracked)
+research/cookbook-2.0/out/
+research/cookbook-2.0/raw/
+research/cookbook-2.0/*.html

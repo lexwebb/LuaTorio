@@ -71,7 +71,7 @@ function sumProducerBags(
  * Seed latch Q from non-empty constants wired directly into the latch.
  * Emitter places `memory.init` literals that way; their filter signal names are the literal
  * ids (not the memory signal), so we take the constant's count as the initial value of the
- * latch's `outputSignal`.
+ * latch's `outputSignal`. Multi-signal fused clocks set `latchSeeds` instead.
  */
 function seedLatchOutputs(
   graph: CircuitGraph,
@@ -81,6 +81,14 @@ function seedLatchOutputs(
 ): void {
   for (const entity of graph.entities) {
     if (entity.role !== "latch") {
+      continue;
+    }
+    const bag = emptyBag();
+    if (entity.latchSeeds !== undefined) {
+      for (const [signal, count] of Object.entries(entity.latchSeeds)) {
+        bagSet(bag, signal, count);
+      }
+      outputs.set(entity.id, bag);
       continue;
     }
     let seed = 0;
@@ -95,7 +103,6 @@ function seedLatchOutputs(
         found = true;
       }
     }
-    const bag = emptyBag();
     if (found) {
       bagSet(bag, entity.outputSignal, seed);
     }
@@ -137,16 +144,42 @@ function refreshConstants(
   }
 }
 
+function producerIdsFor(
+  entityId: string,
+  producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
+): string[] {
+  const colored = producersColor.get(entityId);
+  if (colored === undefined) {
+    return [];
+  }
+  return [...colored.red, ...colored.green];
+}
+
 function readOutputPort(
   port: { signal: string; entityId: string },
   producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
   outputs: ReadonlyMap<string, SignalBag>,
+  entityById: ReadonlyMap<string, CircuitEntity>,
 ): number {
   const net = sumProducerBags(port.entityId, producersColor, outputs);
-  const named = bagGet(net, port.signal);
-  if (named !== 0 || net.has(port.signal)) {
-    return named;
+  if (net.has(port.signal)) {
+    return bagGet(net, port.signal);
   }
+  // EACH/catalog bags: absent recipe name is 0 (do not rename another recipe onto this port).
+  const fromEachBag = producerIdsFor(port.entityId, producersColor).some(
+    (id) => entityById.get(id)?.outputSignal === "signal-each",
+  );
+  if (fromEachBag) {
+    return 0;
+  }
+  // Prefer the producer's declared output signal (fused clocks also emit `__run`, etc.).
+  for (const id of producerIdsFor(port.entityId, producersColor)) {
+    const sig = entityById.get(id)?.outputSignal;
+    if (sig !== undefined && net.has(sig)) {
+      return bagGet(net, sig);
+    }
+  }
+  // Legacy single-signal rename: producer emits on a temp/branch id, port asks for user name.
   let sum = 0;
   for (const count of net.values()) {
     sum = toInt32(sum + count);
@@ -158,10 +191,11 @@ function sampleOutputs(
   graph: CircuitGraph,
   producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
   outputs: ReadonlyMap<string, SignalBag>,
+  entityById: ReadonlyMap<string, CircuitEntity>,
 ): Record<string, number> {
   const tickOutputs: Record<string, number> = {};
   for (const port of graph.outputs) {
-    tickOutputs[port.signal] = readOutputPort(port, producersColor, outputs);
+    tickOutputs[port.signal] = readOutputPort(port, producersColor, outputs, entityById);
   }
   return tickOutputs;
 }
@@ -191,9 +225,12 @@ function pushTick(
   graph: CircuitGraph,
   producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
   outputs: ReadonlyMap<string, SignalBag>,
+  entityById: ReadonlyMap<string, CircuitEntity>,
   entityOutputs: boolean | undefined,
 ): void {
-  const tick: SimulateTick = { outputs: sampleOutputs(graph, producersColor, outputs) };
+  const tick: SimulateTick = {
+    outputs: sampleOutputs(graph, producersColor, outputs, entityById),
+  };
   if (entityOutputs) {
     tick.entities = snapshotEntityOutputs(graph, outputs);
   }
@@ -263,7 +300,7 @@ function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): Simulate
       outputs.set(latch.id, evalEntity(latch, inputBags(latch.id, producersColor, outputs)));
     }
 
-    pushTick(ticks, graph, producersColor, outputs, opts.entityOutputs);
+    pushTick(ticks, graph, producersColor, outputs, entityById, opts.entityOutputs);
   }
 
   return { ticks };
@@ -281,7 +318,7 @@ function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): S
     applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
     refreshConstants(graph, outputs, inputEntityIds);
     parallelUpdate(delayed, producersColor, outputs);
-    pushTick(ticks, graph, producersColor, outputs, opts.entityOutputs);
+    pushTick(ticks, graph, producersColor, outputs, entityById, opts.entityOutputs);
   }
 
   return { ticks };
@@ -306,7 +343,7 @@ function simulateFactorio(graph: CircuitGraph, opts: SimulateOptions): SimulateR
     }
     parallelUpdate(latches, producersColor, outputs);
 
-    pushTick(ticks, graph, producersColor, outputs, opts.entityOutputs);
+    pushTick(ticks, graph, producersColor, outputs, entityById, opts.entityOutputs);
   }
 
   return { ticks };

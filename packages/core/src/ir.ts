@@ -19,7 +19,27 @@ export type IRNode =
   /** Cookbook SR: Q' = (Q ∨ set) ∧ ¬reset → 0/1. */
   | { kind: "sr"; id: string; state: string; set: string; reset: string }
   /** Count nonzero unique arg signals → one selector combinator (`operation: "count"`). */
-  | { kind: "signal_count"; id: string; args: string[] };
+  | { kind: "signal_count"; id: string; args: string[] }
+  /**
+   * EACH-tag sticky hysteresis latch (#46): constant signal tags + one multi-OR decider.
+   * `level` is an IR node id; `signal` is the emit name; `tag` is unique ≥ 1.
+   */
+  | {
+      kind: "each_latch";
+      id: string;
+      entries: Array<{ level: string; signal: string; buffer: number; tag: number }>;
+    }
+  /**
+   * Selector rank/index (#47): pick the Nth nonzero arg by value.
+   * `ascending` → Factorio `select_max: false` (index 0 = minimum).
+   */
+  | {
+      kind: "signal_at";
+      id: string;
+      index: number;
+      ascending: boolean;
+      args: string[];
+    };
 
 export interface IRModule {
   /** Flat node list; `id === temp signal name`. */

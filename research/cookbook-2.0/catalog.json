@@ -1,0 +1,1566 @@
+{
+  "source": "https://forums.factorio.com/viewtopic.php?t=124776",
+  "topicId": 124776,
+  "generatedAt": "2026-07-23T21:44:23.857Z",
+  "pages": [
+    0,
+    20,
+    40
+  ],
+  "scraped": 40,
+  "unique": 37,
+  "decoded": 37,
+  "errors": [],
+  "entries": [
+    {
+      "id": "p0-00-1-math",
+      "label": "1 math",
+      "pageStart": 0,
+      "indexOnPage": 0,
+      "blueprintChars": 893,
+      "analysis": {
+        "entities": 8,
+        "combinators": 3,
+        "wires": 3,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 1,
+          "decider": 0,
+          "selector": 0,
+          "other": 5
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 3,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 1,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Divide everything from [item=red-wire] by everything from [item=green-wire].\nCan be used for all the other arithmetic operations as well."
+        ]
+      }
+    },
+    {
+      "id": "p0-01-2-min",
+      "label": "2 min",
+      "pageStart": 0,
+      "indexOnPage": 1,
+      "blueprintChars": 1013,
+      "analysis": {
+        "entities": 8,
+        "combinators": 4,
+        "wires": 6,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 4
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 6,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 4,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "This combinator outputs all signals from[item=green-wire]whose values are lower or equal than the corresponding signals on[item=red-wire]\nThe other combinator outputs all signals from[item=red-wire]whose values are lower than the correspond"
+        ]
+      }
+    },
+    {
+      "id": "p0-02-hh-copy-blueprint-maximum",
+      "label": "hh copy blueprint maximum",
+      "pageStart": 0,
+      "indexOnPage": 2,
+      "blueprintChars": 1025,
+      "analysis": {
+        "entities": 8,
+        "combinators": 4,
+        "wires": 6,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 4
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 6,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 4,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "This combinator outputs all signals from[item=green-wire]whose values are greater than or equal to the corresponding signals on[item=red-wire]\nThe other combinator outputs all signals from[item=red-wire]whose values are greater than the cor"
+        ]
+      }
+    },
+    {
+      "id": "p0-03-3-filter-include",
+      "label": "3 filter include",
+      "pageStart": 0,
+      "indexOnPage": 3,
+      "blueprintChars": 1145,
+      "analysis": {
+        "entities": 17,
+        "combinators": 3,
+        "wires": 3,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 14
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 3,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 3,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Arbitrary signals on[item=red-wire]\nFilter definition on[item=green-wire]\nOutput only signals from[item=red-wire]also present on[item=green-wire]\nValues on[item=green-wire]don't matter, don't need to be 1."
+        ]
+      }
+    },
+    {
+      "id": "p0-04-4-filter-exclude",
+      "label": "4 filter exclude",
+      "pageStart": 0,
+      "indexOnPage": 4,
+      "blueprintChars": 1145,
+      "analysis": {
+        "entities": 17,
+        "combinators": 3,
+        "wires": 3,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 14
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 3,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 3,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Arbitrary signals on[item=red-wire]\nFilter definition on[item=green-wire]\nOutput only signals from[item=red-wire]not present on[item=green-wire]\nValues on[item=green-wire]don't matter, don't need to be 1."
+        ]
+      }
+    },
+    {
+      "id": "p0-05-5-filter-limit",
+      "label": "5 filter limit",
+      "pageStart": 0,
+      "indexOnPage": 5,
+      "blueprintChars": 1213,
+      "analysis": {
+        "entities": 16,
+        "combinators": 3,
+        "wires": 4,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 13
+        },
+        "otherNames": [
+          "display-panel",
+          "fast-inserter",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 3,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 2,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Maximum allowed items",
+          "Filter everything below or above some limit.\nWith[item=red-wire]a limit for some given signals is input.\nOutput every signal from[item=green-wire]that's below the limit. Ignore signals from[item=green-wire]that don't exist in the filter on[",
+          "Simulated content from container"
+        ]
+      }
+    },
+    {
+      "id": "p0-06-6-latch",
+      "label": "6 latch",
+      "pageStart": 0,
+      "indexOnPage": 6,
+      "blueprintChars": 965,
+      "analysis": {
+        "entities": 8,
+        "combinators": 2,
+        "wires": 3,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 6
+        },
+        "otherNames": [
+          "display-panel",
+          "small-lamp"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 0,
+          "dualColorEntities": 1,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": []
+        },
+        "descriptions": [
+          "Hysteresis:\nActivate[virtual-signal=signal-check]if input signal [item=iron-ore] raises above the upper limit (200).\n[virtual-signal=signal-check]stays active until input signal [item=iron-ore] goes below the lower limit (100).\nSignal has t"
+        ]
+      }
+    },
+    {
+      "id": "p0-07-7-counter",
+      "label": "7 counter",
+      "pageStart": 0,
+      "indexOnPage": 7,
+      "blueprintChars": 729,
+      "analysis": {
+        "entities": 10,
+        "combinators": 1,
+        "wires": 3,
+        "byKind": {
+          "constant": 0,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 9
+        },
+        "otherNames": [
+          "display-panel",
+          "fast-inserter",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 0,
+          "dualColorEntities": 0,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": []
+        },
+        "descriptions": [
+          "This counter counts everything moved by the inserter.\nIt is reset to 0 if [virtual-signal=signal-R]>0 is provided."
+        ]
+      }
+    },
+    {
+      "id": "p0-08-8-clock",
+      "label": "8 clock",
+      "pageStart": 0,
+      "indexOnPage": 8,
+      "blueprintChars": 805,
+      "analysis": {
+        "entities": 7,
+        "combinators": 1,
+        "wires": 2,
+        "byKind": {
+          "constant": 0,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 6
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 1,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 0,
+          "dualColorEntities": 0,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": []
+        },
+        "descriptions": [
+          "This clock counts from 0 to 100, then starts from 0 again.\nFeel free to provide a different loop condition with different input signals. The clock counts as long as the conditions are true.\n\nIn contrast to clocks from game version 1.1, you'"
+        ]
+      }
+    },
+    {
+      "id": "p0-09-9-memory-cell",
+      "label": "9 memory cell",
+      "pageStart": 0,
+      "indexOnPage": 9,
+      "blueprintChars": 1201,
+      "analysis": {
+        "entities": 16,
+        "combinators": 5,
+        "wires": 7,
+        "byKind": {
+          "constant": 3,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 11
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 2,
+          "redGreenSplit": 4,
+          "dualColorEntities": 2,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-everything"
+          ]
+        },
+        "descriptions": [
+          "While [virtual-signal=signal-S] is true, pass values from [item=red-wire], so the output follows the input.\nWhile [virtual-signal=signal-S] is false, the output is provided by the other combinator.",
+          "While [virtual-signal=signal-S] is false, retain values on [item=red-wire] due to the loopback wire.\nWhile [virtual-signal=signal-S] is true, the output is provided by the other combinator."
+        ]
+      }
+    },
+    {
+      "id": "p0-10-10-filter-real-items",
+      "label": "10 filter real items",
+      "pageStart": 0,
+      "indexOnPage": 10,
+      "blueprintChars": 1169,
+      "analysis": {
+        "entities": 16,
+        "combinators": 4,
+        "wires": 5,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 1,
+          "decider": 1,
+          "selector": 1,
+          "other": 12
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 5,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 3,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [
+            "stack-size"
+          ],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Filter stackable items from an arbitrary number of signals.",
+          "Arbitrary signals on[item=red-wire]\nFilter definition on[item=green-wire]\nOutput only signals from[item=red-wire]also present on[item=green-wire]\nValues on[item=green-wire]don't matter, don't need to be 1."
+        ]
+      }
+    },
+    {
+      "id": "p0-11-11-iterate-list-1",
+      "label": "11 iterate list 1",
+      "pageStart": 0,
+      "indexOnPage": 11,
+      "blueprintChars": 925,
+      "analysis": {
+        "entities": 16,
+        "combinators": 3,
+        "wires": 5,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 1,
+          "other": 13
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 1,
+          "eachUse": 0,
+          "anythingUse": 1,
+          "everythingUse": 1,
+          "redGreenSplit": 1,
+          "dualColorEntities": 2,
+          "feedbackWires": 1,
+          "selectorOps": [
+            "select"
+          ],
+          "wildcards": [
+            "signal-anything",
+            "signal-everything"
+          ]
+        },
+        "descriptions": []
+      }
+    },
+    {
+      "id": "p0-12-12-iterate-list-2",
+      "label": "12 iterate list 2",
+      "pageStart": 0,
+      "indexOnPage": 12,
+      "blueprintChars": 913,
+      "analysis": {
+        "entities": 17,
+        "combinators": 4,
+        "wires": 6,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 2,
+          "other": 13
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 1,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 0,
+          "dualColorEntities": 3,
+          "feedbackWires": 1,
+          "selectorOps": [
+            "count",
+            "select"
+          ],
+          "wildcards": []
+        },
+        "descriptions": []
+      }
+    },
+    {
+      "id": "p0-13-17-digital-display",
+      "label": "17 digital display",
+      "pageStart": 0,
+      "indexOnPage": 13,
+      "blueprintChars": 1865,
+      "analysis": {
+        "entities": 27,
+        "combinators": 3,
+        "wires": 12,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 1,
+          "decider": 0,
+          "selector": 0,
+          "other": 24
+        },
+        "otherNames": [
+          "display-panel"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 2,
+          "anythingUse": 2,
+          "everythingUse": 0,
+          "redGreenSplit": 1,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-anything",
+            "signal-each"
+          ]
+        },
+        "descriptions": []
+      }
+    },
+    {
+      "id": "p0-14-13-stalled-belt-detector",
+      "label": "13 stalled belt detector",
+      "pageStart": 0,
+      "indexOnPage": 14,
+      "blueprintChars": 1389,
+      "analysis": {
+        "entities": 29,
+        "combinators": 1,
+        "wires": 4,
+        "byKind": {
+          "constant": 0,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 28
+        },
+        "otherNames": [
+          "bulk-inserter",
+          "display-panel",
+          "express-transport-belt",
+          "infinity-chest",
+          "small-lamp"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 1,
+          "eachUse": 0,
+          "anythingUse": 1,
+          "everythingUse": 1,
+          "redGreenSplit": 2,
+          "dualColorEntities": 1,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-everything",
+            "signal-anything"
+          ]
+        },
+        "descriptions": [
+          "This is a counter that counts the ticks while there are items on the belt ([virtual-signal=signal-anything]) AND it don't receives any pulses from the belt ([virtual-signal=signal-everything]).\n\nA sufficiently high negative counter value [v"
+        ]
+      }
+    },
+    {
+      "id": "p0-15-14-map-item-to-list",
+      "label": "14 map item to list",
+      "pageStart": 0,
+      "indexOnPage": 15,
+      "blueprintChars": 1345,
+      "analysis": {
+        "entities": 19,
+        "combinators": 3,
+        "wires": 3,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 16
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 4,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 9,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Simulated fluid content",
+          "Index → Recipe",
+          "Check conditions (x > y) and select the corresponding recipe with each ([virtual-signal=signal-each]).\nIf you make sure the ANDed conditions are disjunct within the OR blocks, exactly 1 OR block matches, so exactly 1 recipe is output."
+        ]
+      }
+    },
+    {
+      "id": "p0-16-15-limit-train-limit",
+      "label": "15 limit train limit",
+      "pageStart": 0,
+      "indexOnPage": 16,
+      "blueprintChars": 1557,
+      "analysis": {
+        "entities": 24,
+        "combinators": 4,
+        "wires": 8,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 1,
+          "decider": 1,
+          "selector": 0,
+          "other": 20
+        },
+        "otherNames": [
+          "display-panel",
+          "steel-chest",
+          "straight-rail",
+          "train-stop"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 2,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 2,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Train capacity.\n4 [item=iron-ore] wagons: 4*40*50=8000\n4 [item=iron-plate] wagons: 4*40*100=16000",
+          "Compute number of full trains that can be filled from current chest content to [virtual-signal=signal-M].",
+          "Limit [virtual-signal=signal-M] and store the result in [virtual-signal=signal-L].\n\nTo make this work with only 1 combinator, you need to supply the maximum with as many different [virtual-signal=signal-1], [virtual-signal=signal-2], etc. s"
+        ]
+      }
+    },
+    {
+      "id": "p0-17-16-asteroid-collecting",
+      "label": "16 asteroid collecting",
+      "pageStart": 0,
+      "indexOnPage": 17,
+      "blueprintChars": 997,
+      "analysis": {
+        "entities": 21,
+        "combinators": 2,
+        "wires": 3,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 19
+        },
+        "otherNames": [
+          "asteroid-collector",
+          "display-panel"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 3,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 1,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Maximum allowed items"
+        ]
+      }
+    },
+    {
+      "id": "p0-18-19-edge-detector",
+      "label": "19 edge detector",
+      "pageStart": 0,
+      "indexOnPage": 18,
+      "blueprintChars": 1061,
+      "analysis": {
+        "entities": 16,
+        "combinators": 3,
+        "wires": 4,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 1,
+          "decider": 1,
+          "selector": 0,
+          "other": 13
+        },
+        "otherNames": [
+          "display-panel",
+          "small-lamp"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 2,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 1,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Delay 1 tick",
+          "Current signal on[item=green-wire]\nSignal from the previous tick on[item=red-wire]\nComparison > detects raising edge\nComparison < detects falling edge\nOutput [virtual-signal=signal-P] if edge detected."
+        ]
+      }
+    },
+    {
+      "id": "p0-19-20-pulse-extender",
+      "label": "20 pulse extender",
+      "pageStart": 0,
+      "indexOnPage": 19,
+      "blueprintChars": 1269,
+      "analysis": {
+        "entities": 18,
+        "combinators": 4,
+        "wires": 6,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 14
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 5,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 6,
+          "dualColorEntities": 2,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "If there is some input on [item=green-wire]and [virtual-signal=signal-R]eset is false, pass the input from[item=green-wire]",
+          "If there is no input on[item=green-wire]\nAND\nthere is some (looped back) output on [item=red-wire]\nAND\n[virtual-signal=signal-R]eset is false, retain values on[item=red-wire]due to the loopback wire."
+        ]
+      }
+    },
+    {
+      "id": "p0-20-21-periodic-memory-snapshot",
+      "label": "21 periodic memory snapshot",
+      "pageStart": 0,
+      "indexOnPage": 20,
+      "blueprintChars": 1617,
+      "analysis": {
+        "entities": 28,
+        "combinators": 4,
+        "wires": 8,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 24
+        },
+        "otherNames": [
+          "display-panel",
+          "roboport",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 2,
+          "redGreenSplit": 4,
+          "dualColorEntities": 2,
+          "feedbackWires": 2,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-everything"
+          ]
+        },
+        "descriptions": [
+          "simulate logistics network content",
+          "Defines the period of memory cell update",
+          "While counter [virtual-signal=signal-S] is below the period value [virtual-signal=signal-P], retain values on [item=red-wire]due to the loopback wire.\nIf  [virtual-signal=signal-S]=[virtual-signal=signal-P], the other combinator provides th",
+          "If counter [virtual-signal=signal-S] is equal to the refresh period [virtual-signal=signal-P], pass values from[item=red-wire], so the output follows the input. This is the moment to store the current value into the memory cell."
+        ]
+      }
+    },
+    {
+      "id": "p0-21-18-throughput-display",
+      "label": "18 throughput display",
+      "pageStart": 0,
+      "indexOnPage": 21,
+      "blueprintChars": 2269,
+      "analysis": {
+        "entities": 37,
+        "combinators": 6,
+        "wires": 18,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 4,
+          "decider": 1,
+          "selector": 0,
+          "other": 31
+        },
+        "otherNames": [
+          "bulk-inserter",
+          "display-panel",
+          "infinity-chest"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 10,
+          "anythingUse": 2,
+          "everythingUse": 0,
+          "redGreenSplit": 1,
+          "dualColorEntities": 5,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-anything",
+            "signal-each"
+          ]
+        },
+        "descriptions": []
+      }
+    },
+    {
+      "id": "p0-22-combinator-12-21-2024-14-16-06-png-1-66-mib-view",
+      "label": "combinator. 12-21-2024, 14-16-06.png (1.66 MiB) Viewed 35099 times",
+      "pageStart": 0,
+      "indexOnPage": 22,
+      "blueprintChars": 1309,
+      "analysis": {
+        "label": "7-digit display",
+        "entities": 20,
+        "combinators": 8,
+        "wires": 15,
+        "byKind": {
+          "constant": 0,
+          "arithmetic": 7,
+          "decider": 1,
+          "selector": 0,
+          "other": 12
+        },
+        "otherNames": [
+          "display-panel",
+          "small-lamp"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 7,
+          "anythingUse": 1,
+          "everythingUse": 1,
+          "redGreenSplit": 0,
+          "dualColorEntities": 7,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-anything",
+            "signal-everything",
+            "signal-each"
+          ]
+        },
+        "descriptions": []
+      }
+    },
+    {
+      "id": "p0-23-644584-combinator-16248048-544x256",
+      "label": "644584 combinator_16248048_544x256",
+      "pageStart": 0,
+      "indexOnPage": 23,
+      "blueprintChars": 1845,
+      "analysis": {
+        "entities": 26,
+        "combinators": 17,
+        "wires": 11,
+        "byKind": {
+          "constant": 16,
+          "arithmetic": 1,
+          "decider": 0,
+          "selector": 0,
+          "other": 9
+        },
+        "otherNames": [
+          "display-panel"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 2,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 1,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": []
+      }
+    },
+    {
+      "id": "p0-25-circuits-i-e-assembler-recipes-flickering-12-22-",
+      "label": "circuits (i.e., assembler recipes) flickering. 12-22-2024, 03-40-16.png (",
+      "pageStart": 0,
+      "indexOnPage": 25,
+      "blueprintChars": 1369,
+      "analysis": {
+        "label": "Periodic memory cell",
+        "entities": 25,
+        "combinators": 23,
+        "wires": 10,
+        "byKind": {
+          "constant": 19,
+          "arithmetic": 0,
+          "decider": 4,
+          "selector": 0,
+          "other": 2
+        },
+        "otherNames": [
+          "roboport",
+          "substation"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 1,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 2,
+          "redGreenSplit": 7,
+          "dualColorEntities": 4,
+          "feedbackWires": 2,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-everything"
+          ]
+        },
+        "descriptions": [
+          "While [virtual-signal=signal-S] is true, pass values from [item=red-wire], so the output follows the input.\nWhile [virtual-signal=signal-S] is false, the output is provided by the other combinator.",
+          "Defines the period of memory cell update",
+          "While [virtual-signal=signal-S] is false, retain values on [item=red-wire] due to the loopback wire.\nWhile [virtual-signal=signal-S] is true, the output is provided by the other combinator."
+        ]
+      }
+    },
+    {
+      "id": "p0-26-f-i-understood-correctly-the-contraption",
+      "label": "f i understood correctly the contraption",
+      "pageStart": 0,
+      "indexOnPage": 26,
+      "blueprintChars": 941,
+      "analysis": {
+        "label": "Periodic memory cell",
+        "entities": 6,
+        "combinators": 4,
+        "wires": 8,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 0,
+          "decider": 3,
+          "selector": 0,
+          "other": 2
+        },
+        "otherNames": [
+          "medium-electric-pole",
+          "roboport"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 2,
+          "redGreenSplit": 2,
+          "dualColorEntities": 3,
+          "feedbackWires": 2,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-everything"
+          ]
+        },
+        "descriptions": [
+          "this is needed for the counter to count",
+          "this is a counter that reset every 5 seconds ( could be 1 minute but it would be longer to test things )",
+          "This is the memory cell ( the first )",
+          "the second decider combinator"
+        ]
+      }
+    },
+    {
+      "id": "p0-27-caveat-it-spills-the-counter-into-the-output",
+      "label": "caveat: it spills the counter into the output.",
+      "pageStart": 0,
+      "indexOnPage": 27,
+      "blueprintChars": 1573,
+      "analysis": {
+        "entities": 28,
+        "combinators": 26,
+        "wires": 8,
+        "byKind": {
+          "constant": 24,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 2
+        },
+        "otherNames": [
+          "roboport",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 2,
+          "redGreenSplit": 4,
+          "dualColorEntities": 2,
+          "feedbackWires": 2,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-everything"
+          ]
+        },
+        "descriptions": [
+          "simulate logistics network content",
+          "If counter [virtual-signal=signal-S] is equal to the refresh period [virtual-signal=signal-P], pass values from[item=red-wire], so the output follows the input. This is the moment to store the current value into the memory cell.",
+          "Defines the period of memory cell update",
+          "While counter [virtual-signal=signal-S] is below the period value [virtual-signal=signal-P], retain values on [item=red-wire]due to the loopback wire.\nIf  [virtual-signal=signal-S]=[virtual-signal=signal-P], the other combinator provides th"
+        ]
+      }
+    },
+    {
+      "id": "p0-28-signal-in-different-wires-no-12-24-2024-22-38-10",
+      "label": "signal in different wires: no 12-24-2024, 22-38-10.png (",
+      "pageStart": 0,
+      "indexOnPage": 28,
+      "blueprintChars": 1297,
+      "analysis": {
+        "label": "Raising front detector",
+        "entities": 26,
+        "combinators": 24,
+        "wires": 5,
+        "byKind": {
+          "constant": 22,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 2
+        },
+        "otherNames": [
+          "small-electric-pole",
+          "small-lamp"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 2,
+          "anythingUse": 1,
+          "everythingUse": 1,
+          "redGreenSplit": 2,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each",
+            "signal-anything",
+            "signal-everything"
+          ]
+        },
+        "descriptions": [
+          "Sends [virtual-signal=signal-P] signal each time the value in the red [item=red-wire] wire increases.\nDelay: 2 ticks\n\nCan be switched to negative [virtual-signal=down-right-arrow] front by replacing > (GT) compare with < (LT).",
+          "Diode combinator. Delays the signal by one tick."
+        ]
+      }
+    },
+    {
+      "id": "p20-00-state-of-the-new-display-panel-for-signage",
+      "label": "state of the new display panel for signage.",
+      "pageStart": 20,
+      "indexOnPage": 0,
+      "blueprintChars": 1009,
+      "analysis": {
+        "entities": 22,
+        "combinators": 7,
+        "wires": 0,
+        "byKind": {
+          "constant": 7,
+          "arithmetic": 0,
+          "decider": 0,
+          "selector": 0,
+          "other": 15
+        },
+        "otherNames": [
+          "display-panel"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 0,
+          "dualColorEntities": 0,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": []
+        },
+        "descriptions": []
+      }
+    },
+    {
+      "id": "p20-01-is-probably-looser-than-it-ought-to-be",
+      "label": "is probably looser than it ought to be.",
+      "pageStart": 20,
+      "indexOnPage": 1,
+      "blueprintChars": 1625,
+      "analysis": {
+        "entities": 19,
+        "combinators": 4,
+        "wires": 7,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 15
+        },
+        "otherNames": [
+          "display-panel",
+          "electric-energy-interface",
+          "medium-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 0,
+          "dualColorEntities": 2,
+          "feedbackWires": 2,
+          "selectorOps": [],
+          "wildcards": []
+        },
+        "descriptions": [
+          "Ensures a belt has an arbitrary amount of ammo on it. This lets you connect to a space platform's ammo feed belt, set \"hold all\" and read the entire belt. And if it's assemblers cannot feed the belt the platform will normally run out ammo i",
+          "If cargo has greater than 22K fuel and oxidizer, emits signal F.\n\nOr if it sees F, will run keep the signal raised till it sees either value drop below 11K. This creates a safe operating condition on fuel if a platform can reach a port, but"
+        ]
+      }
+    },
+    {
+      "id": "p20-02-with-the-specific-signal-you-want-combinator-184",
+      "label": "with the specific signal you want. combinator_18405600_512x192.png (",
+      "pageStart": 20,
+      "indexOnPage": 2,
+      "blueprintChars": 1261,
+      "analysis": {
+        "entities": 18,
+        "combinators": 4,
+        "wires": 6,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 2,
+          "selector": 0,
+          "other": 14
+        },
+        "otherNames": [
+          "display-panel",
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 5,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 6,
+          "dualColorEntities": 2,
+          "feedbackWires": 1,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "While [virtual-signal=signal-S] is true, pass values from [item=red-wire], so the output follows the input.\nWhile [virtual-signal=signal-S] is false, the output is provided by the other combinator.",
+          "While [virtual-signal=signal-S] is false, retain values on [item=red-wire] due to the loopback wire.\nWhile [virtual-signal=signal-S] is true, the output is provided by the other combinator."
+        ]
+      }
+    },
+    {
+      "id": "p20-03-are-bumped-into-the-millions-01-05-2025-20-13-07",
+      "label": "are bumped into the millions. 01-05-2025, 20-13-07.png (",
+      "pageStart": 20,
+      "indexOnPage": 3,
+      "blueprintChars": 1093,
+      "analysis": {
+        "entities": 4,
+        "combinators": 3,
+        "wires": 3,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 1
+        },
+        "otherNames": [
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 4,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 9,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Simulated fluid content",
+          "Index → Recipe",
+          "Check conditions (x > y) and select the corresponding recipe with each ([virtual-signal=signal-each]).\nIf you make sure the ANDed conditions are disjunct within the OR blocks, exactly 1 OR block matches, so exactly 1 recipe is output."
+        ]
+      }
+    },
+    {
+      "id": "p20-04-dynamically-setting-the-recipe-to-reprocess-aste",
+      "label": "dynamically setting the recipe to reprocess asteroid chunks.",
+      "pageStart": 20,
+      "indexOnPage": 4,
+      "blueprintChars": 1345,
+      "analysis": {
+        "label": "Dynamic chunk reprocessing",
+        "entities": 2,
+        "combinators": 2,
+        "wires": 1,
+        "byKind": {
+          "constant": 1,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 0
+        },
+        "otherNames": [],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 16,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 30,
+          "dualColorEntities": 0,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Define the reprocessing recipe for each type and quality of asteroid chunk.",
+          "Given an asteroid chunk on the red wire, and a constant combinator providing the recipe for reprocessing chunks of different qualities on the green wire, output the recipe for reprocessing the given chunk. CAUTION: will set the recipe to re"
+        ]
+      }
+    },
+    {
+      "id": "p40-00-to-the-maximum-value-screenshot-2025-03-16-21002",
+      "label": "to the maximum value. Screenshot 2025-03-16 210022.jpg (",
+      "pageStart": 40,
+      "indexOnPage": 0,
+      "blueprintChars": 1385,
+      "analysis": {
+        "entities": 10,
+        "combinators": 10,
+        "wires": 16,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 8,
+          "selector": 0,
+          "other": 0
+        },
+        "otherNames": [],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 1,
+          "copyPlusConstant": 1,
+          "eachUse": 3,
+          "anythingUse": 2,
+          "everythingUse": 4,
+          "redGreenSplit": 13,
+          "dualColorEntities": 5,
+          "feedbackWires": 3,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-everything",
+            "signal-anything",
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "A memory cell that only holds data from the previous cell. If the master condition is not met, projects the last value it has held. If the master set condition is met, updates its value to the one held by the previous cell.",
+          "Safety Circuit -> prevents signal feedback.",
+          "Provided the R condition is 0, and E is not raised, you may pass signals.",
+          "When E on [item=green-wire] is greater than 0 output data on the [item=red-wire]",
+          "The memory cell for the circuit will emit signals for too long. This is what you frankly need the \"enable\" signal for."
+        ]
+      }
+    },
+    {
+      "id": "p40-01-189046-snip",
+      "label": "189046 snip",
+      "pageStart": 40,
+      "indexOnPage": 1,
+      "blueprintChars": 945,
+      "analysis": {
+        "label": "Trigger Schmitt any signals",
+        "entities": 7,
+        "combinators": 5,
+        "wires": 7,
+        "byKind": {
+          "constant": 3,
+          "arithmetic": 1,
+          "decider": 1,
+          "selector": 0,
+          "other": 2
+        },
+        "otherNames": [
+          "medium-electric-pole",
+          "small-lamp"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 4,
+          "anythingUse": 1,
+          "everythingUse": 0,
+          "redGreenSplit": 2,
+          "dualColorEntities": 2,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-anything",
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "range\nM-R = Lower Bound",
+          "Max value",
+          "inputs"
+        ]
+      }
+    },
+    {
+      "id": "p40-02-am-alternative-way-to-include-only-filtered-item",
+      "label": "am Alternative way to \"Include only filtered items\".",
+      "pageStart": 40,
+      "indexOnPage": 2,
+      "blueprintChars": 1081,
+      "analysis": {
+        "entities": 17,
+        "combinators": 16,
+        "wires": 3,
+        "byKind": {
+          "constant": 15,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 0,
+          "other": 1
+        },
+        "otherNames": [
+          "small-electric-pole"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 2,
+          "anythingUse": 0,
+          "everythingUse": 0,
+          "redGreenSplit": 2,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [],
+          "wildcards": [
+            "signal-each"
+          ]
+        },
+        "descriptions": [
+          "Arbitrary signals are on [item=red-wire].\nFilter definition is on [item=green-wire].\nOutput only signals from[item=red-wire] that are also present on[item=green-wire].\nValues on [item=green-wire] don't matter, don't need to be 1."
+        ]
+      }
+    },
+    {
+      "id": "p40-05-into-a-reliable-material-stream-off-a-platform",
+      "label": "into a reliable material stream off a platform.",
+      "pageStart": 40,
+      "indexOnPage": 5,
+      "blueprintChars": 1273,
+      "analysis": {
+        "entities": 11,
+        "combinators": 4,
+        "wires": 4,
+        "byKind": {
+          "constant": 2,
+          "arithmetic": 0,
+          "decider": 1,
+          "selector": 1,
+          "other": 7
+        },
+        "otherNames": [
+          "bulk-inserter",
+          "display-panel"
+        ],
+        "features": {
+          "elseOutputs": 0,
+          "multiOutput": 0,
+          "copyPlusConstant": 0,
+          "eachUse": 0,
+          "anythingUse": 2,
+          "everythingUse": 0,
+          "redGreenSplit": 0,
+          "dualColorEntities": 1,
+          "feedbackWires": 0,
+          "selectorOps": [
+            "select"
+          ],
+          "wildcards": [
+            "signal-anything"
+          ]
+        },
+        "descriptions": [
+          "When the selected \"max\" signal comes out, set the filter to that signal if it is over a count. This is \"more than 4 * 45 of a given kind of single component\" but you may need other logic to deal with special cases like \"automall that can bu",
+          "Real sample from a jammed full assembly line."
+        ]
+      }
+    }
+  ]
+}

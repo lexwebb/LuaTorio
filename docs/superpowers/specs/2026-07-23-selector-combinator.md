@@ -27,7 +27,7 @@ Emit: one `selector-combinator` (`operation: "count"`, `count_signal` = id), gre
 
 **Clearer than decider soup:** counting distinct signals previously needed a hand-rolled EACH/decider chain; selector is the Factorio-native op.
 
-Index/rank Lua (`signal_at`) deferred until channel/bundle IR (P2). VM still evaluates `select` for foreign blueprints / hand graphs.
+Index/rank Lua: `signal_at` / `signal_at_asc` (#47). VM also evaluates `select` for foreign blueprints / hand graphs.
 
 ## Import (#41)
 

@@ -1,0 +1,6 @@
+-- Pick the largest among A/B/C (selector select, index 0, descending)
+local a = input("signal-A")
+local b = input("signal-B")
+local c = input("signal-C")
+local top = signal_at(0, a, b, c)
+output("signal-N", top)
