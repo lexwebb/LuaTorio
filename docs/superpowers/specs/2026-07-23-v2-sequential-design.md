@@ -129,11 +129,55 @@ output("signal-A", x)
    - else only → `select(cond, memory, elseVal)` (hold when true)
 5. A variable assigned only inside `if` is still promoted to a memory cell (init from its `local`).
 
-## Phase 3 sketch (`tick` + loops)
+## Phase 3 (`tick` + `while` / `for`)
 
-- Builtin `tick()` marks an explicit clock barrier / scheduler step.
-- `while` / `for` lower to a CFG / FSM: one iteration (or one state transition) per `tick()`.
-- IR grows `phi` / block structure as in the parent design.
+Clocked loops desugar onto the existing flat IR — **no CFG / `phi`**. One Factorio game tick = one loop iteration. `tick()` is a required syntactic barrier at the end of the loop body (no IR node).
+
+```lua
+local i = 0
+local lim = input("signal-L")
+while i < lim do
+  i = i + 1
+  tick()
+end
+output("signal-A", i)
+```
+
+```lua
+local sum = 0
+for i = 1, 10 do
+  sum = sum + i
+  tick()
+end
+output("signal-A", sum)
+```
+
+### Rules
+
+1. At most **one** top-level `while` or numeric `for` per program (no nesting, no `repeat`).
+2. Loop body last statement must be `tick()` with no args (exactly one).
+3. Body may contain assignments and phase-2 `if`/`else` only (same body restrictions as phase 2).
+4. Clocked program shape: `local*` → one loop → `output*` only. Free-running top-level assigns/`if` stores cannot mix with a loop.
+5. Numeric `for name = start, stop do` only; optional step must be literal `1`. Induction var is declared by the `for` and not assignable in the body.
+6. Programs with no loop remain **free-running** (phase 1–2 unchanged).
+
+### Desugar (while)
+
+Synthetic memory cell `__run` (init `1`):
+
+- `enable = select(__run, cond, 0)`
+- Each body cell: `store(cell, select(enable, bodyNext, mem))` (hold when not enabled)
+- `__run' = select(__run, select(cond, 1, 0), 0)` (sticky exit)
+
+### Desugar (`for i = lo, hi`)
+
+- `local i = lo` (memory); `cond ≡ i <= hi`
+- On enable: body stores, then `i' = i + 1`
+- Same `__run` / enable wrapping as while
+
+### Rejected
+
+`tick()` outside loop / not last / with args; loop without `tick()`; nested or second loop; generic `for`; step ≠ 1; assign to for-var; mixing free-running stores with a loop; `break`; `repeat`.
 
 ## Testing
 

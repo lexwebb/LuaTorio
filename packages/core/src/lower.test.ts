@@ -223,4 +223,73 @@ describe("lower", () => {
       else: memory?.id,
     });
   });
+
+  it("lowers while to __run latch and enable-gated body store", () => {
+    const module = lowerSource(`
+      local i = 0
+      local lim = input("signal-L")
+      while i < lim do
+        i = i + 1
+        tick()
+      end
+      output("signal-A", i)
+    `);
+
+    expect(module.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "memory", cell: "__run" }),
+        expect.objectContaining({ kind: "memory", cell: "i" }),
+        expect.objectContaining({ kind: "store", cell: "i" }),
+        expect.objectContaining({ kind: "store", cell: "__run" }),
+      ]),
+    );
+    const runMem = module.nodes.find((n) => n.kind === "memory" && n.cell === "__run");
+    expect(runMem).toBeDefined();
+  });
+
+  it("lowers for with gated i+1 store and __run", () => {
+    const module = lowerSource(`
+      local sum = 0
+      for i = 1, 10 do
+        sum = sum + i
+        tick()
+      end
+      output("signal-A", sum)
+    `);
+
+    expect(module.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "memory", cell: "__run" }),
+        expect.objectContaining({ kind: "memory", cell: "i" }),
+        expect.objectContaining({ kind: "memory", cell: "sum" }),
+        expect.objectContaining({ kind: "store", cell: "i" }),
+        expect.objectContaining({ kind: "store", cell: "sum" }),
+        expect.objectContaining({ kind: "store", cell: "__run" }),
+        expect.objectContaining({ kind: "cmp", op: "<=" }),
+        expect.objectContaining({ kind: "binop", op: "+" }),
+      ]),
+    );
+
+    const iStore = module.nodes.find((n) => n.kind === "store" && n.cell === "i");
+    expect(iStore).toBeDefined();
+    // i' is enable-gated: store value is a select whose then-branch is i+1.
+    const gated = module.nodes.find((n) => n.kind === "select" && n.id === iStore?.value);
+    expect(gated).toMatchObject({ kind: "select" });
+  });
+
+  it("free-running counter still has no __run cell", () => {
+    const module = lowerSource(`
+      local x = 0
+      x = x + 1
+      output("signal-A", x)
+    `);
+
+    expect(module.nodes.some((n) => n.kind === "memory" && n.cell === "__run")).toBe(false);
+    expect(module.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "memory", cell: "x" }),
+        expect.objectContaining({ kind: "store", cell: "x" }),
+      ]),
+    );
+  });
 });

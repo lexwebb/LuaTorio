@@ -77,6 +77,8 @@ export type AnalyzedAssign = {
   column: number;
 };
 
+export type AnalyzedLoopBodyStmt = Extract<AnalyzedStatement, { kind: "assign" | "if" }>;
+
 export type AnalyzedStatement =
   | {
       kind: "local";
@@ -99,10 +101,26 @@ export type AnalyzedStatement =
       elseAssigns: AnalyzedAssign[];
       line: number;
       column: number;
+    }
+  | {
+      kind: "while";
+      cond: AnalyzedExpr;
+      body: AnalyzedLoopBodyStmt[];
+      line: number;
+      column: number;
+    }
+  | {
+      kind: "for";
+      name: string;
+      start: AnalyzedExpr;
+      stop: AnalyzedExpr;
+      body: AnalyzedLoopBodyStmt[];
+      line: number;
+      column: number;
     };
 
 export interface AnalyzedProgram {
-  /** Ordered locals, assignments, and if mux-stores — enough for IR lowering */
+  /** Ordered locals, assignments, if mux-stores, and at most one clocked loop — enough for IR lowering */
   statements: AnalyzedStatement[];
   outputs: Array<{ signal: string; expr: AnalyzedExpr; line: number; column: number }>;
   inputs: Array<{ signal: string; line: number; column: number }>;
@@ -113,6 +131,18 @@ const CMP_OPS: ReadonlySet<string> = new Set(["<", ">", "<=", ">=", "==", "~="])
 
 interface Loc {
   loc?: { start: { line: number; column: number } } | undefined;
+}
+
+interface AnalyzeContext {
+  declared: Set<string>;
+  reassigned: Set<string>;
+  statements: AnalyzedStatement[];
+  outputs: AnalyzedProgram["outputs"];
+  inputs: AnalyzedProgram["inputs"];
+  /** True after a top-level while/for (clocked mode). */
+  seenLoop: boolean;
+  /** True after a top-level assign or if (free-running stores). */
+  seenFreeRunningStore: boolean;
 }
 
 function locOf(node: Loc): { line: number; column: number } {
@@ -128,86 +158,105 @@ function describeAssignmentTarget(target: Identifier | MemberExpression | IndexE
   return target.type === "Identifier" ? target.name : "<expression>";
 }
 
-function rejectTick(calleeName: string | undefined, line: number, column: number): void {
+/** Returns the tick() CallExpression when `statement` is a bare `tick()` call. */
+function asTickCall(statement: Statement): CallExpression | undefined {
+  if (statement.type !== "CallStatement") {
+    return undefined;
+  }
+  const call = statement.expression;
+  if (call.type !== "CallExpression" || describeCallee(call.base) !== "tick") {
+    return undefined;
+  }
+  return call;
+}
+
+function rejectTickInExpression(
+  calleeName: string | undefined,
+  line: number,
+  column: number,
+): void {
   if (calleeName === "tick") {
     throw new SemanticError(
-      "unsupported construct: tick(); planned for v2 phase 3 (tick scheduler)",
+      "tick() is only allowed as the last statement of a while/for body",
       line,
       column,
-      "v2",
     );
   }
 }
 
 /**
- * Walks a luaparse `Chunk` and enforces the language subset (v1 + v2 phase 1–2),
+ * Walks a luaparse `Chunk` and enforces the language subset (v1 + v2 phase 1–3),
  * returning a validated, minimally-typed program model. Throws `SemanticError` (with
  * line/column and, where the construct is on the roadmap, a `plannedVersion`) for anything
  * outside the supported subset.
  */
 export function analyze(ast: Chunk): AnalyzedProgram {
-  const declared = new Set<string>();
-  const reassigned = new Set<string>();
-  const statements: AnalyzedStatement[] = [];
-  const outputs: AnalyzedProgram["outputs"] = [];
-  const inputs: AnalyzedProgram["inputs"] = [];
+  const ctx: AnalyzeContext = {
+    declared: new Set<string>(),
+    reassigned: new Set<string>(),
+    statements: [],
+    outputs: [],
+    inputs: [],
+    seenLoop: false,
+    seenFreeRunningStore: false,
+  };
 
   for (const statement of ast.body) {
-    analyzeStatement(statement, declared, reassigned, statements, outputs, inputs);
+    analyzeStatement(statement, ctx);
   }
 
-  if (outputs.length === 0) {
+  if (ctx.outputs.length === 0) {
     const { line, column } = locOf(ast);
     throw new SemanticError("program must contain at least one output() call", line, column);
   }
 
-  return { statements, outputs, inputs };
+  return { statements: ctx.statements, outputs: ctx.outputs, inputs: ctx.inputs };
 }
 
-function analyzeStatement(
-  statement: Statement,
-  declared: Set<string>,
-  reassigned: Set<string>,
-  statements: AnalyzedStatement[],
-  outputs: AnalyzedProgram["outputs"],
-  inputs: AnalyzedProgram["inputs"],
-): void {
+function analyzeStatement(statement: Statement, ctx: AnalyzeContext): void {
   const { line, column } = locOf(statement);
+
+  if (ctx.seenLoop) {
+    if (statement.type === "WhileStatement" || statement.type === "ForNumericStatement") {
+      throw new SemanticError("at most one top-level while or for loop is allowed", line, column);
+    }
+    if (statement.type === "CallStatement") {
+      analyzeCallStatement(statement, ctx);
+      return;
+    }
+    throw new SemanticError(
+      "clocked programs may only have output() calls after the loop (local* → loop → output*)",
+      line,
+      column,
+    );
+  }
 
   switch (statement.type) {
     case "LocalStatement":
-      analyzeLocalStatement(statement, declared, statements, inputs);
+      analyzeLocalStatement(statement, ctx);
       return;
     case "CallStatement":
-      analyzeCallStatement(statement, declared, outputs, inputs);
+      analyzeCallStatement(statement, ctx);
       return;
     case "AssignmentStatement":
-      analyzeAssignmentStatement(statement, declared, reassigned, statements, inputs);
+      analyzeAssignmentStatement(statement, ctx);
       return;
     case "IfStatement":
-      analyzeIfStatement(statement, declared, reassigned, statements, inputs);
+      analyzeIfStatement(statement, ctx);
       return;
     case "WhileStatement":
-      throw new SemanticError(
-        "unsupported construct: while loop; planned for v2 phase 3 (tick scheduler)",
-        line,
-        column,
-        "v2",
-      );
-    case "RepeatStatement":
-      throw new SemanticError(
-        "unsupported construct: repeat loop; planned for v2 phase 3 (tick scheduler)",
-        line,
-        column,
-        "v2",
-      );
+      analyzeWhileStatement(statement, ctx);
+      return;
     case "ForNumericStatement":
+      analyzeForNumericStatement(statement, ctx);
+      return;
+    case "RepeatStatement":
+      throw new SemanticError("unsupported construct: repeat loop", line, column);
     case "ForGenericStatement":
       throw new SemanticError(
-        "unsupported construct: for loop; planned for v2 phase 3 (tick scheduler)",
+        "unsupported construct: generic for loop; only numeric for is supported",
         line,
         column,
-        "v2",
       );
     case "FunctionDeclaration":
       throw new SemanticError("unsupported construct: function declaration", line, column, "v3");
@@ -216,10 +265,136 @@ function analyzeStatement(
   }
 }
 
+function requireClockedShape(ctx: AnalyzeContext, line: number, column: number): void {
+  if (ctx.seenFreeRunningStore) {
+    throw new SemanticError(
+      "cannot mix free-running assignments/if with a clocked while/for loop",
+      line,
+      column,
+    );
+  }
+  if (ctx.outputs.length > 0) {
+    throw new SemanticError(
+      "clocked programs must be local* → loop → output*; output() before the loop is not allowed",
+      line,
+      column,
+    );
+  }
+}
+
+function analyzeWhileStatement(
+  statement: Extract<Statement, { type: "WhileStatement" }>,
+  ctx: AnalyzeContext,
+): void {
+  const { line, column } = locOf(statement);
+  requireClockedShape(ctx, line, column);
+
+  const cond = analyzeExpr(statement.condition, ctx.declared, ctx.inputs);
+  const body = analyzeLoopBody(statement.body, ctx, { line, column });
+
+  ctx.seenLoop = true;
+  ctx.statements.push({ kind: "while", cond, body, line, column });
+}
+
+function analyzeForNumericStatement(
+  statement: Extract<Statement, { type: "ForNumericStatement" }>,
+  ctx: AnalyzeContext,
+): void {
+  const { line, column } = locOf(statement);
+  requireClockedShape(ctx, line, column);
+
+  const { step } = statement;
+  if (step !== null && (step.type !== "NumericLiteral" || step.value !== 1)) {
+    const stepLoc = locOf(step);
+    throw new SemanticError(
+      "numeric for step must be literal 1 when present",
+      stepLoc.line,
+      stepLoc.column,
+    );
+  }
+
+  const { name } = statement.variable;
+  if (ctx.declared.has(name)) {
+    throw new SemanticError(
+      `variable '${name}' is already defined; for induction variable must be new`,
+      line,
+      column,
+    );
+  }
+
+  const start = analyzeExpr(statement.start, ctx.declared, ctx.inputs);
+  const stop = analyzeExpr(statement.end, ctx.declared, ctx.inputs);
+
+  // Declare induction var for body refs; lower creates memory from `start` (no local stmt).
+  ctx.declared.add(name);
+
+  const body = analyzeLoopBody(statement.body, ctx, { line, column }, name);
+
+  ctx.seenLoop = true;
+  ctx.statements.push({ kind: "for", name, start, stop, body, line, column });
+}
+
+function analyzeLoopBody(
+  body: Statement[],
+  ctx: AnalyzeContext,
+  loopLoc: { line: number; column: number },
+  inductionVar?: string,
+): AnalyzedLoopBodyStmt[] {
+  const last = body.length > 0 ? body[body.length - 1] : undefined;
+  if (last === undefined) {
+    throw new SemanticError("while/for body must end with tick()", loopLoc.line, loopLoc.column);
+  }
+
+  const tickCall = asTickCall(last);
+  if (tickCall === undefined) {
+    const { line, column } = locOf(last);
+    throw new SemanticError("while/for body must end with tick()", line, column);
+  }
+  if (tickCall.arguments.length !== 0) {
+    const { line, column } = locOf(last);
+    throw new SemanticError("tick() takes no arguments", line, column);
+  }
+
+  const result: AnalyzedLoopBodyStmt[] = [];
+  for (const statement of body.slice(0, -1)) {
+    const { line, column } = locOf(statement);
+
+    if (asTickCall(statement) !== undefined) {
+      throw new SemanticError(
+        "tick() is only allowed as the last statement of a while/for body",
+        line,
+        column,
+      );
+    }
+
+    if (statement.type === "AssignmentStatement") {
+      const assign = analyzeBranchAssign(statement, ctx.declared, ctx.inputs, inductionVar);
+      markReassigned(assign.name, ctx.reassigned, assign.line, assign.column);
+      result.push({ kind: "assign", ...assign });
+      continue;
+    }
+
+    if (statement.type === "IfStatement") {
+      const { cond, thenAssigns, elseAssigns } = analyzeIfClauses(statement, ctx, inductionVar);
+      markBranchNamesReassigned(thenAssigns, elseAssigns, ctx.reassigned, line, column);
+      result.push({ kind: "if", cond, thenAssigns, elseAssigns, line, column });
+      continue;
+    }
+
+    throw new SemanticError(
+      "while/for body may only contain assignments and if/else (ending with tick())",
+      line,
+      column,
+    );
+  }
+
+  return result;
+}
+
 function markReassigned(name: string, reassigned: Set<string>, line: number, column: number): void {
   if (reassigned.has(name)) {
     throw new SemanticError(
-      `variable '${name}' already has a next-state assignment; only one reassignment per variable is supported in v2 phase 1–2`,
+      `variable '${name}' already has a next-state assignment; only one reassignment per variable is supported in v2 phase 1–3`,
       line,
       column,
     );
@@ -227,10 +402,27 @@ function markReassigned(name: string, reassigned: Set<string>, line: number, col
   reassigned.add(name);
 }
 
+/** One next-state slot per name across then/else (shared hold). */
+function markBranchNamesReassigned(
+  thenAssigns: AnalyzedAssign[],
+  elseAssigns: AnalyzedAssign[],
+  reassigned: Set<string>,
+  line: number,
+  column: number,
+): void {
+  const names = new Set<string>();
+  for (const assign of thenAssigns) names.add(assign.name);
+  for (const assign of elseAssigns) names.add(assign.name);
+  for (const name of names) {
+    markReassigned(name, reassigned, line, column);
+  }
+}
+
 function analyzeBranchAssign(
   statement: Statement,
   declared: Set<string>,
   inputs: AnalyzedProgram["inputs"],
+  inductionVar?: string,
 ): AnalyzedAssign {
   const { line, column } = locOf(statement);
   if (statement.type !== "AssignmentStatement") {
@@ -257,6 +449,13 @@ function analyzeBranchAssign(
       column,
     );
   }
+  if (inductionVar !== undefined && target.name === inductionVar) {
+    throw new SemanticError(
+      `for induction variable '${target.name}' is not assignable in the loop body`,
+      line,
+      column,
+    );
+  }
   if (!declared.has(target.name)) {
     throw new SemanticError(`undefined variable '${target.name}'`, line, column);
   }
@@ -269,13 +468,15 @@ function analyzeBranchAssign(
   };
 }
 
-function analyzeIfStatement(
+function analyzeIfClauses(
   statement: Extract<Statement, { type: "IfStatement" }>,
-  declared: Set<string>,
-  reassigned: Set<string>,
-  statements: AnalyzedStatement[],
-  inputs: AnalyzedProgram["inputs"],
-): void {
+  ctx: AnalyzeContext,
+  inductionVar?: string,
+): {
+  cond: AnalyzedExpr;
+  thenAssigns: AnalyzedAssign[];
+  elseAssigns: AnalyzedAssign[];
+} {
   const { line, column } = locOf(statement);
 
   if (statement.clauses.length === 0) {
@@ -308,10 +509,14 @@ function analyzeIfStatement(
     throw new SemanticError("unexpected clause after if", line, column);
   }
 
-  const cond = analyzeExpr(first.condition, declared, inputs);
-  const thenAssigns = first.body.map((bodyStmt) => analyzeBranchAssign(bodyStmt, declared, inputs));
+  const cond = analyzeExpr(first.condition, ctx.declared, ctx.inputs);
+  const thenAssigns = first.body.map((bodyStmt) =>
+    analyzeBranchAssign(bodyStmt, ctx.declared, ctx.inputs, inductionVar),
+  );
   const elseAssigns = elseClause
-    ? elseClause.body.map((bodyStmt) => analyzeBranchAssign(bodyStmt, declared, inputs))
+    ? elseClause.body.map((bodyStmt) =>
+        analyzeBranchAssign(bodyStmt, ctx.declared, ctx.inputs, inductionVar),
+      )
     : [];
 
   if (thenAssigns.length === 0 && elseAssigns.length === 0) {
@@ -342,11 +547,20 @@ function analyzeIfStatement(
     elseNames.add(assign.name);
   }
 
-  for (const name of new Set([...thenNames, ...elseNames])) {
-    markReassigned(name, reassigned, line, column);
-  }
+  return { cond, thenAssigns, elseAssigns };
+}
 
-  statements.push({
+function analyzeIfStatement(
+  statement: Extract<Statement, { type: "IfStatement" }>,
+  ctx: AnalyzeContext,
+): void {
+  const { line, column } = locOf(statement);
+  const { cond, thenAssigns, elseAssigns } = analyzeIfClauses(statement, ctx);
+
+  markBranchNamesReassigned(thenAssigns, elseAssigns, ctx.reassigned, line, column);
+
+  ctx.seenFreeRunningStore = true;
+  ctx.statements.push({
     kind: "if",
     cond,
     thenAssigns,
@@ -358,10 +572,7 @@ function analyzeIfStatement(
 
 function analyzeAssignmentStatement(
   statement: Extract<Statement, { type: "AssignmentStatement" }>,
-  declared: Set<string>,
-  reassigned: Set<string>,
-  statements: AnalyzedStatement[],
-  inputs: AnalyzedProgram["inputs"],
+  ctx: AnalyzeContext,
 ): void {
   const { line, column } = locOf(statement);
 
@@ -384,28 +595,17 @@ function analyzeAssignmentStatement(
   }
 
   const { name } = target;
-  if (!declared.has(name)) {
+  if (!ctx.declared.has(name)) {
     throw new SemanticError(`undefined variable '${name}'`, line, column);
   }
-  if (reassigned.has(name)) {
-    throw new SemanticError(
-      `variable '${name}' already has a next-state assignment; only one reassignment per variable is supported in v2 phase 1–2`,
-      line,
-      column,
-    );
-  }
+  markReassigned(name, ctx.reassigned, line, column);
 
-  const expr = analyzeExpr(initExpr, declared, inputs);
-  reassigned.add(name);
-  statements.push({ kind: "assign", name, expr, line, column });
+  const expr = analyzeExpr(initExpr, ctx.declared, ctx.inputs);
+  ctx.seenFreeRunningStore = true;
+  ctx.statements.push({ kind: "assign", name, expr, line, column });
 }
 
-function analyzeLocalStatement(
-  statement: LocalStatement,
-  declared: Set<string>,
-  statements: AnalyzedStatement[],
-  inputs: AnalyzedProgram["inputs"],
-): void {
+function analyzeLocalStatement(statement: LocalStatement, ctx: AnalyzeContext): void {
   const { line, column } = locOf(statement);
 
   const variable = statement.variables.length === 1 ? statement.variables[0] : undefined;
@@ -423,7 +623,7 @@ function analyzeLocalStatement(
     throw new SemanticError(`local '${name}' must be initialized with an expression`, line, column);
   }
 
-  if (declared.has(name)) {
+  if (ctx.declared.has(name)) {
     throw new SemanticError(
       `variable '${name}' is already defined; redeclaration is not supported in v1`,
       line,
@@ -432,17 +632,12 @@ function analyzeLocalStatement(
     );
   }
 
-  const expr = analyzeExpr(initExpr, declared, inputs);
-  declared.add(name);
-  statements.push({ kind: "local", name, expr, line, column });
+  const expr = analyzeExpr(initExpr, ctx.declared, ctx.inputs);
+  ctx.declared.add(name);
+  ctx.statements.push({ kind: "local", name, expr, line, column });
 }
 
-function analyzeCallStatement(
-  statement: CallStatement,
-  declared: Set<string>,
-  outputs: AnalyzedProgram["outputs"],
-  inputs: AnalyzedProgram["inputs"],
-): void {
+function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): void {
   const { line, column } = locOf(statement);
   const call = statement.expression;
 
@@ -455,7 +650,7 @@ function analyzeCallStatement(
   }
 
   const calleeName = describeCallee(call.base);
-  rejectTick(calleeName, line, column);
+  rejectTickInExpression(calleeName, line, column);
   if (calleeName !== "output") {
     const found = calleeName ? ` (found '${calleeName}()')` : "";
     throw new SemanticError(
@@ -478,8 +673,8 @@ function analyzeCallStatement(
     throw new SemanticError("output() requires a value expression", line, column);
   }
 
-  const expr = analyzeExpr(valueArg, declared, inputs);
-  outputs.push({ signal: signalArg.value, expr, line, column });
+  const expr = analyzeExpr(valueArg, ctx.declared, ctx.inputs);
+  ctx.outputs.push({ signal: signalArg.value, expr, line, column });
 }
 
 function analyzeExpr(
@@ -566,7 +761,7 @@ function analyzeCallExpr(expr: CallExpression, inputs: AnalyzedProgram["inputs"]
     );
   }
 
-  rejectTick(calleeName, line, column);
+  rejectTickInExpression(calleeName, line, column);
 
   if (calleeName !== "input") {
     const found = calleeName ? ` to '${calleeName}'` : "";

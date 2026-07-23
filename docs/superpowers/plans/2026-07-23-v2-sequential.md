@@ -134,6 +134,11 @@
 
 ---
 
-### Task 11 (phase 3, later): `tick()` + while/for FSM
+### Task 11 (phase 3): `tick()` + while/for FSM (issue #28)
 
-- [ ] Design detail + implement when starting phase 3
+**Files:** `analyze.ts`, `lower.ts`, tests, `examples/`, README, design spec phase-3 section
+
+- [x] Spec: desugar to `__run` + enable-gated stores (no CFG/phi)
+- [x] Analyze: one top-level while/for; body ends with `tick()`; clocked vs free-running mode
+- [x] Lower: `__run` latch; `enable = select(__run, cond, 0)`; wrap body stores
+- [x] Examples `while_count.lua` / `for_sum.lua` + golden + README; close #28

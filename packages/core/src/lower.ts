@@ -1,10 +1,14 @@
 import type {
   AnalyzedAssign,
   AnalyzedExpr,
+  AnalyzedLoopBodyStmt,
   AnalyzedProgram,
   AnalyzedStatement,
 } from "./analyze.js";
 import type { IRModule, IRNode } from "./ir.js";
+
+/** Synthetic memory cell for clocked while/for sticky-run latch. */
+export const RUN_CELL = "__run";
 
 interface LowerContext {
   nodes: IRNode[];
@@ -106,17 +110,128 @@ function assignMap(assigns: AnalyzedAssign[]): Map<string, AnalyzedAssign> {
   return new Map(assigns.map((assign) => [assign.name, assign]));
 }
 
+function collectAssignNames(assigns: AnalyzedAssign[], names: Set<string>): void {
+  for (const assign of assigns) names.add(assign.name);
+}
+
+function collectBodyReassigned(body: AnalyzedLoopBodyStmt[], names: Set<string>): void {
+  for (const statement of body) {
+    if (statement.kind === "assign") {
+      names.add(statement.name);
+    } else {
+      collectAssignNames(statement.thenAssigns, names);
+      collectAssignNames(statement.elseAssigns, names);
+    }
+  }
+}
+
 function reassignedNames(statements: AnalyzedStatement[]): Set<string> {
   const names = new Set<string>();
   for (const statement of statements) {
-    if (statement.kind === "assign") {
-      names.add(statement.name);
-    } else if (statement.kind === "if") {
-      for (const assign of statement.thenAssigns) names.add(assign.name);
-      for (const assign of statement.elseAssigns) names.add(assign.name);
+    switch (statement.kind) {
+      case "assign":
+        names.add(statement.name);
+        break;
+      case "if":
+        collectAssignNames(statement.thenAssigns, names);
+        collectAssignNames(statement.elseAssigns, names);
+        break;
+      case "while":
+        collectBodyReassigned(statement.body, names);
+        names.add(RUN_CELL);
+        break;
+      case "for":
+        collectBodyReassigned(statement.body, names);
+        names.add(statement.name);
+        names.add(RUN_CELL);
+        break;
+      default:
+        break;
     }
   }
   return names;
+}
+
+function wrapWithEnable(
+  enableId: string,
+  bodyNextId: string,
+  memId: string,
+  ctx: LowerContext,
+): string {
+  return pushNode(ctx, {
+    kind: "select",
+    id: nextId(ctx),
+    cond: enableId,
+    then: bodyNextId,
+    else: memId,
+  });
+}
+
+/** Create `__run` memory (init=1). Called once per clocked program. */
+function createRunMemory(
+  memoryIdByCell: Map<string, string>,
+  env: Map<string, string>,
+  ctx: LowerContext,
+): string {
+  const oneId = pushNode(ctx, { kind: "literal", id: nextId(ctx), value: 1 });
+  const memId = nextId(ctx);
+  pushNode(ctx, { kind: "memory", id: memId, cell: RUN_CELL, init: oneId });
+  memoryIdByCell.set(RUN_CELL, memId);
+  env.set(RUN_CELL, memId);
+  return memId;
+}
+
+function lowerEnable(runMemId: string, condId: string, ctx: LowerContext): string {
+  return pushNode(ctx, {
+    kind: "select",
+    id: nextId(ctx),
+    cond: runMemId,
+    then: condId,
+    else: getZeroNodeId(ctx),
+  });
+}
+
+/** `__run' = select(__run, select(cond, 1, 0), 0)` — sticky exit once cond fails while running. */
+function lowerRunUpdate(runMemId: string, condId: string, ctx: LowerContext): void {
+  const oneId = pushNode(ctx, { kind: "literal", id: nextId(ctx), value: 1 });
+  const zeroId = getZeroNodeId(ctx);
+  const innerId = pushNode(ctx, {
+    kind: "select",
+    id: nextId(ctx),
+    cond: condId,
+    then: oneId,
+    else: zeroId,
+  });
+  const nextRunId = pushNode(ctx, {
+    kind: "select",
+    id: nextId(ctx),
+    cond: runMemId,
+    then: innerId,
+    else: zeroId,
+  });
+  pushNode(ctx, { kind: "store", id: nextId(ctx), cell: RUN_CELL, value: nextRunId });
+}
+
+function requireMemoryId(memoryIdByCell: ReadonlyMap<string, string>, cell: string): string {
+  const memId = memoryIdByCell.get(cell);
+  if (memId === undefined) {
+    throw new Error(`internal error: assign to '${cell}' without memory cell`);
+  }
+  return memId;
+}
+
+function lowerAssignStore(
+  statement: Extract<AnalyzedStatement, { kind: "assign" }>,
+  memoryIdByCell: ReadonlyMap<string, string>,
+  env: ReadonlyMap<string, string>,
+  ctx: LowerContext,
+  enableId: string | undefined,
+): void {
+  const memId = requireMemoryId(memoryIdByCell, statement.name);
+  const valueId = lowerExpr(statement.expr, env, ctx);
+  const storeValue =
+    enableId !== undefined ? wrapWithEnable(enableId, valueId, memId, ctx) : valueId;
+  pushNode(ctx, { kind: "store", id: nextId(ctx), cell: statement.name, value: storeValue });
 }
 
 function lowerIfStore(
@@ -124,6 +239,7 @@ function lowerIfStore(
   memoryIdByCell: ReadonlyMap<string, string>,
   env: ReadonlyMap<string, string>,
   ctx: LowerContext,
+  enableId: string | undefined,
 ): void {
   const condId = lowerExpr(statement.cond, env, ctx);
   const thenByName = assignMap(statement.thenAssigns);
@@ -131,29 +247,103 @@ function lowerIfStore(
   const cells = new Set([...thenByName.keys(), ...elseByName.keys()]);
 
   for (const cell of cells) {
-    if (!memoryIdByCell.has(cell)) {
-      throw new Error(`internal error: if-assign to '${cell}' without memory cell`);
-    }
-    const memId = memoryIdByCell.get(cell) as string;
+    const memId = requireMemoryId(memoryIdByCell, cell);
     const thenAssign = thenByName.get(cell);
     const elseAssign = elseByName.get(cell);
     const thenId = thenAssign ? lowerExpr(thenAssign.expr, env, ctx) : memId;
     const elseId = elseAssign ? lowerExpr(elseAssign.expr, env, ctx) : memId;
-    const valueId = pushNode(ctx, {
+    // Phase-2 mux first, then optional enable wrap for clocked loops.
+    const muxedId = pushNode(ctx, {
       kind: "select",
       id: nextId(ctx),
       cond: condId,
       then: thenId,
       else: elseId,
     });
+    const valueId =
+      enableId !== undefined ? wrapWithEnable(enableId, muxedId, memId, ctx) : muxedId;
     pushNode(ctx, { kind: "store", id: nextId(ctx), cell, value: valueId });
   }
+}
+
+function lowerLoopBody(
+  body: AnalyzedLoopBodyStmt[],
+  memoryIdByCell: ReadonlyMap<string, string>,
+  env: ReadonlyMap<string, string>,
+  ctx: LowerContext,
+  enableId: string,
+): void {
+  for (const statement of body) {
+    if (statement.kind === "assign") {
+      lowerAssignStore(statement, memoryIdByCell, env, ctx, enableId);
+    } else {
+      lowerIfStore(statement, memoryIdByCell, env, ctx, enableId);
+    }
+  }
+}
+
+function lowerWhile(
+  statement: Extract<AnalyzedStatement, { kind: "while" }>,
+  memoryIdByCell: Map<string, string>,
+  env: Map<string, string>,
+  ctx: LowerContext,
+): void {
+  const runMemId = createRunMemory(memoryIdByCell, env, ctx);
+  const condId = lowerExpr(statement.cond, env, ctx);
+  const enableId = lowerEnable(runMemId, condId, ctx);
+  lowerLoopBody(statement.body, memoryIdByCell, env, ctx, enableId);
+  lowerRunUpdate(runMemId, condId, ctx);
+}
+
+function lowerFor(
+  statement: Extract<AnalyzedStatement, { kind: "for" }>,
+  memoryIdByCell: Map<string, string>,
+  env: Map<string, string>,
+  ctx: LowerContext,
+): void {
+  // Induction var: analyze declares the name; lower owns memory(init=start).
+  if (memoryIdByCell.has(statement.name)) {
+    throw new Error(`internal error: for var '${statement.name}' already has a memory cell`);
+  }
+  const startId = lowerExpr(statement.start, env, ctx);
+  const indMemId = nextId(ctx);
+  pushNode(ctx, { kind: "memory", id: indMemId, cell: statement.name, init: startId });
+  memoryIdByCell.set(statement.name, indMemId);
+  env.set(statement.name, indMemId);
+
+  const stopId = lowerExpr(statement.stop, env, ctx);
+  const condId = pushNode(ctx, {
+    kind: "cmp",
+    id: nextId(ctx),
+    op: "<=",
+    left: indMemId,
+    right: stopId,
+  });
+
+  const runMemId = createRunMemory(memoryIdByCell, env, ctx);
+  const enableId = lowerEnable(runMemId, condId, ctx);
+  lowerLoopBody(statement.body, memoryIdByCell, env, ctx, enableId);
+
+  // On enable: i' = i + 1 (after body stores).
+  const oneId = pushNode(ctx, { kind: "literal", id: nextId(ctx), value: 1 });
+  const nextI = pushNode(ctx, {
+    kind: "binop",
+    id: nextId(ctx),
+    op: "+",
+    left: indMemId,
+    right: oneId,
+  });
+  const gatedNextI = wrapWithEnable(enableId, nextI, indMemId, ctx);
+  pushNode(ctx, { kind: "store", id: nextId(ctx), cell: statement.name, value: gatedNextI });
+
+  lowerRunUpdate(runMemId, condId, ctx);
 }
 
 /**
  * Lowers an analyzed program into the IR DAG. Locals that are later reassigned become
  * `memory` cells (env binds the memory id); assignments and if/else become `store`s
- * (if uses `select` to mux then/else/hold). Unreassigned locals stay combinational SSA.
+ * (if uses `select` to mux then/else/hold). Clocked while/for add `__run` + enable-gated
+ * stores. Unreassigned locals stay combinational SSA.
  */
 export function lower(program: AnalyzedProgram): IRModule {
   const ctx: LowerContext = { nodes: [], inputs: [], nextTempId: 1, zeroNodeId: undefined };
@@ -175,16 +365,17 @@ export function lower(program: AnalyzedProgram): IRModule {
         }
         break;
       }
-      case "assign": {
-        if (!memoryIdByCell.has(statement.name)) {
-          throw new Error(`internal error: assign to '${statement.name}' without memory cell`);
-        }
-        const valueId = lowerExpr(statement.expr, env, ctx);
-        pushNode(ctx, { kind: "store", id: nextId(ctx), cell: statement.name, value: valueId });
+      case "assign":
+        lowerAssignStore(statement, memoryIdByCell, env, ctx, undefined);
         break;
-      }
       case "if":
-        lowerIfStore(statement, memoryIdByCell, env, ctx);
+        lowerIfStore(statement, memoryIdByCell, env, ctx, undefined);
+        break;
+      case "while":
+        lowerWhile(statement, memoryIdByCell, env, ctx);
+        break;
+      case "for":
+        lowerFor(statement, memoryIdByCell, env, ctx);
         break;
       default: {
         const unreachable: never = statement;

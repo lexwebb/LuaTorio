@@ -25,35 +25,153 @@ describe("analyze", () => {
     expect(program.statements[1].expr.kind).toBe("logical");
   });
 
-  it("rejects while loops as planned for v2", () => {
+  it("accepts while with body ending in tick() (v2 phase 3)", () => {
+    const ast = parse(`
+      local i = 0
+      local lim = input("signal-L")
+      while i < lim do
+        i = i + 1
+        tick()
+      end
+      output("signal-A", i)
+    `);
+
+    const program = analyze(ast);
+    expect(program.statements).toEqual([
+      expect.objectContaining({ kind: "local", name: "i" }),
+      expect.objectContaining({ kind: "local", name: "lim" }),
+      expect.objectContaining({
+        kind: "while",
+        body: [expect.objectContaining({ kind: "assign", name: "i" })],
+      }),
+    ]);
+  });
+
+  it("accepts numeric for with body ending in tick() (v2 phase 3)", () => {
+    const ast = parse(`
+      local sum = 0
+      for i = 1, 10 do
+        sum = sum + i
+        tick()
+      end
+      output("signal-A", sum)
+    `);
+
+    const program = analyze(ast);
+    expect(program.statements).toEqual([
+      expect.objectContaining({ kind: "local", name: "sum" }),
+      expect.objectContaining({
+        kind: "for",
+        name: "i",
+        body: [expect.objectContaining({ kind: "assign", name: "sum" })],
+      }),
+    ]);
+  });
+
+  it("rejects while without tick()", () => {
+    const ast = parse(`
+      local i = 0
+      while i < 10 do
+        i = i + 1
+      end
+      output("signal-A", i)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/tick/i);
+  });
+
+  it("rejects for without tick()", () => {
+    const ast = parse(`
+      local sum = 0
+      for i = 1, 10 do
+        sum = sum + i
+      end
+      output("signal-A", sum)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/tick/i);
+  });
+
+  it("rejects mixing free-running assign with a clocked loop", () => {
+    const ast = parse(`
+      local x = 0
+      x = x + 1
+      while x < 10 do
+        x = x + 1
+        tick()
+      end
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/mix|free-running/i);
+  });
+
+  it("rejects a second top-level loop", () => {
+    const ast = parse(`
+      local x = 0
+      while x < 5 do
+        x = x + 1
+        tick()
+      end
+      while x < 10 do
+        x = x + 1
+        tick()
+      end
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/at most one|clocked/i);
+  });
+
+  it("rejects assign to for induction variable", () => {
+    const ast = parse(`
+      local sum = 0
+      for i = 1, 10 do
+        i = i + 1
+        tick()
+      end
+      output("signal-A", sum)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/induction/i);
+  });
+
+  it("rejects numeric for with step other than literal 1", () => {
+    const ast = parse(`
+      local sum = 0
+      for i = 1, 10, 2 do
+        sum = sum + i
+        tick()
+      end
+      output("signal-A", sum)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/step/i);
+  });
+
+  it("rejects repeat loops", () => {
+    const ast = parse(`
+      local x = 1
+      repeat
+        x = x + 1
+        tick()
+      until x > 10
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/repeat/i);
+  });
+
+  it("rejects output inside while body", () => {
     const ast = parse(`
       local x = 1
       while x do
         output("signal-A", x)
+        tick()
       end
     `);
 
-    expect(() => analyze(ast)).toThrow(/while/i);
-    try {
-      analyze(ast);
-    } catch (error) {
-      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v2" });
-    }
-  });
-
-  it("rejects for loops as planned for v2", () => {
-    const ast = parse(`
-      for i = 1, 10 do
-        output("signal-A", i)
-      end
-    `);
-
-    expect(() => analyze(ast)).toThrow(/for/i);
-    try {
-      analyze(ast);
-    } catch (error) {
-      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v2" });
-    }
+    expect(() => analyze(ast)).toThrow(/assignments and if/i);
   });
 
   it("rejects function declarations as planned for v3", () => {
@@ -125,7 +243,7 @@ describe("analyze", () => {
     expect(() => analyze(ast)).toThrow(/undefined variable 'x'/i);
   });
 
-  it("rejects tick() as planned for v2 phase 3", () => {
+  it("rejects tick() outside a while/for body", () => {
     const ast = parse(`
       local x = 1
       tick()
@@ -136,7 +254,8 @@ describe("analyze", () => {
     try {
       analyze(ast);
     } catch (error) {
-      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v2" });
+      expect(error).toMatchObject({ name: "SemanticError" });
+      expect((error as { plannedVersion?: string }).plannedVersion).toBeUndefined();
     }
   });
 

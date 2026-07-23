@@ -81,6 +81,8 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`counter.lua`](examples/counter.lua) | v2 memory: free-running counter (`x = x + 1`) |
 | [`accumulator.lua`](examples/accumulator.lua) | v2 memory: accumulate `signal-A` each tick |
 | [`conditional-counter.lua`](examples/conditional-counter.lua) | v2 if/else: muxed next-state (`if c then x+1 else x-1`) |
+| [`while_count.lua`](examples/while_count.lua) | v2 clocked while: count up to `signal-L` (`tick()` barrier) |
+| [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
 
 ## Language Reference
 
@@ -95,12 +97,20 @@ Programs are a flat sequence of statements. See the
 | `local x = <expr>` | Every local must be initialized |
 | `x = <expr>` | Next-state assignment (at most one per variable); promotes `x` to a memory cell |
 | `if cond then … else … end` | Muxes next-state stores (`select`); omitted branch holds previous value |
+| `while cond do … tick() end` | Clocked loop: at most one per program; body ends with `tick()` |
+| `for i = lo, hi do … tick() end` | Numeric for only; optional step must be literal `1`; `i` not assignable in body |
+| `tick()` | Syntactic barrier only (no IR); required as last statement of a while/for body |
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | Arithmetic: `+ - * / %` | Lowers to arithmetic combinators |
 | Comparisons: `< > <= >= == ~=` | Lowers to a decider combinator (1/0 output) |
 | `a and b or c` | Standard Lua ternary idiom; desugars to a `select` (mux) |
 | Integer literals | Lowers to constant combinators; floats are rejected |
+
+**Free-running vs clocked:** Programs without a loop stay free-running (phase 1–2): top-level
+assigns/`if` update every game tick. A program with `while`/`for` is clocked —
+shape must be `local*` → one loop → `output*` only; free-running stores cannot mix with a
+loop. One Factorio game tick = one loop iteration (`tick()` is the barrier).
 
 **Memory (v2 phase 1):** A variable that is assigned after `local` becomes a latch. RHS reads
 see the previous game-tick value; the assignment is the next-state function evaluated every
@@ -110,9 +120,12 @@ tick. Unreassigned locals stay combinational (v1 SSA).
 `select(cond, thenVal, elseVal)` (or hold via the memory id when a branch omits the assign).
 No `elseif` or nested `if` yet.
 
-Not yet supported: `while` / `for` / `repeat` and `tick()` (v2 phase 3), `function` (v3),
-tables and multi-signal bundles (v4), entity placement (v5). Unsupported constructs raise a
-`SemanticError` naming the construct and its planned version.
+**Clocked loops (v2 phase 3):** `while`/`for` desugar onto flat IR with a synthetic `__run`
+latch and enable-gated stores (no CFG/phi). `repeat` and generic `for` are rejected.
+
+Not yet supported: `function` (v3), tables and multi-signal bundles (v4), entity placement
+(v5). Unsupported constructs raise a `SemanticError` naming the construct and its planned
+version.
 
 ### `input()` / `output()` API
 
