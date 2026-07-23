@@ -55,3 +55,7 @@ export { lower } from "./lower.js";
 export { optimize } from "./optimize.js";
 export type { Chunk } from "./parse.js";
 export { ParseError, parse } from "./parse.js";
+export type { ReferenceOptions, ReferenceResult } from "./sim/reference.js";
+export { reference } from "./sim/reference.js";
+export type { SimulateOptions, SimulateResult, SimulateTick } from "./sim/simulate.js";
+export { simulate } from "./sim/simulate.js";
