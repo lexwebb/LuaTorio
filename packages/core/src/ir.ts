@@ -33,6 +33,14 @@ export type IRNode =
   | { kind: "bag_const"; id: string; entries: Array<{ signal: string; count: number }> }
   /** Pairwise EACH arithmetic: left on red, right on green, result on EACH. */
   | { kind: "bag_binop"; id: string; op: ArithOp; left: string; right: string }
+  /** Cookbook 3–5: per-channel presence / limit filter, data on red and mask on green. */
+  | {
+      kind: "bag_filter";
+      id: string;
+      mode: "include" | "exclude" | "limit";
+      data: string;
+      mask: string;
+    }
   /**
    * Selector rank/index (#47): pick the Nth nonzero arg by value.
    * `ascending` → Factorio `select_max: false` (index 0 = minimum).

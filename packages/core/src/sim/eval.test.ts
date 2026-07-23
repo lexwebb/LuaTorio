@@ -102,6 +102,35 @@ describe("evalDecider", () => {
     const net = emptyBag();
     expect(bagGet(evalDecider(entity, net), "signal-A")).toBe(9);
   });
+
+  it("compares EACH channels by name across red and green networks", () => {
+    const entity = decider(
+      [
+        {
+          first_signal: { type: "virtual", name: "signal-each" },
+          first_signal_networks: { red: true, green: false },
+          comparator: "<=",
+          second_signal: { type: "virtual", name: "signal-each" },
+          second_signal_networks: { red: false, green: true },
+        },
+      ],
+      [
+        {
+          signal: { type: "virtual", name: "signal-each" },
+          copy_count_from_input: true,
+          networks: { red: true, green: false },
+        },
+      ],
+    );
+    const red = emptyBag();
+    const green = emptyBag();
+    bagSet(red, "signal-A", 5);
+    bagSet(red, "signal-B", 9);
+    bagSet(green, "signal-A", 5);
+    bagSet(green, "signal-B", 8);
+
+    expect(bagToRecord(evalDecider(entity, { red, green }))).toEqual({ "signal-A": 5 });
+  });
 });
 
 describe("evalSelector", () => {

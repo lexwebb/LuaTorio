@@ -244,14 +244,15 @@ function evalOneCondition(
 
   // EACH mode: eachValue is taken from the EACH operand's selected networks.
   const left =
-    signalName(condition.first_signal) === SIGNAL_EACH && eachValue !== undefined
-      ? eachValue
+    signalName(condition.first_signal) === SIGNAL_EACH && eachName !== undefined
+      ? bagGet(firstNet, eachName)
       : readConditionOperand(firstNet, condition, "first", eachValue);
+  // A second EACH on a different color reads the same channel name from that color,
+  // rather than reusing the first operand's count (cookbook bag filters / arithmetic).
   const right =
-    signalName(condition.second_signal) === SIGNAL_EACH && eachValue !== undefined
-      ? eachValue
+    signalName(condition.second_signal) === SIGNAL_EACH && eachName !== undefined
+      ? bagGet(secondNet, eachName)
       : readConditionOperand(secondNet, condition, "second", eachValue);
-  void eachName;
   return compare(comparator, left, right);
 }
 

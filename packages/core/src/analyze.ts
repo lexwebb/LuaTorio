@@ -109,6 +109,14 @@ export type AnalyzedExpr =
       column: number;
     }
   | {
+      kind: "bag_filter";
+      mode: "include" | "exclude" | "limit";
+      data: AnalyzedExpr;
+      mask: AnalyzedExpr;
+      line: number;
+      column: number;
+    }
+  | {
       kind: "signal_at";
       index: number;
       ascending: boolean;
@@ -477,6 +485,7 @@ function forbidBagInScalar(
       );
     case "bag_const":
     case "bag_binop":
+    case "bag_filter":
       throw new SemanticError(
         "bag expression may only appear as a local initializer, output() value, or bag_arith() operand",
         line,
@@ -528,6 +537,7 @@ function isBagExpr(expr: AnalyzedExpr, bagLocals: ReadonlySet<string>): boolean 
     case "each_latch":
     case "bag_const":
     case "bag_binop":
+    case "bag_filter":
       return true;
     case "ref":
       return bagLocals.has(expr.name);
@@ -1189,6 +1199,36 @@ function analyzeCallExpr(
       throw new SemanticError("bag_arith right operand must be a bag expression", line, column);
     }
     return { kind: "bag_binop", op: opArg.value as ArithOp, left, right, line, column };
+  }
+
+  if (calleeName === "bag_filter") {
+    if (expr.arguments.length !== 3) {
+      throw new SemanticError(
+        "bag_filter(mode, data, mask) requires exactly 3 arguments",
+        line,
+        column,
+      );
+    }
+    const modeArg = expr.arguments[0]!;
+    if (
+      modeArg.type !== "StringLiteral" ||
+      (modeArg.value !== "include" && modeArg.value !== "exclude" && modeArg.value !== "limit")
+    ) {
+      throw new SemanticError(
+        'bag_filter mode must be "include", "exclude", or "limit"',
+        locOf(modeArg).line,
+        locOf(modeArg).column,
+      );
+    }
+    const data = analyzeExpr(expr.arguments[1]!, declared, inputs, bagLocals);
+    const mask = analyzeExpr(expr.arguments[2]!, declared, inputs, bagLocals);
+    if (!isBagExpr(data, bagLocals)) {
+      throw new SemanticError("bag_filter data operand must be a bag expression", line, column);
+    }
+    if (!isBagExpr(mask, bagLocals)) {
+      throw new SemanticError("bag_filter mask operand must be a bag expression", line, column);
+    }
+    return { kind: "bag_filter", mode: modeArg.value, data, mask, line, column };
   }
 
   if (calleeName !== "input") {

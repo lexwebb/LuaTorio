@@ -172,4 +172,38 @@ describe("simulate", () => {
     const result = simulate(graph, { ticks: 2 });
     expect(result.ticks[1]?.outputs).toMatchObject({ "signal-A": 5, "signal-B": 5 });
   });
+
+  it("bag_filter includes, excludes, and limits red data by a green bag", () => {
+    const source = `
+      local data = bag_const("signal-A", 5, "signal-B", 7, "signal-C", 9)
+      local mask = bag_const("signal-A", 1, "signal-B", 7)
+      local included = bag_filter("include", data, mask)
+      local excluded = bag_filter("exclude", data, mask)
+      local limited = bag_filter("limit", data, mask)
+      output("signal-A", included)
+      output("signal-C", excluded)
+      output("signal-B", limited)
+    `;
+    const graph = graphOf(source);
+    const filters = graph.entities.filter((entity) => entity.label?.startsWith("bag "));
+    expect(filters).toHaveLength(3);
+    expect(graph.wires).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: "red" }),
+        expect.objectContaining({ color: "green" }),
+      ]),
+    );
+
+    const result = simulate(graph, { ticks: 4, entityOutputs: true });
+    expect(result.ticks[3]?.entities).toMatchObject({
+      [filters[0]!.id]: { "signal-A": 5, "signal-B": 7 },
+      [filters[1]!.id]: { "signal-C": 9 },
+      [filters[2]!.id]: { "signal-B": 7 },
+    });
+    expect(result.ticks[3]?.outputs).toMatchObject({
+      "signal-A": 5,
+      "signal-B": 7,
+      "signal-C": 9,
+    });
+  });
 });

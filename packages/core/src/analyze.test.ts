@@ -505,6 +505,43 @@ describe("analyze", () => {
     ).toThrow(/left operand must be a bag/i);
   });
 
+  it("accepts bag_filter modes and rejects invalid filter calls", () => {
+    const program = analyze(
+      parse(`
+        local data = bag_const("signal-A", 5)
+        local mask = bag_const("signal-A", 1)
+        local filtered = bag_filter("include", data, mask)
+        output("signal-A", filtered)
+      `),
+    );
+    expect(program.statements[2]).toMatchObject({
+      kind: "local",
+      name: "filtered",
+      expr: { kind: "bag_filter", mode: "include" },
+    });
+
+    expect(() =>
+      analyze(
+        parse(`
+          local data = bag_const("signal-A", 5)
+          local mask = bag_const("signal-A", 1)
+          local filtered = bag_filter("unknown", data, mask)
+          output("signal-A", filtered)
+        `),
+      ),
+    ).toThrow(/bag_filter mode/i);
+
+    expect(() =>
+      analyze(
+        parse(`
+          local data = bag_const("signal-A", 5)
+          local filtered = bag_filter("include", data, 1)
+          output("signal-A", filtered)
+        `),
+      ),
+    ).toThrow(/mask operand must be a bag/i);
+  });
+
   it("includes line and column information from the AST", () => {
     const ast = parse(`local x = 1\noutput("signal-A", x)`);
     const program = analyze(ast);

@@ -191,6 +191,13 @@ function constantFold(module: IRModule): IRModule {
           right: resolve(node.right, alias),
         });
         break;
+      case "bag_filter":
+        nodes.push({
+          ...node,
+          data: resolve(node.data, alias),
+          mask: resolve(node.mask, alias),
+        });
+        break;
       case "signal_at":
         nodes.push({
           ...node,
@@ -241,6 +248,8 @@ function structuralKey(node: IRNode): string {
       return `bag_const:${node.entries.map((e) => `${e.signal}:${e.count}`).join("|")}`;
     case "bag_binop":
       return `bag_binop:${node.op}:${node.left}:${node.right}`;
+    case "bag_filter":
+      return `bag_filter:${node.mode}:${node.data}:${node.mask}`;
     case "signal_at":
       return `signal_at:${node.index}:${node.ascending ? "asc" : "desc"}:${node.args.join(":")}`;
     default: {
@@ -291,6 +300,8 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
       return node;
     case "bag_binop":
       return { ...node, left: resolve(node.left, alias), right: resolve(node.right, alias) };
+    case "bag_filter":
+      return { ...node, data: resolve(node.data, alias), mask: resolve(node.mask, alias) };
     case "signal_at":
       return { ...node, args: node.args.map((arg) => resolve(arg, alias)) };
     default: {
@@ -353,6 +364,8 @@ function childIds(node: IRNode): string[] {
       return [];
     case "bag_binop":
       return [node.left, node.right];
+    case "bag_filter":
+      return [node.data, node.mask];
     case "signal_at":
       return [...node.args];
     default: {

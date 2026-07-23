@@ -1540,6 +1540,66 @@ function lowerBagBinop(node: Extract<IRNode, { kind: "bag_binop" }>): {
 }
 
 /**
+ * Cookbook 3–5: filter red data against green mask with one EACH decider.
+ * Include/exclude compare mask presence; limit compares per-channel counts.
+ */
+function lowerBagFilter(node: Extract<IRNode, { kind: "bag_filter" }>): {
+  entity: CircuitEntity;
+  wires: WireEdge[];
+} {
+  const dataEach = {
+    first_signal: signalRef(SIGNAL_EACH),
+    first_signal_networks: NET_RED,
+  };
+  const maskEach = {
+    first_signal: signalRef(SIGNAL_EACH),
+    first_signal_networks: NET_GREEN,
+  };
+  const conditions =
+    node.mode === "include"
+      ? [
+          { ...dataEach, comparator: "!=" },
+          { ...maskEach, comparator: "!=", constant: 0, compare_type: "and" },
+        ]
+      : node.mode === "exclude"
+        ? [
+            { ...dataEach, comparator: "!=" },
+            { ...maskEach, comparator: "=", constant: 0, compare_type: "and" },
+          ]
+        : [
+            {
+              ...dataEach,
+              comparator: "<=",
+              second_signal: signalRef(SIGNAL_EACH),
+              second_signal_networks: NET_GREEN,
+            },
+          ];
+
+  return {
+    entity: {
+      id: node.id,
+      kind: "decider",
+      name: "decider-combinator",
+      outputSignal: SIGNAL_EACH,
+      label: `bag ${node.mode}`,
+      control_behavior: {
+        decider_conditions: {
+          conditions,
+          outputs: [
+            {
+              signal: signalRef(SIGNAL_EACH),
+              copy_count_from_input: true,
+              networks: NET_RED,
+            },
+          ],
+        },
+      },
+    },
+    wires: [redWire(node.data, node.id), greenWire(node.mask, node.id)],
+  };
+}
+
+/**
  * Fuse `store(mem, select(en, next, mem))` into an enable/hold latch.
  *
  * When `next = mem + δ`: literal δ → copy-increment decider; else gate δ + `Q+δ`.
@@ -2117,6 +2177,12 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         wires.push(...lowered.wires);
         break;
       }
+      case "bag_filter": {
+        const lowered = lowerBagFilter(node);
+        entities.push(lowered.entity);
+        wires.push(...lowered.wires);
+        break;
+      }
       case "signal_at": {
         const { entity, wires: atWires } = lowerSignalAt(node);
         entities.push(entity);
@@ -2216,6 +2282,11 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
+      case "bag_filter":
+        if (node.data === id || node.mask === id) {
+          users.push(node);
+        }
+        break;
       case "signal_at":
         if (node.args.includes(id)) {
           users.push(node);
@@ -2280,6 +2351,10 @@ function countNodeUses(module: IRModule): Map<string, number> {
       case "bag_binop":
         add(node.left);
         add(node.right);
+        break;
+      case "bag_filter":
+        add(node.data);
+        add(node.mask);
         break;
       case "signal_at":
         for (const arg of node.args) {

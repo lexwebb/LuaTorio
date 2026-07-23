@@ -67,6 +67,7 @@ function evalExpr(
       throw new Error("reference: each_latch is a signal bag, not a scalar");
     case "bag_const":
     case "bag_binop":
+    case "bag_filter":
       throw new Error(`reference: ${expr.kind} is a signal bag, not a scalar`);
     case "ref": {
       const value = env.get(expr.name);

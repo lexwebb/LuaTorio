@@ -121,6 +121,11 @@ function lowerExpr(
       const right = lowerExpr(expr.right, env, ctx);
       return pushNode(ctx, { kind: "bag_binop", id: nextId(ctx), op: expr.op, left, right });
     }
+    case "bag_filter": {
+      const data = lowerExpr(expr.data, env, ctx);
+      const mask = lowerExpr(expr.mask, env, ctx);
+      return pushNode(ctx, { kind: "bag_filter", id: nextId(ctx), mode: expr.mode, data, mask });
+    }
     case "signal_at": {
       const args = expr.args.map((arg) => lowerExpr(arg, env, ctx));
       return pushNode(ctx, {
