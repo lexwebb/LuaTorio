@@ -19,6 +19,7 @@ export function App() {
   );
   const [outcome, setOutcome] = useState<CompileOutcome>({ status: "idle" });
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const [simRunToken, setSimRunToken] = useState(0);
 
   // Keep the URL shareable: mirror source + view mode into the hash without growing history.
   useEffect(() => {
@@ -29,6 +30,11 @@ export function App() {
     setOutcome(runCompile(source));
     setCopyStatus("idle");
   }, [source]);
+
+  const handleSimulate = useCallback(() => {
+    setViewMode("simulate");
+    setSimRunToken((token) => token + 1);
+  }, []);
 
   const handleSelectExample = useCallback((exampleSource: string) => {
     setSource(exampleSource);
@@ -55,11 +61,12 @@ export function App() {
         <div>
           <h1>LuaTorio</h1>
           <p>
-            Write LuaTorio v1 source and compile it to a Factorio blueprint, entirely in your
-            browser.
+            Write LuaTorio source, compile a Factorio blueprint, and simulate the circuit — entirely
+            in your browser.
           </p>
           <span className="playground-disclaimer">
-            Fan-made playground — not affiliated with Wube Software.
+            Fan-made playground — not affiliated with Wube Software. Combinator icons © Wube (see
+            factorio-icons/NOTICE).
           </span>
         </div>
       </header>
@@ -70,6 +77,7 @@ export function App() {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           onCompile={handleCompile}
+          onSimulate={handleSimulate}
           onCopy={handleCopy}
           copyDisabled={outcome.status !== "success"}
           copyStatus={copyStatus}
@@ -84,9 +92,14 @@ export function App() {
           </div>
         </section>
         <section className="pane">
-          <div className="pane-titlebar">Result</div>
-          <div className="pane-body">
-            <Output outcome={outcome} viewMode={viewMode} />
+          <div className="pane-titlebar">{viewMode === "simulate" ? "Simulate" : "Result"}</div>
+          <div className="pane-body pane-body-scroll">
+            <Output
+              outcome={outcome}
+              viewMode={viewMode}
+              source={source}
+              simRunToken={simRunToken}
+            />
           </div>
         </section>
       </div>

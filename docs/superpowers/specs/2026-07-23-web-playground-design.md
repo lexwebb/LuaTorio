@@ -89,7 +89,7 @@ Create issues under milestone `web`, add to LuaTorio project:
 ## Out of scope (MVP)
 
 - Web Worker compile
-- Blueprint preview / entity canvas
+- Blueprint preview / entity canvas — **shipped** as Simulate view (#42/#43)
 - Auth, saved cloud snippets
 - npm publish of the web app
 

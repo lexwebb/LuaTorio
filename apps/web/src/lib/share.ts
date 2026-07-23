@@ -2,9 +2,9 @@
  * Encodes/decodes playground state (source + view mode) into a URL-safe, unicode-safe base64
  * fragment so a link can restore an editor session without any server-side storage.
  */
-export type ViewMode = "blueprint" | "json" | "stats";
+export type ViewMode = "blueprint" | "json" | "stats" | "simulate";
 
-const VIEW_MODES: readonly ViewMode[] = ["blueprint", "json", "stats"];
+const VIEW_MODES: readonly ViewMode[] = ["blueprint", "json", "stats", "simulate"];
 
 export interface ShareState {
   source: string;

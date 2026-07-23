@@ -416,3 +416,180 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Simulate panel + circuit canvas ---------- */
+
+.pane-body-scroll {
+  overflow: auto;
+}
+
+.sim-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 12px 14px;
+  min-height: 100%;
+}
+
+.sim-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+}
+
+.sim-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--ft-text-warm);
+}
+
+.sim-field input {
+  width: 7rem;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--ft-border);
+  background: #100d0a;
+  color: var(--ft-text-warm);
+  font-family: var(--font-ui);
+}
+
+.sim-muted {
+  margin: 8px 0;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.sim-table-wrap {
+  overflow: auto;
+  max-height: 280px;
+  border: 1px solid var(--ft-border);
+  border-radius: 4px;
+  background: #100d0a;
+}
+
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-table th,
+.sim-table td {
+  padding: 4px 10px;
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sim-table th:first-child,
+.sim-table td:first-child {
+  text-align: left;
+}
+
+.sim-table th {
+  position: sticky;
+  top: 0;
+  background: #1a1510;
+  color: var(--ft-accent);
+  font-weight: 600;
+}
+
+.sim-icon-disclaimer {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.65;
+  line-height: 1.35;
+}
+
+.circuit-canvas-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.circuit-canvas {
+  width: 100%;
+  max-height: 220px;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 182, 77, 0.05), transparent 50%),
+    #100d0a;
+  border: 1px solid var(--ft-border);
+  border-radius: 4px;
+}
+
+.circuit-wire {
+  fill: none;
+  stroke-width: 2.5;
+  opacity: 0.85;
+}
+
+.circuit-wire-green {
+  stroke: #3d9e4a;
+}
+
+.circuit-wire-red {
+  stroke: #c43c3c;
+}
+
+.circuit-entity-frame {
+  fill: #1c1712;
+  stroke: #4a4034;
+  stroke-width: 1.5;
+}
+
+.circuit-entity.is-selected .circuit-entity-frame {
+  stroke: var(--ft-accent);
+  stroke-width: 2;
+}
+
+.circuit-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+}
+
+.circuit-selection-signal {
+  color: var(--ft-accent);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+}
+
+.circuit-entity {
+  cursor: pointer;
+  outline: none;
+}
+
+.circuit-entity:focus .circuit-entity-frame {
+  stroke: var(--ft-accent);
+}
+
+.circuit-entity-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid #4a4034;
+  border-radius: 4px;
+  background: #1c1712;
+  cursor: pointer;
+}
+
+.circuit-entity-button.is-selected {
+  border-color: var(--ft-accent);
+  border-width: 2px;
+}
+
+.circuit-entity-button img {
+  pointer-events: none;
+  image-rendering: pixelated;
+}
