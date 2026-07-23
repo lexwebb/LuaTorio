@@ -126,6 +126,10 @@ function lowerExpr(
       const mask = lowerExpr(expr.mask, env, ctx);
       return pushNode(ctx, { kind: "bag_filter", id: nextId(ctx), mode: expr.mode, data, mask });
     }
+    case "bag_sample": {
+      const bag = lowerExpr(expr.bag, env, ctx);
+      return pushNode(ctx, { kind: "bag_sample", id: nextId(ctx), bag, signal: expr.signal });
+    }
     case "edge": {
       const value = lowerExpr(expr.value, env, ctx);
       return pushNode(ctx, { kind: "edge", id: nextId(ctx), value });
@@ -453,5 +457,11 @@ export function lower(program: AnalyzedProgram): IRModule {
     nodeId: lowerExpr(output.expr, env, ctx),
   }));
 
-  return { nodes: ctx.nodes, outputs, inputs: ctx.inputs };
+  const places = program.places.map(({ name, x, y }) => ({ name, x, y }));
+  return {
+    nodes: ctx.nodes,
+    outputs,
+    inputs: ctx.inputs,
+    ...(places.length > 0 ? { places } : {}),
+  };
 }

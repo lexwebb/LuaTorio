@@ -207,6 +207,26 @@ describe("simulate", () => {
     });
   });
 
+  it("table bag samples named channels as scalars, including absent channels", () => {
+    const graph = graphOf(`
+      local request = { ["iron-plate"] = 10, ["signal-A"] = -1 }
+      local iron = request["iron-plate"]
+      local absent = request["signal-Z"]
+      output("iron-plate", request)
+      output("signal-A", request)
+      output("signal-B", iron)
+      output("signal-C", absent)
+    `);
+
+    const result = simulate(graph, { ticks: 3 });
+    expect(result.ticks[2]?.outputs).toMatchObject({
+      "iron-plate": 10,
+      "signal-A": -1,
+      "signal-B": 10,
+      "signal-C": 0,
+    });
+  });
+
   it("edge emits a one-tick pulse for each rising scalar input", () => {
     const graph = graphOf(`
       local level = input("signal-L")

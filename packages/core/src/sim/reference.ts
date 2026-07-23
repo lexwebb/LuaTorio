@@ -69,6 +69,8 @@ function evalExpr(
     case "bag_binop":
     case "bag_filter":
       throw new Error(`reference: ${expr.kind} is a signal bag, not a scalar`);
+    case "bag_sample":
+      throw new Error("reference: bag_sample requires bag-state evaluation");
     case "edge":
     case "bag_test":
       throw new Error(`reference: ${expr.kind} requires circuit-state evaluation`);

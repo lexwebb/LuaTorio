@@ -88,10 +88,12 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`each_latch.lua`](examples/each_latch.lua) | EACH-tag sticky hysteresis bag — 1 constant + 1 decider |
 | [`bag_arith.lua`](examples/bag_arith.lua) | Cookbook 1 math: pairwise `EACH / EACH` bags over red/green |
 | [`bag_filter.lua`](examples/bag_filter.lua) | Cookbook 3–5: include, exclude, and per-channel limit bags |
+| [`table_bag.lua`](examples/table_bag.lua) | v4 constant bag table syntax and named scalar samples |
 | [`signal_at.lua`](examples/signal_at.lua) | Pick Nth-largest input via `signal_at` → selector `select` |
 | [`signal_at_asc.lua`](examples/signal_at_asc.lua) | Nth-smallest among present (`signal_at_asc`) — priority ranks |
 | [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
 | [`signal_count.lua`](examples/signal_count.lua) | Count nonzero inputs via `signal_count` → selector combinator |
+| [`place.lua`](examples/place.lua) | v5 absolute chest, lamp, and power-pole placement beside a circuit |
 
 ## Language Reference
 
@@ -118,11 +120,14 @@ Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain mac
 | `tick()` | Syntactic barrier only (no IR); required as last statement of a while/for body |
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
+| `place("entity", x, y)` | Top-level only; place an allowed non-combinator at absolute blueprint tile coordinates |
 | `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
 | `each_latch(level, signal, high, …)` | Sticky multi-signal hysteresis bag (EACH tags); `output(signal, bag)` |
 | `bag_const(signal, count, …)` | Constant multi-signal bag; signal/count pairs are literals |
 | `bag_arith(op, left, right)` | Pairwise bag arithmetic (`+ - * / %`); left red, right green, output EACH |
 | `bag_filter(mode, data, mask)` | Red bag filtered by green bag: `include`, `exclude`, or count `limit` |
+| `{ ["signal-name"] = integer, … }` | Non-empty constant multi-signal bag (v4) |
+| `bag["signal-name"]` | Scalar named-channel sample; absent channels read as `0` |
 | `signal_at(index, a, b, …)` | Value of Nth-largest nonzero arg; selector `select` (`select_max`) |
 | `signal_at_asc(index, a, b, …)` | Value of Nth-smallest nonzero arg; selector `select` ascending |
 | `signal_count(a, b, …)` | Count nonzero args; emits one selector combinator (`operation: "count"`) |
@@ -152,9 +157,14 @@ assignments, control flow, `tick()`, `sr()`, or capture mutable locals. Function
 declared helpers, but recursion is rejected (planned for v4); every call is expanded into the
 existing scalar/bag expression graph.
 
-Not yet supported: tables (v4: [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70)),
-recursion ([#71](https://github.com/lexwebb/LuaTorio/issues/71)), entity placement (v5:
-[#72](https://github.com/lexwebb/LuaTorio/issues/72)/[#73](https://github.com/lexwebb/LuaTorio/issues/73)).
+**Table bags (v4):** A table literal is only a constant bag when it is non-empty and every entry
+uses a bracketed string-literal signal name with an integer literal count, such as
+`{ ["iron-plate"] = 10, ["signal-A"] = -1 }`. Tables are immutable: arrays, identifier keys,
+dot access, computed keys, nested values, duplicates, and field writes are rejected.
+`bag["signal-name"]` samples one scalar channel and returns `0` when that channel is absent.
+
+Not yet supported: general Lua tables and recursion
+([#71](https://github.com/lexwebb/LuaTorio/issues/71)).
 Unsupported constructs raise a `SemanticError` naming the construct and its planned version.
 
 ### `input()` / `output()` API
@@ -167,6 +177,14 @@ Unsupported constructs raise a `SemanticError` naming the construct and its plan
   output per required boundary channel. Bag locals cannot be used in scalar arithmetic,
   comparisons, or memory assignments. `bag_const`, `bag_arith`, and `bag_filter` explicitly
   encode red/green cookbook patterns and unblock v4 table constructors as constant bags.
+
+### `place()` API (v5.0)
+
+`place("wooden-chest" | "small-lamp" | "medium-electric-pole", x, y)` is a top-level statement.
+The entity name and signed integer tile coordinates must be literals. Positions are authoritative
+absolute blueprint coordinates and are emitted after the combinator graph is laid out; they do not
+move or reserve the combinator grid in this initial slice. LuaTorio generates no circuit wires,
+conditions, or power planning for placed entities. `simulate()` intentionally ignores them.
 
 ### Errors
 

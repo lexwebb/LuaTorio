@@ -3,6 +3,30 @@ import { analyze } from "./analyze.js";
 import { parse } from "./parse.js";
 
 describe("analyze", () => {
+  it("accepts top-level place() calls with allowed literal entities", () => {
+    const program = analyze(
+      parse(`
+        place("wooden-chest", 4, 0)
+        place("small-lamp", -4, 2)
+        output("signal-B", input("signal-A") + 1)
+      `),
+    );
+
+    expect(program.places).toEqual([
+      expect.objectContaining({ name: "wooden-chest", x: 4, y: 0 }),
+      expect.objectContaining({ name: "small-lamp", x: -4, y: 2 }),
+    ]);
+  });
+
+  it("rejects unknown and non-literal place() entities", () => {
+    expect(() => analyze(parse(`place("iron-chest", 0, 0); output("signal-A", 1)`))).toThrow(
+      /allowed entities.*wooden-chest.*small-lamp.*medium-electric-pole/i,
+    );
+    expect(() => analyze(parse(`place("wooden-chest", 1.5, 0); output("signal-A", 1)`))).toThrow(
+      /integer literals/i,
+    );
+  });
+
   it("accepts a valid clamp-style program and records inputs/outputs", () => {
     const ast = parse(`
       local raw = input("signal-A")
@@ -263,17 +287,47 @@ describe("analyze", () => {
     }
   });
 
-  it("rejects table constructors as planned for v4", () => {
-    const ast = parse(`
-      local t = { 1, 2, 3 }
-      output("signal-A", 1)
-    `);
+  it("accepts string-keyed integer table bags and scalar samples", () => {
+    const program = analyze(
+      parse(`
+        local request = { ["iron-plate"] = 10, ["signal-A"] = -1 }
+        local iron = request["iron-plate"]
+        output("iron-plate", request)
+        output("signal-B", iron)
+      `),
+    );
 
-    expect(() => analyze(ast)).toThrow(/table/i);
-    try {
-      analyze(ast);
-    } catch (error) {
-      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v4" });
+    expect(program.statements[0]).toMatchObject({
+      kind: "local",
+      name: "request",
+      expr: {
+        kind: "bag_const",
+        entries: [
+          { signal: "iron-plate", count: 10 },
+          { signal: "signal-A", count: -1 },
+        ],
+      },
+    });
+    expect(program.statements[1]).toMatchObject({
+      kind: "local",
+      name: "iron",
+      expr: { kind: "bag_sample", signal: "iron-plate" },
+    });
+  });
+
+  it("rejects table shapes and bag access outside the v4 subset", () => {
+    const rejects = [
+      [`local t = {}; output("signal-A", 1)`, /must not be empty/i],
+      [`local t = { iron = 1 }; output("signal-A", t)`, /bracketed string/i],
+      [`local t = { ["signal-A"] = 1.5 }; output("signal-A", t)`, /integer literals/i],
+      [`local t = { ["signal-A"] = 1, ["signal-A"] = 2 }; output("signal-A", t)`, /duplicate/i],
+      [`local key = input("signal-X"); local t = { [key] = 1 }; output("signal-A", t)`, /bracketed string/i],
+      [`local t = { ["signal-A"] = 1 }; output("signal-A", t.signal_A)`, /dot access/i],
+      [`local t = { ["signal-A"] = 1 }; local key = "signal-A"; output("signal-A", t[key])`, /string literal/i],
+      [`local t = { ["signal-A"] = 1 }; t["signal-A"] = 2; output("signal-A", t)`, /field writes/i],
+    ];
+    for (const [source, error] of rejects) {
+      expect(() => analyze(parse(source))).toThrow(error);
     }
   });
 

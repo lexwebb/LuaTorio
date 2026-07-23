@@ -1601,6 +1601,31 @@ function lowerBagFilter(node: Extract<IRNode, { kind: "bag_filter" }>): {
   };
 }
 
+/** Scalar boundary for `bag["signal"]`: copy one named bag channel onto the temp signal. */
+function lowerBagSample(node: Extract<IRNode, { kind: "bag_sample" }>): {
+  entity: CircuitEntity;
+  wires: WireEdge[];
+} {
+  return {
+    entity: {
+      id: node.id,
+      kind: "arithmetic",
+      name: "arithmetic-combinator",
+      outputSignal: node.id,
+      label: `sample ${node.signal}`,
+      control_behavior: {
+        arithmetic_conditions: {
+          first_signal: signalRef(node.signal),
+          second_constant: 0,
+          operation: "+",
+          output_signal: signalRef(node.id),
+        },
+      },
+    },
+    wires: [greenWire(node.bag, node.id)],
+  };
+}
+
 /** Cookbook 19: compare a scalar value with its one-tick delayed copy. */
 function lowerEdge(node: Extract<IRNode, { kind: "edge" }>): {
   entities: CircuitEntity[];
@@ -2249,6 +2274,12 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         wires.push(...lowered.wires);
         break;
       }
+      case "bag_sample": {
+        const lowered = lowerBagSample(node);
+        entities.push(lowered.entity);
+        wires.push(...lowered.wires);
+        break;
+      }
       case "edge": {
         const lowered = lowerEdge(node);
         entities.push(...lowered.entities);
@@ -2365,6 +2396,11 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
+      case "bag_sample":
+        if (node.bag === id) {
+          users.push(node);
+        }
+        break;
       case "edge":
         if (node.value === id) {
           users.push(node);
@@ -2443,6 +2479,9 @@ function countNodeUses(module: IRModule): Map<string, number> {
       case "bag_filter":
         add(node.data);
         add(node.mask);
+        break;
+      case "bag_sample":
+        add(node.bag);
         break;
       case "edge":
         add(node.value);

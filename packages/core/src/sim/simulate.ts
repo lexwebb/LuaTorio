@@ -12,6 +12,8 @@ import { bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js"
 
 /**
  * Simulation timing model.
+ * Spatial `place()` entities are not part of `CircuitGraph`; simulation intentionally ignores
+ * them in v5.0 (they have no generated circuit wires or behavior).
  * - `"factorio"` (default): each non-latch combinator has 1-tick delay; within one API tick the
  *   combo cone settles (up to depth micro-steps), then `role: "latch"` clocks once. Matches
  *   Factorio per-combinator latency while preserving synchronous language `tick()` semantics.

@@ -28,7 +28,7 @@ describe("emitBlueprint", () => {
 
     expect(blueprint.startsWith("0")).toBe(true);
     // Empty I/O pads are omitted: 2 inputs + 1 output drop, leaving the adder.
-    expect(stats).toEqual({ combinators: 1, wires: 0 });
+    expect(stats).toEqual({ combinators: 1, places: 0, wires: 0 });
     expect(stats.combinators).toBeLessThan(laidOut.entities.length);
   });
 

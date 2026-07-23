@@ -1,6 +1,15 @@
 type ArithOp = "+" | "-" | "*" | "/" | "%";
 type CmpOp = "<" | ">" | "<=" | ">=" | "==" | "~=";
 
+export type PlaceableEntity = "wooden-chest" | "small-lamp" | "medium-electric-pole";
+
+/** A non-combinator entity at an absolute Factorio tile coordinate. */
+export interface SpatialPlace {
+  name: PlaceableEntity;
+  x: number;
+  y: number;
+}
+
 /**
  * Signal-value IR node. `id` doubles as the temp signal name (`__t1`, `__t2`, …) that the
  * node's value is carried on once combinators are emitted. Child references are node ids
@@ -41,6 +50,8 @@ export type IRNode =
       data: string;
       mask: string;
     }
+  /** Copy one named channel from a bag onto a scalar temp signal. */
+  | { kind: "bag_sample"; id: string; bag: string; signal: string }
   /** Scalar rising edge: current input is greater than its one-tick delayed value. */
   | { kind: "edge"; id: string; value: string }
   /** Test all or any present channels in a bag against a literal threshold. */
@@ -62,4 +73,6 @@ export interface IRModule {
   nodes: IRNode[];
   outputs: Array<{ signal: string; nodeId: string }>;
   inputs: Array<{ signal: string; nodeId: string }>;
+  /** Separate from the signal graph; emitted after combinator layout. */
+  places?: SpatialPlace[];
 }

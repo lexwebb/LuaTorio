@@ -16,6 +16,7 @@ export interface CompileResult {
   blueprint: string;
   stats: {
     combinators: number;
+    places: number;
     wires: number;
   };
   warnings: string[];
@@ -37,12 +38,19 @@ export function compile(source: string, options?: CompileOptions): CompileResult
   const { blueprint, stats } = emitBlueprint(laidOut, {
     ...(options?.name !== undefined ? { name: options.name } : {}),
     ...(options?.json !== undefined ? { json: options.json } : {}),
+    ...(optimized.places !== undefined ? { places: optimized.places } : {}),
   });
 
   return { blueprint, stats, warnings: [] };
 }
 
-export type { AnalyzedExpr, AnalyzedProgram, AnalyzedStatement } from "./analyze.js";
+export type {
+  AnalyzedExpr,
+  AnalyzedPlace,
+  AnalyzedProgram,
+  AnalyzedStatement,
+  PlaceableEntity,
+} from "./analyze.js";
 export { analyze, SemanticError } from "./analyze.js";
 export type {
   CircuitEntity,
@@ -54,7 +62,7 @@ export type {
 export { lowerToCombinators, redWire, signalLabelMap } from "./combinators.js";
 export type { EmitOptions, EmitResult } from "./emit.js";
 export { emitBlueprint } from "./emit.js";
-export type { IRModule, IRNode } from "./ir.js";
+export type { IRModule, IRNode, SpatialPlace } from "./ir.js";
 export type { MemoryStoreMatch } from "./ir-match.js";
 export {
   fusedCmpForSelect,

@@ -81,6 +81,21 @@
 - Added immutable capture validation, call-graph recursion-cycle detection (`v4` diagnostic),
   `clamp_fn.lua`, analyzer/simulation coverage, README language reference, and a clamp golden.
 
+### T7 — #73 v5 `place()` (DONE)
+- Added top-level `place(name, x, y)` for the explicit allowlist: `wooden-chest`, `small-lamp`,
+  and `medium-electric-pole`; unknown entities and non-literal coordinates are rejected.
+- Carries places beside the combinator IR and emits them at source-authoritative absolute
+  coordinates after circuit layout, without generated wires or grid reservation.
+- Added `examples/place.lua`, analyzer/blueprint coverage, golden output, and documented that
+  `simulate()` intentionally ignores placed non-combinator entities.
+
+### T8 — #70 v4 table bags (DONE)
+- Added the accepted immutable table subset: non-empty bracketed string keys with integer counts
+  lower to `bag_const`; duplicate, dynamic, dot, array, nested, and write forms are rejected.
+- `bag["signal-name"]` now lowers through `bag_sample` to a scalar arithmetic copy; absent
+  channels simulate as `0`.
+- Added `table_bag.lua`, analyzer and simulator coverage, README language reference, and goldens.
+
 ---
 
 ## SKIPPED / morning

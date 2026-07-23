@@ -118,6 +118,14 @@ export type AnalyzedExpr =
       column: number;
     }
   | {
+      /** Named scalar channel read from a bag: `bag["signal-name"]`. */
+      kind: "bag_sample";
+      bag: AnalyzedExpr;
+      signal: string;
+      line: number;
+      column: number;
+    }
+  | {
       kind: "edge";
       value: AnalyzedExpr;
       line: number;
@@ -147,6 +155,22 @@ export type AnalyzedAssign = {
   line: number;
   column: number;
 };
+
+export const PLACEABLE_ENTITIES = [
+  "wooden-chest",
+  "small-lamp",
+  "medium-electric-pole",
+] as const;
+
+export type PlaceableEntity = (typeof PLACEABLE_ENTITIES)[number];
+
+export interface AnalyzedPlace {
+  name: PlaceableEntity;
+  x: number;
+  y: number;
+  line: number;
+  column: number;
+}
 
 export type AnalyzedLoopBodyStmt = Extract<AnalyzedStatement, { kind: "assign" | "if" }>;
 
@@ -195,6 +219,8 @@ export interface AnalyzedProgram {
   statements: AnalyzedStatement[];
   outputs: Array<{ signal: string; expr: AnalyzedExpr; line: number; column: number }>;
   inputs: Array<{ signal: string; line: number; column: number }>;
+  /** Explicit non-combinator entities, emitted at absolute tile coordinates. */
+  places: AnalyzedPlace[];
 }
 
 const ARITH_OPS: ReadonlySet<string> = new Set(["+", "-", "*", "/", "%"]);
@@ -212,6 +238,7 @@ interface AnalyzeContext {
   statements: AnalyzedStatement[];
   outputs: AnalyzedProgram["outputs"];
   inputs: AnalyzedProgram["inputs"];
+  places: AnalyzedPlace[];
   /** True after a top-level while/for (clocked mode). */
   seenLoop: boolean;
   /** True after a top-level assign or if (free-running stores). */
@@ -251,6 +278,16 @@ function describeCallee(base: Expression): string | undefined {
 
 function describeAssignmentTarget(target: Identifier | MemberExpression | IndexExpression): string {
   return target.type === "Identifier" ? target.name : "<expression>";
+}
+
+function rejectBagWrite(target: Identifier | MemberExpression | IndexExpression, line: number, column: number): void {
+  if (target.type === "MemberExpression" || target.type === "IndexExpression") {
+    throw new SemanticError(
+      "bag field writes are not supported in v4.0; create a new bag with bag_arith()/bag_filter()",
+      line,
+      column,
+    );
+  }
 }
 
 /** Returns the tick() CallExpression when `statement` is a bare `tick()` call. */
@@ -294,6 +331,7 @@ export function analyze(ast: Chunk): AnalyzedProgram {
     statements: [],
     outputs: [],
     inputs: [],
+    places: [],
     seenLoop: false,
     seenFreeRunningStore: false,
     functions,
@@ -312,7 +350,7 @@ export function analyze(ast: Chunk): AnalyzedProgram {
     throw new SemanticError("program must contain at least one output() call", line, column);
   }
 
-  return { statements: ctx.statements, outputs: ctx.outputs, inputs: ctx.inputs };
+  return { statements: ctx.statements, outputs: ctx.outputs, inputs: ctx.inputs, places: ctx.places };
 }
 
 function collectFunctionDeclarations(statements: Statement[]): {
@@ -753,6 +791,8 @@ function forbidBagInScalar(
         line,
         column,
       );
+    case "bag_sample":
+      return;
     case "ref":
       if (bagLocals.has(expr.name)) {
         throw new SemanticError(
@@ -856,6 +896,7 @@ function analyzeBranchAssign(
     );
   }
   if (target.type !== "Identifier") {
+    rejectBagWrite(target, line, column);
     throw new SemanticError(
       `unsupported assignment target '${describeAssignmentTarget(target)}'`,
       line,
@@ -1100,6 +1141,7 @@ function analyzeAssignmentStatement(
   }
 
   if (target.type !== "Identifier") {
+    rejectBagWrite(target, line, column);
     throw new SemanticError(
       `unsupported assignment target '${describeAssignmentTarget(target)}'`,
       line,
@@ -1190,7 +1232,7 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
 
   if (call.type !== "CallExpression") {
     throw new SemanticError(
-      'only output("signal", expr) calls are supported as statements in v1',
+      'only output("signal", expr) and place("entity", x, y) calls are supported as statements',
       line,
       column,
     );
@@ -1198,6 +1240,10 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
 
   const calleeName = describeCallee(call.base);
   rejectTickInExpression(calleeName, line, column);
+  if (calleeName === "place") {
+    analyzePlaceCall(call, ctx, line, column);
+    return;
+  }
   if (calleeName !== "output") {
     const found = calleeName ? ` (found '${calleeName}()')` : "";
     throw new SemanticError(
@@ -1231,6 +1277,49 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
     forbidBagInScalar(expr, ctx.bagLocals, line, column);
   }
   ctx.outputs.push({ signal: signalArg.value, expr, line, column });
+}
+
+function integerLiteral(arg: Expression): number | undefined {
+  if (arg.type === "NumericLiteral" && Number.isInteger(arg.value)) {
+    return arg.value;
+  }
+  if (
+    arg.type === "UnaryExpression" &&
+    arg.operator === "-" &&
+    arg.argument.type === "NumericLiteral" &&
+    Number.isInteger(arg.argument.value)
+  ) {
+    return -arg.argument.value;
+  }
+  return undefined;
+}
+
+function analyzePlaceCall(
+  call: CallExpression,
+  ctx: AnalyzeContext,
+  line: number,
+  column: number,
+): void {
+  if (call.arguments.length !== 3) {
+    throw new SemanticError("place(name, x, y) requires exactly 3 arguments", line, column);
+  }
+  const [nameArg, xArg, yArg] = call.arguments;
+  if (nameArg?.type !== "StringLiteral") {
+    throw new SemanticError("place() requires a string literal entity name", line, column);
+  }
+  if (!PLACEABLE_ENTITIES.includes(nameArg.value as PlaceableEntity)) {
+    throw new SemanticError(
+      `unknown place() entity '${nameArg.value}'; allowed entities: ${PLACEABLE_ENTITIES.join(", ")}`,
+      line,
+      column,
+    );
+  }
+  const x = xArg === undefined ? undefined : integerLiteral(xArg);
+  const y = yArg === undefined ? undefined : integerLiteral(yArg);
+  if (x === undefined || y === undefined) {
+    throw new SemanticError("place() x and y must be integer literals", line, column);
+  }
+  ctx.places.push({ name: nameArg.value as PlaceableEntity, x, y, line, column });
 }
 
 function analyzeExpr(
@@ -1288,12 +1377,94 @@ function analyzeExpr(
         column,
       );
     case "TableConstructorExpression":
-      throw new SemanticError("unsupported construct: table constructor", line, column, "v4");
+      return analyzeTableConstructor(expr, line, column);
+    case "IndexExpression":
+      return analyzeBagSample(expr, declared, inputs, bagLocals, options);
+    case "MemberExpression":
+      throw new SemanticError(
+        "bag dot access is not supported in v4.0; use bag[\"signal-name\"]",
+        line,
+        column,
+      );
     case "FunctionDeclaration":
       throw new SemanticError("unsupported construct: function expression", line, column, "v3");
     default:
       throw new SemanticError(`unsupported construct: ${expr.type}`, line, column);
   }
+}
+
+function analyzeTableConstructor(
+  expr: Extract<Expression, { type: "TableConstructorExpression" }>,
+  line: number,
+  column: number,
+): AnalyzedExpr {
+  if (expr.fields.length === 0) {
+    throw new SemanticError("bag table constructor must not be empty", line, column);
+  }
+
+  const entries: Array<{ signal: string; count: number }> = [];
+  const signals = new Set<string>();
+  for (const field of expr.fields) {
+    const { line: fieldLine, column: fieldColumn } = locOf(field);
+    if (field.type !== "TableKey" || field.key.type !== "StringLiteral") {
+      throw new SemanticError(
+        "bag table keys must be bracketed string literal signal names",
+        fieldLine,
+        fieldColumn,
+      );
+    }
+    const count = tableIntegerLiteral(field.value);
+    if (count === undefined) {
+      throw new SemanticError(
+        "bag table values must be integer literals",
+        fieldLine,
+        fieldColumn,
+      );
+    }
+    if (signals.has(field.key.value)) {
+      throw new SemanticError(`bag table duplicate signal '${field.key.value}'`, fieldLine, fieldColumn);
+    }
+    signals.add(field.key.value);
+    entries.push({ signal: field.key.value, count });
+  }
+  return { kind: "bag_const", entries, line, column };
+}
+
+function tableIntegerLiteral(expr: Expression): number | undefined {
+  if (expr.type === "NumericLiteral" && Number.isInteger(expr.value)) {
+    return expr.value;
+  }
+  if (
+    expr.type === "UnaryExpression" &&
+    expr.operator === "-" &&
+    expr.argument.type === "NumericLiteral" &&
+    Number.isInteger(expr.argument.value)
+  ) {
+    return -expr.argument.value;
+  }
+  return undefined;
+}
+
+function analyzeBagSample(
+  expr: Extract<Expression, { type: "IndexExpression" }>,
+  declared: Set<string>,
+  inputs: AnalyzedProgram["inputs"],
+  bagLocals: ReadonlySet<string>,
+  options: ExpressionOptions,
+): AnalyzedExpr {
+  const { line, column } = locOf(expr);
+  if (expr.index.type !== "StringLiteral") {
+    throw new SemanticError(
+      "bag index must be a string literal signal name",
+      locOf(expr.index).line,
+      locOf(expr.index).column,
+    );
+  }
+  const bag = analyzeExpr(expr.base, declared, inputs, bagLocals, options);
+  if (!isBagExpr(bag, bagLocals)) {
+    throw new SemanticError("index access requires a bag expression", line, column);
+  }
+  return { kind: "bag_sample", bag, signal: expr.index.value, line, column };
 }
 
 function analyzeBinaryExpr(
@@ -1432,6 +1603,10 @@ function analyzeCallExpr(
       line,
       column,
     );
+  }
+
+  if (calleeName === "place") {
+    throw new SemanticError("place() must be a top-level statement, not used within an expression", line, column);
   }
 
   rejectTickInExpression(calleeName, line, column);

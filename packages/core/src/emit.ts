@@ -5,6 +5,7 @@ import {
   encodePlan,
 } from "@jensforstmann/factorio-blueprint-tools";
 import type { CircuitEntity } from "./combinators.js";
+import type { SpatialPlace } from "./ir.js";
 import type { FactorioWire, LaidOutCircuit, PlacedEntity } from "./layout.js";
 import { isEmptyConstant } from "./sim/eval.js";
 
@@ -13,12 +14,15 @@ export interface EmitOptions {
   name?: string;
   /** When true, `blueprint` holds the JSON-stringified plan object instead of an encoded blueprint string. */
   json?: boolean;
+  /** Non-combinator entities with source-authoritative absolute positions. */
+  places?: SpatialPlace[];
 }
 
 export interface EmitResult {
   blueprint: string;
   stats: {
     combinators: number;
+    places: number;
     wires: number;
   };
 }
@@ -94,6 +98,14 @@ function toLibraryEntity(placed: PlacedEntity): Entity {
   };
 }
 
+function toLibraryPlace(place: SpatialPlace, entity_number: number): Entity {
+  return {
+    entity_number,
+    name: place.name,
+    position: { x: place.x, y: place.y },
+  };
+}
+
 function isIoPlaceholder(entity: CircuitEntity, laidOut: LaidOutCircuit): boolean {
   if (!isEmptyConstant(entity)) {
     return false;
@@ -136,9 +148,16 @@ function withoutIoPlaceholders(laidOut: LaidOutCircuit): LaidOutCircuit {
 }
 
 /** Builds a Factorio `Blueprint` plan object from a `LaidOutCircuit` (no encoding yet). */
-function buildPlan(laidOut: LaidOutCircuit, name: string | undefined): Blueprint {
+function buildPlan(
+  laidOut: LaidOutCircuit,
+  name: string | undefined,
+  places: SpatialPlace[],
+): Blueprint {
   const plan = createEmptyBlueprint();
-  plan.blueprint.entities = laidOut.entities.map(toLibraryEntity);
+  plan.blueprint.entities = [
+    ...laidOut.entities.map(toLibraryEntity),
+    ...places.map((place, index) => toLibraryPlace(place, laidOut.entities.length + index + 1)),
+  ];
   plan.blueprint.wires = laidOut.wires;
   if (name !== undefined) {
     plan.blueprint.label = name;
@@ -153,11 +172,13 @@ function buildPlan(laidOut: LaidOutCircuit, name: string | undefined): Blueprint
  */
 export function emitBlueprint(laidOut: LaidOutCircuit, options?: EmitOptions): EmitResult {
   const stripped = withoutIoPlaceholders(laidOut);
-  const plan = buildPlan(stripped, options?.name);
+  const places = options?.places ?? [];
+  const plan = buildPlan(stripped, options?.name, places);
   return {
     blueprint: options?.json ? JSON.stringify(plan) : encodePlan(plan),
     stats: {
       combinators: stripped.entities.length,
+      places: places.length,
       wires: stripped.wires.length,
     },
   };

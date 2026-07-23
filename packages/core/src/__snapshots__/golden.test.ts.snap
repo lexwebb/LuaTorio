@@ -2028,6 +2028,65 @@ exports[`golden examples > or_flags > compiles to a blueprint JSON plan matching
 }
 `;
 
+exports[`golden examples > place > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "__t1",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t3",
+              "type": "virtual",
+            },
+            "second_constant": 1,
+          },
+        },
+        "entity_number": 1,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "entity_number": 2,
+        "name": "wooden-chest",
+        "position": {
+          "x": 4,
+          "y": 0,
+        },
+      },
+      {
+        "entity_number": 3,
+        "name": "small-lamp",
+        "position": {
+          "x": 4,
+          "y": 2,
+        },
+      },
+      {
+        "entity_number": 4,
+        "name": "medium-electric-pole",
+        "position": {
+          "x": 2,
+          "y": 2,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "place",
+    "wires": [],
+  },
+}
+`;
+
 exports[`golden examples > signal_at > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {
@@ -2179,6 +2238,79 @@ exports[`golden examples > sr_latch > compiles to a blueprint JSON plan matching
         1,
         4,
         1,
+        2,
+      ],
+    ],
+  },
+}
+`;
+
+exports[`golden examples > table_bag > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "sections": {
+            "sections": [
+              {
+                "filters": [
+                  {
+                    "count": 10,
+                    "index": 1,
+                    "name": "iron-plate",
+                    "type": "virtual",
+                  },
+                  {
+                    "count": -1,
+                    "index": 2,
+                    "name": "signal-A",
+                    "type": "virtual",
+                  },
+                ],
+                "index": 1,
+              },
+            ],
+          },
+        },
+        "entity_number": 1,
+        "name": "constant-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "iron-plate",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t2",
+              "type": "virtual",
+            },
+            "second_constant": 0,
+          },
+        },
+        "entity_number": 2,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 2,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "table_bag",
+    "wires": [
+      [
+        1,
+        2,
+        2,
         2,
       ],
     ],

@@ -198,6 +198,9 @@ function constantFold(module: IRModule): IRModule {
           mask: resolve(node.mask, alias),
         });
         break;
+      case "bag_sample":
+        nodes.push({ ...node, bag: resolve(node.bag, alias) });
+        break;
       case "edge":
         nodes.push({ ...node, value: resolve(node.value, alias) });
         break;
@@ -221,6 +224,7 @@ function constantFold(module: IRModule): IRModule {
     nodes,
     outputs: module.outputs.map((output) => ({ ...output, nodeId: resolve(output.nodeId, alias) })),
     inputs: module.inputs.map((input) => ({ ...input, nodeId: resolve(input.nodeId, alias) })),
+    ...(module.places !== undefined ? { places: module.places } : {}),
   };
 }
 
@@ -256,6 +260,8 @@ function structuralKey(node: IRNode): string {
       return `bag_binop:${node.op}:${node.left}:${node.right}`;
     case "bag_filter":
       return `bag_filter:${node.mode}:${node.data}:${node.mask}`;
+    case "bag_sample":
+      return `bag_sample:${node.bag}:${node.signal}`;
     case "edge":
       return `edge:${node.value}`;
     case "bag_test":
@@ -312,6 +318,8 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
       return { ...node, left: resolve(node.left, alias), right: resolve(node.right, alias) };
     case "bag_filter":
       return { ...node, data: resolve(node.data, alias), mask: resolve(node.mask, alias) };
+    case "bag_sample":
+      return { ...node, bag: resolve(node.bag, alias) };
     case "edge":
       return { ...node, value: resolve(node.value, alias) };
     case "bag_test":
@@ -351,6 +359,7 @@ function cse(module: IRModule): IRModule {
     nodes,
     outputs: module.outputs.map((output) => ({ ...output, nodeId: resolve(output.nodeId, alias) })),
     inputs: module.inputs.map((input) => ({ ...input, nodeId: resolve(input.nodeId, alias) })),
+    ...(module.places !== undefined ? { places: module.places } : {}),
   };
 }
 
@@ -380,6 +389,8 @@ function childIds(node: IRNode): string[] {
       return [node.left, node.right];
     case "bag_filter":
       return [node.data, node.mask];
+    case "bag_sample":
+      return [node.bag];
     case "edge":
       return [node.value];
     case "bag_test":
@@ -436,6 +447,7 @@ function dce(module: IRModule): IRModule {
     nodes: module.nodes.filter((node) => keep.has(node.id)),
     outputs: module.outputs,
     inputs: module.inputs,
+    ...(module.places !== undefined ? { places: module.places } : {}),
   };
 }
 

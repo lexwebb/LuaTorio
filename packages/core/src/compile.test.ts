@@ -32,6 +32,30 @@ describe("compile", () => {
     expect(JSON.parse(result.blueprint).blueprint.label).toBe("My Circuit");
   });
 
+  it("emits placed non-combinator entities at their absolute coordinates", () => {
+    const result = compile(
+      `
+        local a = input("signal-A")
+        output("signal-B", a + 1)
+        place("wooden-chest", 4, 0)
+        place("small-lamp", 4, 2)
+      `,
+      { json: true },
+    );
+    const entities = JSON.parse(result.blueprint).blueprint.entities as Array<{
+      name: string;
+      position: { x: number; y: number };
+    }>;
+
+    expect(entities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "wooden-chest", position: { x: 4, y: 0 } }),
+        expect.objectContaining({ name: "small-lamp", position: { x: 4, y: 2 } }),
+      ]),
+    );
+    expect(result.stats.places).toBe(2);
+  });
+
   it("still compiles with optimize: false (folds nothing away at IR)", () => {
     const optimized = compile(`output("signal-B", 1 + 2)`, { json: true });
     const unoptimized = compile(`output("signal-B", 1 + 2)`, { optimize: false, json: true });
