@@ -137,6 +137,30 @@ export function evalArithmetic(entity: CircuitEntity, net: SignalBag): SignalBag
   return out;
 }
 
+function emitDeciderOutputs(
+  outputs: unknown,
+  entity: CircuitEntity,
+  net: SignalBag,
+  out: SignalBag,
+): void {
+  if (!Array.isArray(outputs)) {
+    return;
+  }
+  for (const raw of outputs) {
+    if (raw === null || typeof raw !== "object") {
+      continue;
+    }
+    const output = raw as Record<string, unknown>;
+    const name = signalName(output.signal) ?? entity.outputSignal;
+    if (output.copy_count_from_input === true) {
+      bagSet(out, name, bagGet(net, name));
+    } else {
+      const constant = asNumber(output.constant) ?? 1;
+      bagSet(out, name, constant);
+    }
+  }
+}
+
 /** Evaluate a decider combinator (AND of conditions) against its input network. */
 export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
   const out = emptyBag();
@@ -144,7 +168,7 @@ export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
   if (root === null || typeof root !== "object") {
     return out;
   }
-  const block = root as { conditions?: unknown; outputs?: unknown };
+  const block = root as { conditions?: unknown; outputs?: unknown; else_outputs?: unknown };
   const conditions = Array.isArray(block.conditions) ? block.conditions : [];
   let ok = true;
   for (let i = 0; i < conditions.length; i += 1) {
@@ -170,24 +194,8 @@ export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
     }
   }
 
-  if (!ok) {
-    return out;
-  }
-
-  const outputs = Array.isArray(block.outputs) ? block.outputs : [];
-  for (const raw of outputs) {
-    if (raw === null || typeof raw !== "object") {
-      continue;
-    }
-    const output = raw as Record<string, unknown>;
-    const name = signalName(output.signal) ?? entity.outputSignal;
-    if (output.copy_count_from_input === true) {
-      bagSet(out, name, bagGet(net, name));
-    } else {
-      const constant = asNumber(output.constant) ?? 1;
-      bagSet(out, name, constant);
-    }
-  }
+  // Factorio 2.x: `outputs` when conditions pass, `else_outputs` when they fail.
+  emitDeciderOutputs(ok ? block.outputs : block.else_outputs, entity, net, out);
   return out;
 }
 

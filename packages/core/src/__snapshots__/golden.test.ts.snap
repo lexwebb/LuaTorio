@@ -330,6 +330,15 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
                 },
               },
             ],
+            "else_outputs": [
+              {
+                "copy_count_from_input": true,
+                "signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+              },
+            ],
             "outputs": [
               {
                 "copy_count_from_input": true,
@@ -345,37 +354,6 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         "name": "decider-combinator",
         "position": {
           "x": 8,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "=",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t10",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
-                  "name": "__t1",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 6,
-        "name": "decider-combinator",
-        "position": {
-          "x": 10,
           "y": 0,
         },
       },
@@ -397,10 +375,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             },
           },
         },
-        "entity_number": 7,
+        "entity_number": 6,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 12,
+          "x": 10,
           "y": 0,
         },
       },
@@ -422,10 +400,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 8,
+        "entity_number": 7,
         "name": "constant-combinator",
         "position": {
-          "x": 14,
+          "x": 12,
           "y": 0,
         },
       },
@@ -444,10 +422,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             "second_constant": 0,
           },
         },
-        "entity_number": 9,
+        "entity_number": 8,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 16,
+          "x": 14,
           "y": 0,
         },
       },
@@ -464,38 +442,7 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
                 },
               },
             ],
-            "outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
-                  "name": "__t6",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 10,
-        "name": "decider-combinator",
-        "position": {
-          "x": 18,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "=",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t6",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
+            "else_outputs": [
               {
                 "copy_count_from_input": true,
                 "signal": {
@@ -504,12 +451,21 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
                 },
               },
             ],
+            "outputs": [
+              {
+                "copy_count_from_input": true,
+                "signal": {
+                  "name": "__t6",
+                  "type": "virtual",
+                },
+              },
+            ],
           },
         },
-        "entity_number": 11,
+        "entity_number": 9,
         "name": "decider-combinator",
         "position": {
-          "x": 20,
+          "x": 16,
           "y": 0,
         },
       },
@@ -531,10 +487,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             },
           },
         },
-        "entity_number": 12,
+        "entity_number": 10,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 22,
+          "x": 18,
           "y": 0,
         },
       },
@@ -544,10 +500,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             "sections": [],
           },
         },
-        "entity_number": 13,
+        "entity_number": 11,
         "name": "constant-combinator",
         "position": {
-          "x": 24,
+          "x": 20,
           "y": 0,
         },
       },
@@ -563,10 +519,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         2,
       ],
       [
+        7,
+        2,
         8,
         2,
-        9,
-        2,
       ],
       [
         1,
@@ -593,27 +549,33 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         2,
       ],
       [
-        4,
-        4,
-        6,
-        2,
-      ],
-      [
         1,
         2,
-        6,
+        5,
         2,
       ],
       [
         5,
         4,
-        7,
+        6,
+        2,
+      ],
+      [
+        8,
+        4,
+        9,
+        2,
+      ],
+      [
+        8,
+        4,
+        9,
         2,
       ],
       [
         6,
         4,
-        7,
+        9,
         2,
       ],
       [
@@ -623,39 +585,9 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         2,
       ],
       [
-        9,
-        4,
-        10,
-        2,
-      ],
-      [
-        9,
-        4,
-        11,
-        2,
-      ],
-      [
-        7,
-        4,
-        11,
-        2,
-      ],
-      [
         10,
         4,
-        12,
-        2,
-      ],
-      [
         11,
-        4,
-        12,
-        2,
-      ],
-      [
-        12,
-        4,
-        13,
         2,
       ],
     ],
@@ -975,6 +907,15 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
                 },
               },
             ],
+            "else_outputs": [
+              {
+                "copy_count_from_input": true,
+                "signal": {
+                  "name": "__t7",
+                  "type": "virtual",
+                },
+              },
+            ],
             "outputs": [
               {
                 "copy_count_from_input": true,
@@ -990,37 +931,6 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
         "name": "decider-combinator",
         "position": {
           "x": 8,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "=",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t3",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
-                  "name": "__t7",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 6,
-        "name": "decider-combinator",
-        "position": {
-          "x": 10,
           "y": 0,
         },
       },
@@ -1042,10 +952,10 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
             },
           },
         },
-        "entity_number": 7,
+        "entity_number": 6,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 12,
+          "x": 10,
           "y": 0,
         },
       },
@@ -1055,10 +965,10 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
             "sections": [],
           },
         },
-        "entity_number": 8,
+        "entity_number": 7,
         "name": "constant-combinator",
         "position": {
-          "x": 14,
+          "x": 12,
           "y": 0,
         },
       },
@@ -1068,7 +978,7 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
     "label": "conditional-counter",
     "wires": [
       [
-        7,
+        6,
         4,
         1,
         2,
@@ -1098,33 +1008,21 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
         2,
       ],
       [
-        2,
-        2,
-        6,
-        2,
-      ],
-      [
         4,
         4,
-        6,
+        5,
         2,
       ],
       [
         5,
         4,
-        7,
-        2,
-      ],
-      [
         6,
-        4,
-        7,
         2,
       ],
       [
         1,
         4,
-        8,
+        7,
         2,
       ],
     ],
@@ -1702,6 +1600,15 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
                 },
               },
             ],
+            "else_outputs": [
+              {
+                "copy_count_from_input": true,
+                "signal": {
+                  "name": "__t3",
+                  "type": "virtual",
+                },
+              },
+            ],
             "outputs": [
               {
                 "copy_count_from_input": true,
@@ -1717,37 +1624,6 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
         "name": "decider-combinator",
         "position": {
           "x": 12,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "=",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t7",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
-                  "name": "__t3",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 8,
-        "name": "decider-combinator",
-        "position": {
-          "x": 14,
           "y": 0,
         },
       },
@@ -1769,10 +1645,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             },
           },
         },
-        "entity_number": 9,
+        "entity_number": 8,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 16,
+          "x": 14,
           "y": 0,
         },
       },
@@ -1782,10 +1658,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             "sections": [],
           },
         },
-        "entity_number": 10,
+        "entity_number": 9,
         "name": "constant-combinator",
         "position": {
-          "x": 18,
+          "x": 16,
           "y": 0,
         },
       },
@@ -1831,33 +1707,21 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
         2,
       ],
       [
-        6,
-        4,
-        8,
-        2,
-      ],
-      [
         3,
         2,
-        8,
+        7,
         2,
       ],
       [
         7,
         4,
-        9,
+        8,
         2,
       ],
       [
         8,
         4,
         9,
-        2,
-      ],
-      [
-        9,
-        4,
-        10,
         2,
       ],
     ],

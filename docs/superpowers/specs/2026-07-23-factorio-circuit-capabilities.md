@@ -150,8 +150,8 @@ Update `docs/superpowers/specs/2026-07-23-circuit-sim-fuzz-design.md` backlog me
 
 ## Acceptance check for next implement pass
 
-- [ ] VM: `else_outputs` when conditions fail
-- [ ] Emit: general `select` → one decider (then outs + else outs) + merge if rename required
-- [ ] Emit: non-incremental enable-hold → one decider + latch
-- [ ] Fuzz + while_count / for_sum / mux / clamp goldens
-- [ ] Re-run opt profile; expect mux entity share down again
+- [x] VM: `else_outputs` when conditions fail
+- [x] Emit: general `select` → one decider (then outs + else outs) + merge if rename required
+- [x] Emit: non-incremental enable-hold → one decider + latch
+- [x] Fuzz + while_count / for_sum / mux / clamp goldens
+- [x] Re-run opt profile; mux/clamp/conditional-counter down (mux 10→9, clamp 13→11, conditional-counter 8→7)

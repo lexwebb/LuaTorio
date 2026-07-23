@@ -234,7 +234,7 @@ describe("lowerToCombinators", () => {
     });
   });
 
-  it("keeps the full 3-entity mux for select(c, x, y) with distinct non-zero branches", () => {
+  it("emits else_outputs mux + merge for select(c, x, y) with distinct non-zero branches", () => {
     const module: IRModule = {
       nodes: [
         { kind: "input", id: "__t1", signal: "signal-A" },
@@ -251,18 +251,21 @@ describe("lowerToCombinators", () => {
     };
 
     const graph = lowerToCombinators(module);
-    expect(graph.entities.find((entity) => entity.id === "__t4__then")).toMatchObject({
+    expect(graph.entities.find((entity) => entity.id === "__t4__mux")).toMatchObject({
       kind: "decider",
       role: "mux-side",
-    });
-    expect(graph.entities.find((entity) => entity.id === "__t4__else")).toMatchObject({
-      kind: "decider",
-      role: "mux-side",
+      control_behavior: {
+        decider_conditions: {
+          else_outputs: [{ signal: { type: "virtual", name: "__t3" }, copy_count_from_input: true }],
+        },
+      },
     });
     expect(graph.entities.find((entity) => entity.id === "__t4")).toMatchObject({
       kind: "arithmetic",
       outputSignal: "__t4",
     });
+    expect(graph.entities.find((entity) => entity.id === "__t4__then")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t4__else")).toBeUndefined();
   });
 
   it("lowers memory+store to a latch arithmetic with feedback from the store value", () => {

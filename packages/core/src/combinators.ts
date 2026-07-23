@@ -199,6 +199,32 @@ function lowerSelectGate(
   };
 }
 
+/**
+ * One decider: copy `thenSignal` when `cond != 0`, else copy `elseSignal`
+ * (Factorio 2.x `else_outputs`). Keeps branch signal names on the wire.
+ */
+function lowerElseOutputsMux(
+  id: string,
+  condId: string,
+  thenSignal: string,
+  elseSignal: string,
+): CircuitEntity {
+  return {
+    id,
+    kind: "decider",
+    name: "decider-combinator",
+    outputSignal: thenSignal,
+    role: "mux-side",
+    control_behavior: {
+      decider_conditions: {
+        conditions: [{ first_signal: signalRef(condId), comparator: "!=", constant: 0 }],
+        outputs: [{ signal: signalRef(thenSignal), copy_count_from_input: true }],
+        else_outputs: [{ signal: signalRef(elseSignal), copy_count_from_input: true }],
+      },
+    },
+  };
+}
+
 /** Arithmetic rename: copy `fromSignal` onto `id` (used after a gate that kept the branch name). */
 function lowerRename(id: string, fromSignal: string): CircuitEntity {
   return {
@@ -295,16 +321,15 @@ function lowerGateAndRename(
   };
 }
 
-/** Full 3-entity mux: then-gate + else-gate + merge. */
+/**
+ * General mux via one `else_outputs` decider + arithmetic merge (−1 vs two gates).
+ * Copy keeps branch signal names; merge renames onto `node.id`.
+ */
 function lowerSelectFullMux(node: Extract<IRNode, { kind: "select" }>): {
   entities: CircuitEntity[];
   wires: WireEdge[];
 } {
-  const thenGateId = `${node.id}__then`;
-  const elseGateId = `${node.id}__else`;
-  const thenGate = lowerSelectGate(thenGateId, node.cond, node.then, "!=", 0);
-  const elseGate = lowerSelectGate(elseGateId, node.cond, node.else, "=", 0);
-
+  const muxId = `${node.id}__mux`;
   const merge: CircuitEntity = {
     id: node.id,
     kind: "arithmetic",
@@ -321,14 +346,12 @@ function lowerSelectFullMux(node: Extract<IRNode, { kind: "select" }>): {
   };
 
   return {
-    entities: [thenGate, elseGate, merge],
+    entities: [lowerElseOutputsMux(muxId, node.cond, node.then, node.else), merge],
     wires: [
-      greenWire(node.cond, thenGateId),
-      greenWire(node.then, thenGateId),
-      greenWire(node.cond, elseGateId),
-      greenWire(node.else, elseGateId),
-      greenWire(thenGateId, node.id),
-      greenWire(elseGateId, node.id),
+      greenWire(node.cond, muxId),
+      greenWire(node.then, muxId),
+      greenWire(node.else, muxId),
+      greenWire(muxId, node.id),
     ],
   };
 }
@@ -357,7 +380,7 @@ function isBooleanValued(node: IRNode | undefined): boolean {
  * - `select(c, bool, 0)` / `select(c, 0, bool)` → 1 AND-decider → constant 1
  * - `select(c, x, 0)` / `select(c, 0, x)` → gate + rename (2)
  * - `select(c, x, x)` → rename (1)
- * - otherwise → full 3-entity mux
+ * - otherwise → else_outputs mux + merge (2)
  */
 function lowerSelect(
   node: Extract<IRNode, { kind: "select" }>,
@@ -533,8 +556,8 @@ function lowerIncrementalHoldLatch(
 /**
  * Fuse `store(mem, select(en, next, mem))` into an enable/hold latch.
  *
- * Default: then-gate + else-gate + latch merging `next + mem` (saves the separate select merge).
- * When `next = mem + δ`: gate only δ, latch `Q + gated_δ` with Q feedback (drops the else-gate).
+ * When `next = mem + δ`: gate only δ, latch `Q + gated_δ` with Q feedback.
+ * Otherwise: one decider with else_outputs (next vs mem) + latch merge (−1 vs two gates).
  */
 function lowerEnabledHoldLatch(
   memory: Extract<IRNode, { kind: "memory" }>,
@@ -547,25 +570,22 @@ function lowerEnabledHoldLatch(
     return lowerIncrementalHoldLatch(memory, select, deltaId, initIsZero, nodeById);
   }
 
-  const thenGateId = `${select.id}__then`;
-  const elseGateId = `${select.id}__else`;
-  const thenGate = lowerSelectGate(thenGateId, select.cond, select.then, "!=", 0);
-  const elseGate = lowerSelectGate(elseGateId, select.cond, select.else, "=", 0);
-
+  const muxId = `${select.id}__mux`;
   const wires: WireEdge[] = [
-    greenWire(select.cond, thenGateId),
-    greenWire(select.then, thenGateId),
-    greenWire(select.cond, elseGateId),
-    greenWire(select.else, elseGateId),
-    greenWire(thenGateId, memory.id),
-    greenWire(elseGateId, memory.id),
+    greenWire(select.cond, muxId),
+    greenWire(select.then, muxId),
+    greenWire(select.else, muxId),
+    greenWire(muxId, memory.id),
   ];
   if (!initIsZero) {
     wires.push(greenWire(memory.init, memory.id));
   }
 
   return {
-    entities: [thenGate, elseGate, lowerLatch(memory.id, select.then, select.else)],
+    entities: [
+      lowerElseOutputsMux(muxId, select.cond, select.then, select.else),
+      lowerLatch(memory.id, select.then, select.else),
+    ],
     wires,
   };
 }

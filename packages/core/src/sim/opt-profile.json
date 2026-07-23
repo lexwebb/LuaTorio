@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T12:31:10.471Z",
+  "generatedAt": "2026-07-23T12:45:33.431Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -41,18 +41,18 @@
       "name": "clamp",
       "source": "example",
       "kind": "example",
-      "combinators": 13,
-      "wires": 17,
+      "combinators": 11,
+      "wires": 13,
       "buckets": {
         "latch": 0,
-        "mux_side": 4,
+        "mux_side": 2,
         "mux_merge": 2,
         "decider_other": 3,
         "arithmetic_other": 1,
         "constant_value": 0,
         "placeholder_io": 3
       },
-      "muxShare": 0.6
+      "muxShare": 0.5
     },
     {
       "name": "comparison-chain",
@@ -75,18 +75,18 @@
       "name": "conditional-counter",
       "source": "example",
       "kind": "example",
-      "combinators": 8,
-      "wires": 10,
+      "combinators": 7,
+      "wires": 8,
       "buckets": {
         "latch": 1,
-        "mux_side": 2,
+        "mux_side": 1,
         "mux_merge": 1,
         "decider_other": 0,
         "arithmetic_other": 2,
         "constant_value": 0,
         "placeholder_io": 2
       },
-      "muxShare": 0.5
+      "muxShare": 0.4
     },
     {
       "name": "counter",
@@ -126,18 +126,18 @@
       "name": "mux",
       "source": "example",
       "kind": "example",
-      "combinators": 10,
-      "wires": 11,
+      "combinators": 9,
+      "wires": 9,
       "buckets": {
         "latch": 0,
-        "mux_side": 3,
+        "mux_side": 2,
         "mux_merge": 1,
         "decider_other": 1,
         "arithmetic_other": 1,
         "constant_value": 0,
         "placeholder_io": 4
       },
-      "muxShare": 0.6666666666666666
+      "muxShare": 0.6
     },
     {
       "name": "while_count",
@@ -3561,17 +3561,17 @@
   ],
   "totals": {
     "programs": 209,
-    "combinators": 1252,
+    "combinators": 1248,
     "buckets": {
       "latch": 300,
-      "mux_side": 155,
+      "mux_side": 151,
       "mux_merge": 4,
       "decider_other": 207,
       "arithmetic_other": 109,
       "constant_value": 100,
       "placeholder_io": 377
     },
-    "muxShareMean": 0.10653907496012764
+    "muxShareMean": 0.10526315789473689
   },
   "opportunities": [
     {
