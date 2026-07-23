@@ -1,0 +1,48 @@
+{
+  "blueprint": {
+    "item": "blueprint",
+    "label": "static-mul",
+    "entities": [
+      {
+        "entity_number": 1,
+        "name": "constant-combinator",
+        "position": { "x": 0, "y": 0 },
+        "control_behavior": {
+          "sections": {
+            "sections": [
+              {
+                "index": 1,
+                "filters": [
+                  { "index": 1, "count": 6, "type": "virtual", "name": "signal-A" }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "entity_number": 2,
+        "name": "arithmetic-combinator",
+        "position": { "x": 2, "y": 0 },
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": { "type": "virtual", "name": "signal-A" },
+            "second_constant": 7,
+            "operation": "*",
+            "output_signal": { "type": "virtual", "name": "signal-C" }
+          }
+        }
+      },
+      {
+        "entity_number": 3,
+        "name": "constant-combinator",
+        "position": { "x": 4, "y": 0 },
+        "control_behavior": { "sections": { "sections": [] } }
+      }
+    ],
+    "wires": [
+      [1, 2, 2, 2],
+      [2, 4, 3, 2]
+    ]
+  }
+}

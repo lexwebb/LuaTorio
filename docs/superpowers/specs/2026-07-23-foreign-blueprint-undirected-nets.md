@@ -1,8 +1,9 @@
 # Foreign Blueprints + Undirected Wire Nets
 
 **Date:** 2026-07-23  
-**Status:** In progress (#41)  
-**Related:** #40 red/green, #39 selector (unsupported until present)
+**Status:** Done (#41)  
+**Related:** #40 red/green, #39 selector (unsupported until present)  
+**Landed:** `fromBlueprint` / `fromCircuitGraph` → `ImportedCircuit`; `simulateImported`; fixtures `static-mul` + `free-counter` under `packages/core/src/sim/fixtures/`
 
 ## Problem
 

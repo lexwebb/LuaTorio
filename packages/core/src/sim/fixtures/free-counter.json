@@ -1,0 +1,31 @@
+{
+  "blueprint": {
+    "item": "blueprint",
+    "label": "free-counter",
+    "entities": [
+      {
+        "entity_number": 1,
+        "name": "arithmetic-combinator",
+        "position": { "x": 0, "y": 0 },
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": { "type": "virtual", "name": "signal-A" },
+            "second_constant": 1,
+            "operation": "+",
+            "output_signal": { "type": "virtual", "name": "signal-A" }
+          }
+        }
+      },
+      {
+        "entity_number": 2,
+        "name": "constant-combinator",
+        "position": { "x": 2, "y": 0 },
+        "control_behavior": { "sections": { "sections": [] } }
+      }
+    ],
+    "wires": [
+      [1, 4, 1, 2],
+      [1, 4, 2, 2]
+    ]
+  }
+}

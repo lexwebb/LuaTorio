@@ -55,7 +55,26 @@ export { lower } from "./lower.js";
 export { optimize } from "./optimize.js";
 export type { Chunk } from "./parse.js";
 export { ParseError, parse } from "./parse.js";
+export type {
+  CircuitNet,
+  ConnectorSide,
+  ImportedCircuit,
+  NetEndpoint,
+  WireColor,
+} from "./sim/import.js";
+export {
+  BlueprintImportError,
+  fromBlueprint,
+  fromCircuitGraph,
+  WIRE_CONNECTOR,
+} from "./sim/import.js";
 export type { ReferenceOptions, ReferenceResult } from "./sim/reference.js";
 export { reference } from "./sim/reference.js";
-export type { SimulateMode, SimulateOptions, SimulateResult, SimulateTick } from "./sim/simulate.js";
+export type {
+  SimulateMode,
+  SimulateOptions,
+  SimulateResult,
+  SimulateTick,
+} from "./sim/simulate.js";
 export { comboSettleDepth, simulate } from "./sim/simulate.js";
+export { simulateImported } from "./sim/simulate-imported.js";
