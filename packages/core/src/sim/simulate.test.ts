@@ -79,6 +79,26 @@ describe("simulate", () => {
     expect(result.ticks[15]?.outputs["signal-A"]).toBe(55);
   });
 
+  it("signal_at: largest among A/B/C onto signal-N", () => {
+    const graph = graphOf(loadExample("signal_at.lua"));
+    const result = simulate(graph, {
+      ticks: 2,
+      inputs: { "signal-A": 3, "signal-B": 7, "signal-C": 1 },
+    });
+    expect(result.ticks[0]?.outputs["signal-N"]).toBe(7);
+    expect(result.ticks[1]?.outputs["signal-N"]).toBe(7);
+  });
+
+  it("signal_at_asc: minimum present priority onto signal-N", () => {
+    const graph = graphOf(loadExample("signal_at_asc.lua"));
+    const result = simulate(graph, {
+      ticks: 2,
+      inputs: { "priority-1": 0, "priority-2": 2, "priority-3": 3 },
+    });
+    // 0 absent; among 2 and 3, ascending index 0 → 2
+    expect(result.ticks[0]?.outputs["signal-N"]).toBe(2);
+  });
+
   it("catalog_latch sets, holds below buffer, clears at buffer", async () => {
     const { compile } = await import("../index.js");
     const compiled = compile(loadExample("catalog_latch.lua"));

@@ -1344,6 +1344,31 @@ function lowerSignalCount(node: Extract<IRNode, { kind: "signal_count" }>): {
   };
 }
 
+/**
+ * Selector rank/index (#47): pick Nth nonzero arg by value.
+ * Pass-through keeps the winner's signal name; output-port rename yields the count.
+ */
+function lowerSignalAt(node: Extract<IRNode, { kind: "signal_at" }>): {
+  entity: CircuitEntity;
+  wires: WireEdge[];
+} {
+  return {
+    entity: {
+      id: node.id,
+      kind: "selector",
+      name: "selector-combinator",
+      outputSignal: node.id,
+      label: node.ascending ? "signal_at_asc" : "signal_at",
+      control_behavior: {
+        operation: "select",
+        index_constant: node.index,
+        select_max: !node.ascending,
+      },
+    },
+    wires: uniqueGreenWires(node.args, node.id),
+  };
+}
+
 const NET_GREEN = { red: false, green: true };
 const NET_RED = { red: true, green: false };
 
@@ -1944,6 +1969,12 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         wires.push(...expanded.wires);
         break;
       }
+      case "signal_at": {
+        const { entity, wires: atWires } = lowerSignalAt(node);
+        entities.push(entity);
+        wires.push(...atWires);
+        break;
+      }
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -2031,6 +2062,11 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
+      case "signal_at":
+        if (node.args.includes(id)) {
+          users.push(node);
+        }
+        break;
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -2083,6 +2119,11 @@ function countNodeUses(module: IRModule): Map<string, number> {
       case "catalog_latch":
         for (const entry of node.entries) {
           add(entry.stock);
+        }
+        break;
+      case "signal_at":
+        for (const arg of node.args) {
+          add(arg);
         }
         break;
       default: {

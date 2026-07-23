@@ -114,6 +114,16 @@ function lowerExpr(
       }));
       return pushNode(ctx, { kind: "catalog_latch", id: nextId(ctx), entries });
     }
+    case "signal_at": {
+      const args = expr.args.map((arg) => lowerExpr(arg, env, ctx));
+      return pushNode(ctx, {
+        kind: "signal_at",
+        id: nextId(ctx),
+        index: expr.index,
+        ascending: expr.ascending,
+        args,
+      });
+    }
     default: {
       const unreachable: never = expr;
       throw new Error(`internal error: unhandled expression kind '${JSON.stringify(unreachable)}'`);

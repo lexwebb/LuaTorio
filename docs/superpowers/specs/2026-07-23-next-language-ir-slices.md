@@ -87,11 +87,11 @@ First ship: **`catalog_latch`** — multi-signal recipe bag without full v4 tabl
 
 Later: general bundle / EACH packing memory for denser loops.
 
-## P2 — Rank / index (feeds #39)
+## P2 — Rank / index (#47)
 
-Sketch only: e.g. `select_by_index(bag, n)` or “Nth largest signal”. Then selector combinator is the honest emit.
+`signal_at` / `signal_at_asc` — design `2026-07-23-signal-at-design.md`. Honest selector `select` emit (not mux).
 
-Cookbook precursor in the wild: WarDaft’s deficit → priority → **selector index 0** → recipe-table map (same research note). Prefer that over inventing selector-as-mux.
+WarDaft recipe-table map (second selector over a constant pairing) remains a small follow-up once named bags are ergonomic; priority **value** pick ships in `examples/signal_at_asc.lua`.
 
 ## Tracking
 

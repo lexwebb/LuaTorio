@@ -132,6 +132,25 @@ function evalExpr(
     }
     case "signal_count":
       return expr.args.filter((arg) => evalExpr(arg, env, inputs) !== 0).length;
+    case "signal_at": {
+      const scored = expr.args
+        .map((arg, index) => ({ index, value: evalExpr(arg, env, inputs) }))
+        .filter((entry) => entry.value !== 0);
+      if (scored.length === 0) {
+        return 0;
+      }
+      // Factorio: a lone candidate always passes (wiki / evalSelectorSelect).
+      if (scored.length === 1) {
+        return scored[0]!.value;
+      }
+      scored.sort((a, b) => {
+        if (a.value !== b.value) {
+          return expr.ascending ? a.value - b.value : b.value - a.value;
+        }
+        return a.index - b.index;
+      });
+      return scored[expr.index]?.value ?? 0;
+    }
     default: {
       const unreachable: never = expr;
       throw new Error(`reference: bad expr '${JSON.stringify(unreachable)}'`);

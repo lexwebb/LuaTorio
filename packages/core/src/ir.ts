@@ -28,6 +28,17 @@ export type IRNode =
       kind: "catalog_latch";
       id: string;
       entries: Array<{ stock: string; recipe: string; buffer: number; tag: number }>;
+    }
+  /**
+   * Selector rank/index (#47): pick the Nth nonzero arg by value.
+   * `ascending` → Factorio `select_max: false` (index 0 = minimum).
+   */
+  | {
+      kind: "signal_at";
+      id: string;
+      index: number;
+      ascending: boolean;
+      args: string[];
     };
 
 export interface IRModule {

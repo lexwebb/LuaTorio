@@ -1020,6 +1020,58 @@ exports[`golden examples > or_flags > compiles to a blueprint JSON plan matching
 }
 `;
 
+exports[`golden examples > signal_at > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "index_constant": 0,
+          "operation": "select",
+          "select_max": true,
+        },
+        "entity_number": 1,
+        "name": "selector-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "signal_at",
+    "wires": [],
+  },
+}
+`;
+
+exports[`golden examples > signal_at_asc > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "index_constant": 0,
+          "operation": "select",
+          "select_max": false,
+        },
+        "entity_number": 1,
+        "name": "selector-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "signal_at_asc",
+    "wires": [],
+  },
+}
+`;
+
 exports[`golden examples > signal_count > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {

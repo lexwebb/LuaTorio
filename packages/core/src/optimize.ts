@@ -181,6 +181,12 @@ function constantFold(module: IRModule): IRModule {
           })),
         });
         break;
+      case "signal_at":
+        nodes.push({
+          ...node,
+          args: node.args.map((arg) => resolve(arg, alias)),
+        });
+        break;
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -221,6 +227,8 @@ function structuralKey(node: IRNode): string {
       return `catalog_latch:${node.entries
         .map((e) => `${e.stock}:${e.recipe}:${e.buffer}:${e.tag}`)
         .join("|")}`;
+    case "signal_at":
+      return `signal_at:${node.index}:${node.ascending ? "asc" : "desc"}:${node.args.join(":")}`;
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -265,6 +273,8 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
           stock: resolve(entry.stock, alias),
         })),
       };
+    case "signal_at":
+      return { ...node, args: node.args.map((arg) => resolve(arg, alias)) };
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -321,6 +331,8 @@ function childIds(node: IRNode): string[] {
       return [...node.args];
     case "catalog_latch":
       return node.entries.map((entry) => entry.stock);
+    case "signal_at":
+      return [...node.args];
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);

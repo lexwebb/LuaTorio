@@ -93,6 +93,14 @@ export type AnalyzedExpr =
       }>;
       line: number;
       column: number;
+    }
+  | {
+      kind: "signal_at";
+      index: number;
+      ascending: boolean;
+      args: AnalyzedExpr[];
+      line: number;
+      column: number;
     };
 
 export type AnalyzedAssign = {
@@ -474,6 +482,7 @@ function forbidCatalogInScalar(
       forbidCatalogInScalar(expr.reset, catalogLocals, line, column);
       return;
     case "signal_count":
+    case "signal_at":
       for (const arg of expr.args) {
         forbidCatalogInScalar(arg, catalogLocals, line, column);
       }
@@ -900,6 +909,41 @@ function analyzeCallExpr(
     return {
       kind: "signal_count",
       args: expr.arguments.map((arg) => analyzeExpr(arg, declared, inputs, catalogLocals)),
+      line,
+      column,
+    };
+  }
+
+  if (calleeName === "signal_at" || calleeName === "signal_at_asc") {
+    if (expr.arguments.length < 2) {
+      throw new SemanticError(
+        `${calleeName}(index, signal, ...) requires an index and at least one signal`,
+        line,
+        column,
+      );
+    }
+    const indexArg = expr.arguments[0]!;
+    if (indexArg.type !== "NumericLiteral" || !Number.isInteger(indexArg.value)) {
+      throw new SemanticError(
+        `${calleeName} index must be a non-negative integer literal`,
+        locOf(indexArg).line,
+        locOf(indexArg).column,
+      );
+    }
+    if (indexArg.value < 0) {
+      throw new SemanticError(
+        `${calleeName} index must be >= 0`,
+        locOf(indexArg).line,
+        locOf(indexArg).column,
+      );
+    }
+    return {
+      kind: "signal_at",
+      index: indexArg.value,
+      ascending: calleeName === "signal_at_asc",
+      args: expr.arguments
+        .slice(1)
+        .map((arg) => analyzeExpr(arg, declared, inputs, catalogLocals)),
       line,
       column,
     };
