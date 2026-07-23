@@ -1,28 +1,70 @@
-import { compile } from "@luatorio/core";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import "./App.css";
+import { Editor } from "./components/Editor.js";
+import { ExamplePicker } from "./components/ExamplePicker.js";
+import { Output } from "./components/Output.js";
+import { Toolbar } from "./components/Toolbar.js";
+import { type CompileOutcome, runCompile } from "./lib/compile.js";
+import { examples } from "./lib/examples.js";
+import { decodeShareHash, encodeShareHash, type ViewMode } from "./lib/share.js";
 
-const SAMPLE_SOURCE = 'local x = input("signal-A")\noutput("signal-B", x)';
+const DEFAULT_SOURCE = examples[0]?.source ?? 'local x = input("signal-A")\noutput("signal-B", x)';
 
 export function App() {
-  const [result, setResult] = useState<string | null>(null);
+  const [source, setSource] = useState(() => decodeShareHash(window.location.hash)?.source ?? DEFAULT_SOURCE);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => decodeShareHash(window.location.hash)?.mode ?? "blueprint");
+  const [outcome, setOutcome] = useState<CompileOutcome>({ status: "idle" });
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
 
-  function handleCompile() {
-    try {
-      const { blueprint } = compile(SAMPLE_SOURCE);
-      setResult(`Compiled OK — blueprint length: ${blueprint.length}`);
-    } catch (error) {
-      setResult(`Error: ${error instanceof Error ? error.message : String(error)}`);
+  // Keep the URL shareable: mirror source + view mode into the hash without growing history.
+  useEffect(() => {
+    window.history.replaceState(null, "", encodeShareHash({ source, mode: viewMode }));
+  }, [source, viewMode]);
+
+  const handleCompile = useCallback(() => {
+    setOutcome(runCompile(source));
+    setCopyStatus("idle");
+  }, [source]);
+
+  const handleSelectExample = useCallback((exampleSource: string) => {
+    setSource(exampleSource);
+    setOutcome({ status: "idle" });
+    setCopyStatus("idle");
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    if (outcome.status !== "success") {
+      return;
     }
-  }
+    navigator.clipboard
+      .writeText(outcome.blueprint)
+      .then(() => setCopyStatus("copied"))
+      .catch(() => setCopyStatus("failed"));
+  }, [outcome]);
 
   return (
-    <main>
-      <h1>LuaTorio Playground</h1>
-      <p>Scaffold check: compiling a tiny Lua snippet via @luatorio/core.</p>
-      <button type="button" onClick={handleCompile}>
-        Compile
-      </button>
-      {result && <pre>{result}</pre>}
-    </main>
+    <div className="playground">
+      <header className="playground-header">
+        <h1>LuaTorio Playground</h1>
+        <p>Write LuaTorio v1 source and compile it to a Factorio blueprint, entirely in your browser.</p>
+      </header>
+
+      <div className="playground-toolbar-row">
+        <ExamplePicker examples={examples} onSelect={handleSelectExample} />
+        <Toolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onCompile={handleCompile}
+          onCopy={handleCopy}
+          copyDisabled={outcome.status !== "success"}
+          copyStatus={copyStatus}
+        />
+      </div>
+
+      <div className="playground-panes">
+        <Editor value={source} onChange={setSource} />
+        <Output outcome={outcome} viewMode={viewMode} />
+      </div>
+    </div>
   );
 }
