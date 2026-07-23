@@ -27,28 +27,40 @@ describe("emitBlueprint", () => {
     const { blueprint, stats } = emitBlueprint(laidOut);
 
     expect(blueprint.startsWith("0")).toBe(true);
-    expect(stats).toEqual({ combinators: laidOut.entities.length, wires: laidOut.wires.length });
+    // Empty I/O pads are omitted: 2 inputs + 1 output drop, leaving the adder.
+    expect(stats).toEqual({ combinators: 1, wires: 0 });
+    expect(stats.combinators).toBeLessThan(laidOut.entities.length);
   });
 
   it("round-trips through decodePlan with the same entity and wire count", () => {
     const laidOut = simpleLaidOut();
-    const { blueprint } = emitBlueprint(laidOut);
+    const { blueprint, stats } = emitBlueprint(laidOut);
 
     const plan = decodePlan(blueprint);
     expect(isBlueprint(plan)).toBe(true);
     if (isBlueprint(plan)) {
-      expect(plan.blueprint.entities).toHaveLength(laidOut.entities.length);
-      expect(plan.blueprint.wires).toHaveLength(laidOut.wires.length);
+      expect(plan.blueprint.entities).toHaveLength(stats.combinators);
+      expect(plan.blueprint.wires).toHaveLength(stats.wires);
     }
   });
 
   it("emits the plan object as a JSON string when options.json is true", () => {
     const laidOut = simpleLaidOut();
-    const { blueprint } = emitBlueprint(laidOut, { json: true });
+    const { blueprint, stats } = emitBlueprint(laidOut, { json: true });
 
     const plan = JSON.parse(blueprint);
     expect(isBlueprint(plan)).toBe(true);
-    expect(plan.blueprint.entities).toHaveLength(laidOut.entities.length);
+    expect(plan.blueprint.entities).toHaveLength(stats.combinators);
+  });
+
+  it("omits empty I/O placeholders from the blueprint but keeps valued constants", () => {
+    const laidOut = simpleLaidOut();
+    const { blueprint, stats } = emitBlueprint(laidOut, { json: true });
+    const plan = JSON.parse(blueprint);
+    expect(stats.combinators).toBe(1);
+    expect(plan.blueprint.entities.every((e: { name: string }) => e.name === "arithmetic-combinator")).toBe(
+      true,
+    );
   });
 
   it("sets the blueprint label from options.name", () => {

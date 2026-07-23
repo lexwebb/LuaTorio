@@ -69,7 +69,7 @@ describe("golden examples", () => {
 
         expect(decoded.blueprint.entities?.length ?? 0).toBeGreaterThan(0);
         expect(decoded.blueprint.entities?.length ?? 0).toBe(result.stats.combinators);
-        expect(decoded.blueprint.wires?.length ?? 0).toBeGreaterThan(0);
+        // Combinational graphs may have no internal wires once empty I/O pads are stripped.
         expect(decoded.blueprint.wires?.length ?? 0).toBe(result.stats.wires);
       });
     });

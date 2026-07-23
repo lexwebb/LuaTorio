@@ -28,19 +28,6 @@ exports[`golden examples > accumulator > compiles to a blueprint JSON plan match
       },
       {
         "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 2,
-        "name": "constant-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
               "name": "__t2",
@@ -57,23 +44,10 @@ exports[`golden examples > accumulator > compiles to a blueprint JSON plan match
             },
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 4,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 4,
-        "name": "constant-combinator",
-        "position": {
-          "x": 6,
+          "x": 2,
           "y": 0,
         },
       },
@@ -83,7 +57,7 @@ exports[`golden examples > accumulator > compiles to a blueprint JSON plan match
     "label": "accumulator",
     "wires": [
       [
-        3,
+        2,
         4,
         1,
         2,
@@ -91,19 +65,7 @@ exports[`golden examples > accumulator > compiles to a blueprint JSON plan match
       [
         1,
         4,
-        3,
         2,
-      ],
-      [
-        2,
-        2,
-        3,
-        2,
-      ],
-      [
-        1,
-        4,
-        4,
         2,
       ],
     ],
@@ -115,32 +77,6 @@ exports[`golden examples > adder > compiles to a blueprint JSON plan matching it
 {
   "blueprint": {
     "entities": [
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 1,
-        "name": "constant-combinator",
-        "position": {
-          "x": 0,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 2,
-        "name": "constant-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
       {
         "control_behavior": {
           "arithmetic_conditions": {
@@ -159,23 +95,10 @@ exports[`golden examples > adder > compiles to a blueprint JSON plan matching it
             },
           },
         },
-        "entity_number": 3,
+        "entity_number": 1,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 4,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 4,
-        "name": "constant-combinator",
-        "position": {
-          "x": 6,
+          "x": 0,
           "y": 0,
         },
       },
@@ -183,26 +106,7 @@ exports[`golden examples > adder > compiles to a blueprint JSON plan matching it
     "icons": [],
     "item": "blueprint",
     "label": "adder",
-    "wires": [
-      [
-        1,
-        2,
-        3,
-        2,
-      ],
-      [
-        2,
-        2,
-        3,
-        2,
-      ],
-      [
-        3,
-        4,
-        4,
-        2,
-      ],
-    ],
+    "wires": [],
   },
 }
 `;
@@ -211,19 +115,6 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
 {
   "blueprint": {
     "entities": [
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 1,
-        "name": "constant-combinator",
-        "position": {
-          "x": 0,
-          "y": 0,
-        },
-      },
       {
         "control_behavior": {
           "decider_conditions": {
@@ -248,10 +139,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 2,
+        "entity_number": 1,
         "name": "decider-combinator",
         "position": {
-          "x": 2,
+          "x": 0,
           "y": 0,
         },
       },
@@ -279,10 +170,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "decider-combinator",
         "position": {
-          "x": 4,
+          "x": 2,
           "y": 0,
         },
       },
@@ -310,10 +201,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 4,
+        "entity_number": 3,
         "name": "decider-combinator",
         "position": {
-          "x": 6,
+          "x": 4,
           "y": 0,
         },
       },
@@ -350,10 +241,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 5,
+        "entity_number": 4,
         "name": "decider-combinator",
         "position": {
-          "x": 8,
+          "x": 6,
           "y": 0,
         },
       },
@@ -375,10 +266,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             },
           },
         },
-        "entity_number": 6,
+        "entity_number": 5,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 10,
+          "x": 8,
           "y": 0,
         },
       },
@@ -400,10 +291,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 7,
+        "entity_number": 6,
         "name": "constant-combinator",
         "position": {
-          "x": 12,
+          "x": 10,
           "y": 0,
         },
       },
@@ -422,10 +313,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             "second_constant": 0,
           },
         },
-        "entity_number": 8,
+        "entity_number": 7,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 14,
+          "x": 12,
           "y": 0,
         },
       },
@@ -462,10 +353,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 9,
+        "entity_number": 8,
         "name": "decider-combinator",
         "position": {
-          "x": 16,
+          "x": 14,
           "y": 0,
         },
       },
@@ -487,23 +378,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             },
           },
         },
-        "entity_number": 10,
+        "entity_number": 9,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 18,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 11,
-        "name": "constant-combinator",
-        "position": {
-          "x": 20,
+          "x": 16,
           "y": 0,
         },
       },
@@ -513,81 +391,57 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
     "label": "clamp",
     "wires": [
       [
-        1,
+        6,
         2,
+        7,
         2,
+      ],
+      [
+        2,
+        4,
+        3,
+        2,
+      ],
+      [
+        3,
+        4,
+        4,
+        2,
+      ],
+      [
+        3,
+        4,
+        4,
+        2,
+      ],
+      [
+        4,
+        4,
+        5,
         2,
       ],
       [
         7,
-        2,
+        4,
         8,
         2,
       ],
       [
-        1,
-        2,
-        3,
-        2,
-      ],
-      [
-        3,
+        7,
         4,
-        4,
-        2,
-      ],
-      [
-        4,
-        4,
-        5,
-        2,
-      ],
-      [
-        4,
-        4,
-        5,
-        2,
-      ],
-      [
-        1,
-        2,
-        5,
+        8,
         2,
       ],
       [
         5,
         4,
-        6,
+        8,
         2,
       ],
       [
         8,
         4,
         9,
-        2,
-      ],
-      [
-        8,
-        4,
-        9,
-        2,
-      ],
-      [
-        6,
-        4,
-        9,
-        2,
-      ],
-      [
-        9,
-        4,
-        10,
-        2,
-      ],
-      [
-        10,
-        4,
-        11,
         2,
       ],
     ],
@@ -599,45 +453,6 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
 {
   "blueprint": {
     "entities": [
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 1,
-        "name": "constant-combinator",
-        "position": {
-          "x": 0,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 2,
-        "name": "constant-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 3,
-        "name": "constant-combinator",
-        "position": {
-          "x": 4,
-          "y": 0,
-        },
-      },
       {
         "control_behavior": {
           "decider_conditions": {
@@ -665,10 +480,10 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
             ],
           },
         },
-        "entity_number": 4,
+        "entity_number": 1,
         "name": "decider-combinator",
         "position": {
-          "x": 6,
+          "x": 0,
           "y": 0,
         },
       },
@@ -699,10 +514,10 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
             ],
           },
         },
-        "entity_number": 5,
+        "entity_number": 2,
         "name": "decider-combinator",
         "position": {
-          "x": 8,
+          "x": 2,
           "y": 0,
         },
       },
@@ -739,23 +554,10 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
             ],
           },
         },
-        "entity_number": 6,
+        "entity_number": 3,
         "name": "decider-combinator",
         "position": {
-          "x": 10,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 7,
-        "name": "constant-combinator",
-        "position": {
-          "x": 12,
+          "x": 4,
           "y": 0,
         },
       },
@@ -766,44 +568,14 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
     "wires": [
       [
         1,
-        2,
         4,
-        2,
-      ],
-      [
-        2,
-        2,
-        4,
-        2,
-      ],
-      [
-        2,
-        2,
-        5,
-        2,
-      ],
-      [
         3,
         2,
-        5,
-        2,
       ],
       [
-        4,
-        4,
-        6,
         2,
-      ],
-      [
-        5,
         4,
-        6,
-        2,
-      ],
-      [
-        6,
-        4,
-        7,
+        3,
         2,
       ],
     ],
@@ -839,19 +611,6 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
       },
       {
         "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 2,
-        "name": "constant-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
               "name": "__t2",
@@ -865,10 +624,10 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
             "second_constant": 1,
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 4,
+          "x": 2,
           "y": 0,
         },
       },
@@ -887,10 +646,10 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
             "second_constant": 1,
           },
         },
-        "entity_number": 4,
+        "entity_number": 3,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 6,
+          "x": 4,
           "y": 0,
         },
       },
@@ -927,10 +686,10 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
             ],
           },
         },
-        "entity_number": 5,
+        "entity_number": 4,
         "name": "decider-combinator",
         "position": {
-          "x": 8,
+          "x": 6,
           "y": 0,
         },
       },
@@ -952,23 +711,10 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
             },
           },
         },
-        "entity_number": 6,
+        "entity_number": 5,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 10,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 7,
-        "name": "constant-combinator",
-        "position": {
-          "x": 12,
+          "x": 8,
           "y": 0,
         },
       },
@@ -978,9 +724,15 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
     "label": "conditional-counter",
     "wires": [
       [
-        6,
+        5,
         4,
         1,
+        2,
+      ],
+      [
+        1,
+        4,
+        2,
         2,
       ],
       [
@@ -990,39 +742,21 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
         2,
       ],
       [
-        1,
+        2,
         4,
         4,
-        2,
-      ],
-      [
-        2,
-        2,
-        5,
         2,
       ],
       [
         3,
         4,
-        5,
+        4,
         2,
       ],
       [
         4,
         4,
         5,
-        2,
-      ],
-      [
-        5,
-        4,
-        6,
-        2,
-      ],
-      [
-        1,
-        4,
-        7,
         2,
       ],
     ],
@@ -1078,19 +812,6 @@ exports[`golden examples > counter > compiles to a blueprint JSON plan matching 
           "y": 0,
         },
       },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 3,
-        "name": "constant-combinator",
-        "position": {
-          "x": 4,
-          "y": 0,
-        },
-      },
     ],
     "icons": [],
     "item": "blueprint",
@@ -1106,12 +827,6 @@ exports[`golden examples > counter > compiles to a blueprint JSON plan matching 
         1,
         4,
         2,
-        2,
-      ],
-      [
-        1,
-        4,
-        3,
         2,
       ],
     ],
@@ -1353,19 +1068,6 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
           "y": 0,
         },
       },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 9,
-        "name": "constant-combinator",
-        "position": {
-          "x": 16,
-          "y": 0,
-        },
-      },
     ],
     "icons": [],
     "item": "blueprint",
@@ -1449,12 +1151,6 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
         5,
         2,
       ],
-      [
-        1,
-        4,
-        9,
-        2,
-      ],
     ],
   },
 }
@@ -1464,45 +1160,6 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
 {
   "blueprint": {
     "entities": [
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 1,
-        "name": "constant-combinator",
-        "position": {
-          "x": 0,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 2,
-        "name": "constant-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 3,
-        "name": "constant-combinator",
-        "position": {
-          "x": 4,
-          "y": 0,
-        },
-      },
       {
         "control_behavior": {
           "decider_conditions": {
@@ -1527,10 +1184,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             ],
           },
         },
-        "entity_number": 4,
+        "entity_number": 1,
         "name": "decider-combinator",
         "position": {
-          "x": 6,
+          "x": 0,
           "y": 0,
         },
       },
@@ -1558,10 +1215,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             ],
           },
         },
-        "entity_number": 5,
+        "entity_number": 2,
         "name": "decider-combinator",
         "position": {
-          "x": 8,
+          "x": 2,
           "y": 0,
         },
       },
@@ -1580,10 +1237,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             "second_constant": 0,
           },
         },
-        "entity_number": 6,
+        "entity_number": 3,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 10,
+          "x": 4,
           "y": 0,
         },
       },
@@ -1620,10 +1277,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             ],
           },
         },
-        "entity_number": 7,
+        "entity_number": 4,
         "name": "decider-combinator",
         "position": {
-          "x": 12,
+          "x": 6,
           "y": 0,
         },
       },
@@ -1645,23 +1302,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             },
           },
         },
-        "entity_number": 8,
+        "entity_number": 5,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 14,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 9,
-        "name": "constant-combinator",
-        "position": {
-          "x": 16,
+          "x": 8,
           "y": 0,
         },
       },
@@ -1672,56 +1316,32 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
     "wires": [
       [
         1,
-        2,
         4,
         2,
-      ],
-      [
-        4,
-        4,
-        5,
         2,
       ],
       [
         2,
-        2,
-        5,
-        2,
-      ],
-      [
-        5,
         4,
-        6,
-        2,
-      ],
-      [
-        6,
-        4,
-        7,
-        2,
-      ],
-      [
-        6,
-        4,
-        7,
+        3,
         2,
       ],
       [
         3,
-        2,
-        7,
+        4,
+        4,
         2,
       ],
       [
-        7,
+        3,
         4,
-        8,
+        4,
         2,
       ],
       [
-        8,
         4,
-        9,
+        4,
+        5,
         2,
       ],
     ],
@@ -1760,19 +1380,6 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
       },
       {
         "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 2,
-        "name": "constant-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
               "name": "__t7",
@@ -1786,10 +1393,10 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
             "second_constant": 0,
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 4,
+          "x": 2,
           "y": 0,
         },
       },
@@ -1820,10 +1427,10 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
             ],
           },
         },
-        "entity_number": 4,
+        "entity_number": 3,
         "name": "decider-combinator",
         "position": {
-          "x": 6,
+          "x": 4,
           "y": 0,
         },
       },
@@ -1860,10 +1467,10 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
             ],
           },
         },
-        "entity_number": 5,
+        "entity_number": 4,
         "name": "decider-combinator",
         "position": {
-          "x": 8,
+          "x": 6,
           "y": 0,
         },
       },
@@ -1891,10 +1498,10 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
             ],
           },
         },
-        "entity_number": 6,
+        "entity_number": 5,
         "name": "decider-combinator",
         "position": {
-          "x": 10,
+          "x": 8,
           "y": 0,
         },
       },
@@ -1916,23 +1523,10 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
             ],
           },
         },
-        "entity_number": 7,
+        "entity_number": 6,
         "name": "constant-combinator",
         "position": {
-          "x": 12,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [],
-          },
-        },
-        "entity_number": 8,
-        "name": "constant-combinator",
-        "position": {
-          "x": 14,
+          "x": 10,
           "y": 0,
         },
       },
@@ -1942,63 +1536,51 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
     "label": "while_count",
     "wires": [
       [
+        4,
+        4,
+        5,
+        2,
+      ],
+      [
         5,
         4,
+        1,
+        2,
+      ],
+      [
+        1,
+        4,
+        1,
+        2,
+      ],
+      [
         6,
         2,
+        2,
+        2,
       ],
       [
-        6,
         4,
-        1,
-        2,
-      ],
-      [
-        1,
         4,
+        2,
+        2,
+      ],
+      [
         1,
-        2,
-      ],
-      [
-        7,
-        2,
-        3,
-        2,
-      ],
-      [
-        5,
         4,
         3,
         2,
       ],
       [
-        1,
+        2,
         4,
-        4,
-        2,
-      ],
-      [
-        2,
-        2,
         4,
         2,
       ],
       [
         3,
         4,
-        5,
-        2,
-      ],
-      [
         4,
-        4,
-        5,
-        2,
-      ],
-      [
-        1,
-        4,
-        8,
         2,
       ],
     ],

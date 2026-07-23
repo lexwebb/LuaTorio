@@ -4,7 +4,9 @@ import {
   createEmptyBlueprint,
   encodePlan,
 } from "@jensforstmann/factorio-blueprint-tools";
-import type { LaidOutCircuit, PlacedEntity } from "./layout.js";
+import type { CircuitEntity } from "./combinators.js";
+import type { FactorioWire, LaidOutCircuit, PlacedEntity } from "./layout.js";
+import { isEmptyConstant } from "./sim/eval.js";
 
 export interface EmitOptions {
   /** Sets the blueprint's `label` (shown in-game and in the blueprint library). */
@@ -35,6 +37,9 @@ const LIBRARY_COMPARATOR: Record<string, Comparator> = {
   "<=": COMPARATOR.lessThanEqual,
   "!=": COMPARATOR.notEqual,
 };
+
+/** 2-tile spacing — match `layout.ts` when re-packing after stripping I/O pads. */
+const X_SPACING = 2;
 
 interface DeciderCondition {
   comparator?: unknown;
@@ -89,6 +94,47 @@ function toLibraryEntity(placed: PlacedEntity): Entity {
   };
 }
 
+function isIoPlaceholder(entity: CircuitEntity, laidOut: LaidOutCircuit): boolean {
+  if (!isEmptyConstant(entity)) {
+    return false;
+  }
+  return (
+    laidOut.inputs.some((port) => port.entityId === entity.id) ||
+    laidOut.outputs.some((port) => port.entityId === entity.id)
+  );
+}
+
+/**
+ * Drop empty I/O pad constants from the blueprint and re-pack entity numbers / positions.
+ * Sim keeps the full graph (inject/read still need markers). If every entity is a pad
+ * (identity `output(input(...))`), keep them so the blueprint stays placeable.
+ */
+function withoutIoPlaceholders(laidOut: LaidOutCircuit): LaidOutCircuit {
+  const kept = laidOut.entities.filter((entity) => !isIoPlaceholder(entity, laidOut));
+  if (kept.length === 0 || kept.length === laidOut.entities.length) {
+    return laidOut;
+  }
+
+  const oldNumberToNew = new Map(kept.map((entity, index) => [entity.entity_number, index + 1]));
+  const entities: PlacedEntity[] = kept.map((entity, index) => ({
+    ...entity,
+    entity_number: index + 1,
+    position: { x: index * X_SPACING, y: 0 },
+  }));
+
+  const wires: FactorioWire[] = [];
+  for (const wire of laidOut.wires) {
+    const from = oldNumberToNew.get(wire[0]);
+    const to = oldNumberToNew.get(wire[2]);
+    if (from === undefined || to === undefined) {
+      continue;
+    }
+    wires.push([from, wire[1], to, wire[3]]);
+  }
+
+  return { entities, wires, inputs: laidOut.inputs, outputs: laidOut.outputs };
+}
+
 /** Builds a Factorio `Blueprint` plan object from a `LaidOutCircuit` (no encoding yet). */
 function buildPlan(laidOut: LaidOutCircuit, name: string | undefined): Blueprint {
   const plan = createEmptyBlueprint();
@@ -103,14 +149,16 @@ function buildPlan(laidOut: LaidOutCircuit, name: string | undefined): Blueprint
 /**
  * Emits a `LaidOutCircuit` (#9) as a Factorio blueprint string (or, with `options.json`, the
  * plan object serialized as JSON instead of the deflate+base64-encoded string format).
+ * Empty I/O placeholder constants are omitted from the blueprint and from `stats`.
  */
 export function emitBlueprint(laidOut: LaidOutCircuit, options?: EmitOptions): EmitResult {
-  const plan = buildPlan(laidOut, options?.name);
+  const stripped = withoutIoPlaceholders(laidOut);
+  const plan = buildPlan(stripped, options?.name);
   return {
     blueprint: options?.json ? JSON.stringify(plan) : encodePlan(plan),
     stats: {
-      combinators: laidOut.entities.length,
-      wires: laidOut.wires.length,
+      combinators: stripped.entities.length,
+      wires: stripped.wires.length,
     },
   };
 }
