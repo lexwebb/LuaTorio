@@ -23,6 +23,7 @@ const TILE = 64;
 const PAD = 56;
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 3.5;
+const DRAG_THRESHOLD_PX = 4;
 
 function iconSrc(entity: PlacedEntity): string {
   const base = `${import.meta.env.BASE_URL}factorio-icons/`;
@@ -69,8 +70,18 @@ interface ViewState {
   scale: number;
 }
 
+function entityScreenBox(entity: PlacedEntity): { x: number; y: number; w: number; h: number } {
+  return {
+    x: PAD + entity.position.x * TILE,
+    y: PAD + entity.position.y * TILE,
+    w: TILE,
+    h: TILE,
+  };
+}
+
 /**
  * Pan/zoom SVG circuit canvas with Factorio-style combinator inspector.
+ * Selection uses world-coordinate hit tests (not foreignObject HTML), so CSS scale stays clickable.
  */
 export function CircuitCanvas({
   laidOut,
@@ -96,6 +107,7 @@ export function CircuitCanvas({
   }, [laidOut]);
 
   const stageRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<ViewState>({ x: 0, y: 0, scale: 1 });
   const [view, setView] = useState<ViewState>({ x: 0, y: 0, scale: 1 });
   const dragRef = useRef<{
     pointerId: number;
@@ -104,7 +116,53 @@ export function CircuitCanvas({
     originX: number;
     originY: number;
     moved: boolean;
+    captured: boolean;
   } | null>(null);
+
+  const updateView = useCallback((next: ViewState | ((prev: ViewState) => ViewState)) => {
+    setView((prev) => {
+      const resolved = typeof next === "function" ? next(prev) : next;
+      viewRef.current = resolved;
+      return resolved;
+    });
+  }, []);
+
+  const clientToWorld = useCallback((clientX: number, clientY: number) => {
+    const el = stageRef.current;
+    const v = viewRef.current;
+    if (el === null) {
+      return { x: 0, y: 0 };
+    }
+    const rect = el.getBoundingClientRect();
+    const mx = clientX - rect.left;
+    const my = clientY - rect.top;
+    return {
+      x: (mx - v.x) / v.scale,
+      y: (my - v.y) / v.scale,
+    };
+  }, []);
+
+  const hitEntityId = useCallback(
+    (worldX: number, worldY: number): string | undefined => {
+      for (let i = laidOut.entities.length - 1; i >= 0; i -= 1) {
+        const entity = laidOut.entities[i];
+        if (entity === undefined) {
+          continue;
+        }
+        const box = entityScreenBox(entity);
+        if (
+          worldX >= box.x &&
+          worldX <= box.x + box.w &&
+          worldY >= box.y &&
+          worldY <= box.y + box.h
+        ) {
+          return entity.id;
+        }
+      }
+      return undefined;
+    },
+    [laidOut.entities],
+  );
 
   const fitView = useCallback(() => {
     const el = stageRef.current;
@@ -121,12 +179,12 @@ export function CircuitCanvas({
       1.25,
       Math.max(MIN_SCALE, Math.min((vw - pad) / width, (vh - pad) / height)),
     );
-    setView({
+    updateView({
       scale,
       x: (vw - width * scale) / 2,
       y: (vh - height * scale) / 2,
     });
-  }, [width, height]);
+  }, [width, height, updateView]);
 
   useEffect(() => {
     fitView();
@@ -142,7 +200,7 @@ export function CircuitCanvas({
       const rect = el.getBoundingClientRect();
       const mx = event.clientX - rect.left;
       const my = event.clientY - rect.top;
-      setView((prev) => {
+      updateView((prev) => {
         const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
         const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * zoomFactor));
         const worldX = (mx - prev.x) / prev.scale;
@@ -156,7 +214,7 @@ export function CircuitCanvas({
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [updateView]);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) {
@@ -166,11 +224,11 @@ export function CircuitCanvas({
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: view.x,
-      originY: view.y,
+      originX: viewRef.current.x,
+      originY: viewRef.current.y,
       moved: false,
+      captured: false,
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -180,11 +238,15 @@ export function CircuitCanvas({
     }
     const dx = event.clientX - drag.startX;
     const dy = event.clientY - drag.startY;
-    if (Math.hypot(dx, dy) > 3) {
+    if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
       drag.moved = true;
+      if (!drag.captured) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.captured = true;
+      }
     }
     if (drag.moved) {
-      setView((prev) => ({ ...prev, x: drag.originX + dx, y: drag.originY + dy }));
+      updateView((prev) => ({ ...prev, x: drag.originX + dx, y: drag.originY + dy }));
     }
   };
 
@@ -194,9 +256,14 @@ export function CircuitCanvas({
       return;
     }
     dragRef.current = null;
-    if (!drag.moved && (event.target as HTMLElement).closest(".circuit-entity-button") === null) {
-      onSelect(undefined);
+    if (drag.captured) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    if (drag.moved) {
+      return;
+    }
+    const world = clientToWorld(event.clientX, event.clientY);
+    onSelect(hitEntityId(world.x, world.y));
   };
 
   const zoomBy = (factor: number) => {
@@ -206,7 +273,7 @@ export function CircuitCanvas({
     }
     const mx = el.clientWidth / 2;
     const my = el.clientHeight / 2;
-    setView((prev) => {
+    updateView((prev) => {
       const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * factor));
       const worldX = (mx - prev.x) / prev.scale;
       const worldY = (my - prev.y) / prev.scale;
@@ -295,44 +362,52 @@ export function CircuitCanvas({
                     isRed ? "circuit-wire circuit-wire-red" : "circuit-wire circuit-wire-green"
                   }
                   fill="none"
+                  pointerEvents="none"
                 />
               );
             })}
             {laidOut.entities.map((entity) => {
-              const x = PAD + entity.position.x * TILE;
-              const y = PAD + entity.position.y * TILE;
+              const box = entityScreenBox(entity);
               const active = entity.id === selectedId;
               const pulsing = activeIds?.has(entity.id) === true;
+              const inset = 10;
               return (
-                <g key={entity.id}>
-                  <foreignObject x={x} y={y} width={TILE} height={TILE}>
-                    <button
-                      type="button"
-                      className={`circuit-entity-button${active ? " is-selected" : ""}${
-                        pulsing ? " is-active-tick" : ""
-                      }`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onSelect(entity.id);
-                      }}
-                      title={`${entity.id} (${entity.role ?? entity.kind})`}
-                    >
-                      <img src={iconSrc(entity)} alt="" width={TILE - 20} height={TILE - 20} />
-                    </button>
-                  </foreignObject>
+                <g key={entity.id} className="circuit-entity">
+                  <rect
+                    x={box.x}
+                    y={box.y}
+                    width={box.w}
+                    height={box.h}
+                    rx={4}
+                    className={`circuit-entity-hit${active ? " is-selected" : ""}${
+                      pulsing ? " is-active-tick" : ""
+                    }`}
+                  />
+                  <image
+                    href={iconSrc(entity)}
+                    x={box.x + inset}
+                    y={box.y + inset}
+                    width={box.w - inset * 2}
+                    height={box.h - inset * 2}
+                    style={{ imageRendering: "pixelated" }}
+                    pointerEvents="none"
+                  />
+                  <title>{`${entity.id} (${entity.role ?? entity.kind})`}</title>
                   <text
-                    x={x + TILE / 2}
-                    y={y + TILE + 12}
+                    x={box.x + box.w / 2}
+                    y={box.y + box.h + 12}
                     textAnchor="middle"
                     className="circuit-entity-label"
+                    pointerEvents="none"
                   >
                     {entity.role ?? entity.kind}
                   </text>
                   <text
-                    x={x + TILE / 2}
-                    y={y + TILE + 24}
+                    x={box.x + box.w / 2}
+                    y={box.y + box.h + 24}
                     textAnchor="middle"
                     className="circuit-entity-label circuit-entity-id"
+                    pointerEvents="none"
                   >
                     {entity.outputSignal}
                   </text>

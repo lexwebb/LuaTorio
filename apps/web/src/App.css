@@ -599,28 +599,22 @@ body {
   stroke: #c43c3c;
 }
 
-.circuit-entity-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 1.5px solid #4a4034;
-  border-radius: 4px;
-  background: #1c1712;
+.circuit-entity-hit {
+  fill: #1c1712;
+  stroke: #4a4034;
+  stroke-width: 1.5;
   cursor: pointer;
 }
 
-.circuit-entity-button.is-selected {
-  border-color: var(--ft-accent);
-  border-width: 2px;
+.circuit-entity-hit.is-selected {
+  stroke: var(--ft-accent);
+  stroke-width: 2.5;
 }
 
-.circuit-entity-button img {
-  pointer-events: none;
-  image-rendering: pixelated;
+.circuit-entity-hit.is-active-tick {
+  stroke: #ffb64d;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 3px rgba(255, 182, 77, 0.7));
 }
 
 .sim-playback {
@@ -675,10 +669,6 @@ body {
   fill: #b5a890;
   font-size: 10px;
   font-weight: 400;
-}
-
-.circuit-entity-button.is-active-tick {
-  box-shadow: 0 0 0 2px rgba(255, 182, 77, 0.7);
 }
 
 /* Factorio-inspired combinator detail panel */
