@@ -3,11 +3,11 @@
 **Date:** 2026-07-23  
 **Status:** Implemented  
 **Issue:** #47  
-**Related:** #39 selector VM, #46 `catalog_latch`, EACH-tag research
+**Related:** #39 selector VM, #46 `each_latch`, EACH-tag research
 
 ## Goal
 
-Honest Factorio **selector `select`** emit for “Nth by value” — not if/else mux. Unlocks WarDaft-style priority picks once bags carry meaningful ranks.
+Honest Factorio **selector `select`** emit for “Nth by value” — not if/else mux. A circuit primitive for rank/index; domain priority tables compose on top.
 
 ## Surface
 
@@ -16,7 +16,7 @@ Honest Factorio **selector `select`** emit for “Nth by value” — not if/els
 local top = signal_at(0, a, b, c)
 output("signal-N", top)
 
--- Ascending (smallest first): index 0 = min — WarDaft priority idiom
+-- Ascending (smallest first): index 0 = min
 local best = signal_at_asc(0, p1, p2, p3)
 output("signal-N", best)
 ```
@@ -26,7 +26,7 @@ Rules:
 - First arg: integer literal index `≥ 0`
 - Remaining args: ≥1 scalar expressions (same shape as `signal_count`)
 - Result is a **scalar**: count of the picked signal, renamed onto the result wire (SSA-friendly)
-- Optional later: single catalog/bag arg for named pass-through (identity-preserving)
+- Optional later: single bag arg for named pass-through (identity-preserving)
 
 ## IR
 
@@ -56,23 +56,23 @@ Green wires from each arg. Selector pass-through keeps the winner’s **temp sig
 
 **Size:** 1 combinator (vs decider sort networks).
 
-## vs `catalog_latch`
+## vs `each_latch`
 
-| | `catalog_latch` | `signal_at` |
+| | `each_latch` | `signal_at` |
 |--|-----------------|-------------|
-| Job | Sticky multi-recipe set/hold | Rank/index pick |
+| Job | Sticky multi-signal hysteresis | Rank/index pick |
 | Size | 2 (const + decider) | 1 (selector) |
 | State | Red feedback latch | Combinational |
 | Extensibility | OR-stack grows with N | Add args / edit constants upstream |
 
-## WarDaft composition (documented)
+## Composition (not new builtins)
 
-Full WarDaft (deficit → priority → `signal_at_asc(0, …)` → recipe table) needs named multi-signal bags + a second selector index. This slice ships the **rank primitive** + an example that picks the minimum priority score among present inputs (ascending index 0). Recipe-table map stays a follow-up once bag identity survives SSA (or hand/import graphs).
+Deficit → priority → `signal_at_asc(0, …)` → constant remap is **composed** from primitives + constants. This slice ships the rank primitive + `examples/signal_at_asc.lua`.
 
 ## Acceptance
 
 - [x] This design note
 - [x] analyze → IR → emit → sim
 - [x] Example + golden (`signal_at.lua`, `signal_at_asc.lua`)
-- [x] WarDaft-style priority example (`signal_at_asc.lua`) + doc composition
+- [x] Priority-rank example without domain-named builtins
 - [x] No selector-as-mux

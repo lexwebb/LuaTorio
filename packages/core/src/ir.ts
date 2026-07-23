@@ -21,13 +21,13 @@ export type IRNode =
   /** Count nonzero unique arg signals → one selector combinator (`operation: "count"`). */
   | { kind: "signal_count"; id: string; args: string[] }
   /**
-   * EACH-tag sticky catalog (#46): constant recipe tags + one multi-OR decider latch.
-   * `stock` is an IR node id; `recipe` is a Factorio signal name; `tag` is unique ≥ 1.
+   * EACH-tag sticky hysteresis latch (#46): constant signal tags + one multi-OR decider.
+   * `level` is an IR node id; `signal` is the emit name; `tag` is unique ≥ 1.
    */
   | {
-      kind: "catalog_latch";
+      kind: "each_latch";
       id: string;
-      entries: Array<{ stock: string; recipe: string; buffer: number; tag: number }>;
+      entries: Array<{ level: string; signal: string; buffer: number; tag: number }>;
     }
   /**
    * Selector rank/index (#47): pick the Nth nonzero arg by value.

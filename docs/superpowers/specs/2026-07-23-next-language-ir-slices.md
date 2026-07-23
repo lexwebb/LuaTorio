@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-23  
 **Status:** P0 done (#38); P1 implementing (#46)  
-**Issues:** #38 (SR), #46 (channels / `catalog_latch`), #47 (rank / WarDaft), #39 selector, #40 red/green, #41 blueprint ingest
+**Issues:** #38 (SR), #46 (channels / `each_latch`), #47 (rank / `signal_at`), #39 selector, #40 red/green, #41 blueprint ingest
 
 ## Context
 
@@ -81,9 +81,9 @@ Plus Q feedback wire; nonzero init via existing latch seed.
 - [x] Example `examples/sr_latch.lua` + golden
 - [x] README note + safe-idiom warning for raw and/or
 
-## P1 — Channels / `catalog_latch` (#46)
+## P1 — Channels / `each_latch` (#46)
 
-First ship: **`catalog_latch`** — multi-signal recipe bag without full v4 tables. Design: `2026-07-23-catalog-latch-design.md`. Research: `2026-07-23-each-tag-catalog-research.md`.
+First ship: **`each_latch`** — multi-signal EACH-tag hysteresis bag (circuit primitive). Design: `2026-07-23-each-latch-design.md`. Research: `2026-07-23-each-tag-catalog-research.md`.
 
 Later: general bundle / EACH packing memory for denser loops.
 
@@ -91,7 +91,7 @@ Later: general bundle / EACH packing memory for denser loops.
 
 `signal_at` / `signal_at_asc` — design `2026-07-23-signal-at-design.md`. Honest selector `select` emit (not mux).
 
-WarDaft recipe-table map (second selector over a constant pairing) remains a small follow-up once named bags are ergonomic; priority **value** pick ships in `examples/signal_at_asc.lua`.
+Constant-table → rank → remap pipelines stay **composed** from primitives (`signal_at_asc` + constants/selectors); no domain-named builtins. Priority **value** pick: `examples/signal_at_asc.lua`.
 
 ## Tracking
 

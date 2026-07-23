@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T21:21:44.713Z",
+  "generatedAt": "2026-07-23T21:28:39.583Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -34,23 +34,6 @@
         "arithmetic_other": 1,
         "constant_value": 0,
         "placeholder_io": 3
-      },
-      "muxShare": 0
-    },
-    {
-      "name": "catalog_latch",
-      "source": "example",
-      "kind": "example",
-      "combinators": 6,
-      "wires": 6,
-      "buckets": {
-        "latch": 1,
-        "mux_side": 0,
-        "mux_merge": 0,
-        "decider_other": 0,
-        "arithmetic_other": 0,
-        "constant_value": 1,
-        "placeholder_io": 4
       },
       "muxShare": 0
     },
@@ -119,6 +102,23 @@
         "arithmetic_other": 0,
         "constant_value": 0,
         "placeholder_io": 1
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "each_latch",
+      "source": "example",
+      "kind": "example",
+      "combinators": 6,
+      "wires": 6,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 0,
+        "constant_value": 1,
+        "placeholder_io": 4
       },
       "muxShare": 0
     },

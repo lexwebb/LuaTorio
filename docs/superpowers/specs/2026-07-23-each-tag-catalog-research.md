@@ -87,14 +87,13 @@ So: we can **simulate and import** this density; we cannot yet **compile** Lua i
 - Language sketch (illustrative, not committed):
 
   ```lua
-  -- pick one recipe signal from a catalog when stock hits 0, hold until buffer
-  local recipe = catalog_latch({
-    ["iron-stick"] = { recipe = "casting-iron-stick", tag = 1, buffer = 100 },
-    ["steel-plate"] = { recipe = "casting-steel-plate", tag = 2, buffer = 100 },
-  }, stock)
+  -- general primitive (shipped as each_latch triples, not tables):
+  -- each_latch(level, signal, high, ...)
+  local bag = each_latch(level_a, "signal-A", 100, level_b, "signal-B", 100)
   ```
 
-- Win vs today’s tree of `cmp`/`select`/`sr`: **O(N) combinators → 2**, for the class of “mutex sticky picks over a signal bag”.
+- Win vs today’s tree of `cmp`/`select`/`sr`: **O(N) combinators → 2**, for sticky multi-channel picks.
+- Language surface stays **circuit-primitive** (`each_latch`); foundry/recipe wiring is an example, not an API.
 - Needs: auto or explicit **red/green coloring** on emit (today non-goal of #40 for compiled programs).
 
 ### B — Medium (already half-supported)

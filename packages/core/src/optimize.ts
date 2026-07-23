@@ -172,12 +172,12 @@ function constantFold(module: IRModule): IRModule {
           args: node.args.map((arg) => resolve(arg, alias)),
         });
         break;
-      case "catalog_latch":
+      case "each_latch":
         nodes.push({
           ...node,
           entries: node.entries.map((entry) => ({
             ...entry,
-            stock: resolve(entry.stock, alias),
+            level: resolve(entry.level, alias),
           })),
         });
         break;
@@ -223,8 +223,8 @@ function structuralKey(node: IRNode): string {
       return `sr:${node.state}:${node.set}:${node.reset}`;
     case "signal_count":
       return `signal_count:${node.args.join(":")}`;
-    case "catalog_latch":
-      return `catalog_latch:${node.entries
+    case "each_latch":
+      return `each_latch:${node.entries
         .map((e) => `${e.stock}:${e.recipe}:${e.buffer}:${e.tag}`)
         .join("|")}`;
     case "signal_at":
@@ -265,12 +265,12 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
       };
     case "signal_count":
       return { ...node, args: node.args.map((arg) => resolve(arg, alias)) };
-    case "catalog_latch":
+    case "each_latch":
       return {
         ...node,
         entries: node.entries.map((entry) => ({
           ...entry,
-          stock: resolve(entry.stock, alias),
+          level: resolve(entry.level, alias),
         })),
       };
     case "signal_at":
@@ -329,8 +329,8 @@ function childIds(node: IRNode): string[] {
       return [node.state, node.set, node.reset];
     case "signal_count":
       return [...node.args];
-    case "catalog_latch":
-      return node.entries.map((entry) => entry.stock);
+    case "each_latch":
+      return node.entries.map((entry) => entry.level);
     case "signal_at":
       return [...node.args];
     default: {

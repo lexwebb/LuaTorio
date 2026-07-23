@@ -1,5 +1,5 @@
--- WarDaft-style priority: among present priority scores, pick the minimum (index 0, ascending).
--- Wire only the priorities you care about (0 = absent). Lowest nonzero rank wins.
+-- Among present rank scores, pick the minimum (selector select, index 0, ascending).
+-- 0 = absent. Useful for priority tables without encoding domain names in the language.
 local p1 = input("priority-1")
 local p2 = input("priority-2")
 local p3 = input("priority-3")
