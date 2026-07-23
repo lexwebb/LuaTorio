@@ -163,6 +163,8 @@ luatorio/
 │   ├── core/   # parse -> analyze -> lower -> optimize -> lowerToCombinators -> layout -> emitBlueprint
 │   └── cli/    # `luatorio compile program.lua`
 ├── examples/   # sample .lua programs, exercised by packages/core/src/golden.test.ts
+├── scripts/    # research/maintenance helpers (e.g. cookbook schematic rip)
+├── research/   # scraped catalogs (bulk dumps gitignored)
 └── docs/       # design specs and implementation plans
 ```
 
@@ -174,6 +176,7 @@ luatorio/
 | `pnpm typecheck` | TypeScript project build check |
 | `pnpm lint` | Biome check |
 | `pnpm build` | Emit `packages/*/dist` |
+| `pnpm rip:cookbook` | Scrape Combinator cookbook 2.0 schematics → `research/cookbook-2.0/` (#52) |
 
 ### Updating golden snapshots
 
