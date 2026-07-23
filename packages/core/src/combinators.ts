@@ -28,13 +28,15 @@ export interface CircuitEntity {
   role?: CircuitRole;
 }
 
+/** Factorio wire color. Compiled Lua stays green; import / hand graphs may use red (#40). */
+export type WireColor = "red" | "green";
+
 export interface WireEdge {
   /** Producer entity id. */
   from: string;
   /** Consumer entity id. */
   to: string;
-  /** Always green in v1/v2 phase 1 — red/green allocation is deferred to v4. */
-  color: "green";
+  color: WireColor;
 }
 
 export interface CircuitGraph {
@@ -53,6 +55,11 @@ function signalRef(name: string): { type: "virtual"; name: string } {
 
 function greenWire(from: string, to: string): WireEdge {
   return { from, to, color: "green" };
+}
+
+/** Explicit red edge for hand graphs / fixtures (#40). Compiled emit still uses `greenWire`. */
+export function redWire(from: string, to: string): WireEdge {
+  return { from, to, color: "red" };
 }
 
 /** Lua/circuit truthiness: signal ≠ 0. */
@@ -422,10 +429,7 @@ function lowerGateByCmpAndRename(
     role: "mux-side",
     control_behavior: { decider_conditions },
   };
-  const wires = [
-    ...wireFrom.map((from) => greenWire(from, gateId)),
-    greenWire(branchId, gateId),
-  ];
+  const wires = [...wireFrom.map((from) => greenWire(from, gateId)), greenWire(branchId, gateId)];
   if (outputOnly) {
     return { entities: [gate], wires };
   }
@@ -857,10 +861,7 @@ function fusedCmpForSelect(
     return undefined;
   }
   // Inverted truth-and still needs a 0/1 cond signal.
-  if (
-    literalValueOf(nodeById.get(node.then)) === 0 &&
-    isBooleanValued(nodeById.get(node.else))
-  ) {
+  if (literalValueOf(nodeById.get(node.then)) === 0 && isBooleanValued(nodeById.get(node.else))) {
     return undefined;
   }
   return fused;
@@ -954,9 +955,7 @@ function lowerSelect(
     return { entities, wires };
   }
 
-  return fusedCmp
-    ? lowerSelectFullMuxFromCmp(node, fusedCmp, nodeById)
-    : lowerSelectFullMux(node);
+  return fusedCmp ? lowerSelectFullMuxFromCmp(node, fusedCmp, nodeById) : lowerSelectFullMux(node);
 }
 
 /** 1-tick delay register: passes `store.value` onto the memory signal (role: latch). */
@@ -991,11 +990,7 @@ function lowerMemory(
 }
 
 /** Latch arithmetic: `first + second` onto `id` (second may be a wired signal or literal). */
-function lowerLatch(
-  id: string,
-  firstSignal: string,
-  second: string | number,
-): CircuitEntity {
+function lowerLatch(id: string, firstSignal: string, second: string | number): CircuitEntity {
   const arithmetic_conditions: Record<string, unknown> = {
     first_signal: signalRef(firstSignal),
     operation: "+",
@@ -1234,11 +1229,7 @@ function lowerDeltaChooseLatch(
   useCount: ReadonlyMap<string, number>,
 ): { entities: CircuitEntity[]; wires: WireEdge[]; absorbedCmpIds: string[] } {
   const deltaId = `${select.id}__d`;
-  const { conditions, wireFrom, cmp } = condFromSoleUseCmpOrSignal(
-    select.cond,
-    nodeById,
-    useCount,
-  );
+  const { conditions, wireFrom, cmp } = condFromSoleUseCmpOrSignal(select.cond, nodeById, useCount);
   const absorbedCmpIds: string[] = cmp !== undefined ? [cmp.id] : [];
 
   const wires: WireEdge[] = wireFrom.map((from) => greenWire(from, deltaId));
@@ -1342,14 +1333,7 @@ function lowerEnabledHoldLatch(
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
   const deltaId = memPlusDelta(select.then, memory.id, nodeById);
   if (deltaId !== undefined) {
-    return lowerIncrementalHoldLatch(
-      memory,
-      select,
-      deltaId,
-      initIsZero,
-      nodeById,
-      stickyEnable,
-    );
+    return lowerIncrementalHoldLatch(memory, select, deltaId, initIsZero, nodeById, stickyEnable);
   }
 
   const muxId = `${select.id}__mux`;
@@ -1545,10 +1529,7 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       absorbedCmpIds.add(fused.id);
     }
     // Sole-use then-cmp inlined into select(c, cmp, 0) truth-AND (see lowerSelect).
-    if (
-      literalValueOf(nodeById.get(node.else)) === 0 &&
-      isBooleanValued(nodeById.get(node.then))
-    ) {
+    if (literalValueOf(nodeById.get(node.else)) === 0 && isBooleanValued(nodeById.get(node.then))) {
       const thenCmp = soleUseCmp(node.then, nodeById, useCount);
       if (thenCmp !== undefined) {
         absorbedCmpIds.add(thenCmp.id);

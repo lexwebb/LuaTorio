@@ -1,4 +1,6 @@
 import type { CircuitEntity } from "../combinators.js";
+import type { ColoredInputs } from "./colors.js";
+import { mergeBags } from "./colors.js";
 import { evalConstant, evalEntity, isEmptyConstant } from "./eval.js";
 import type { ImportedCircuit } from "./import.js";
 import { bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js";
@@ -15,7 +17,7 @@ function resolveInputs(inputs: SimulateOptions["inputs"], tick: number): Record<
 function forEachProducerOnInputNets(
   entityId: string,
   circuit: ImportedCircuit,
-  visit: (producerId: string) => void,
+  visit: (producerId: string, color: "red" | "green") => void,
 ): void {
   for (const net of circuit.nets) {
     if (!net.members.some((m) => m.entityId === entityId && m.side === "in")) {
@@ -23,29 +25,41 @@ function forEachProducerOnInputNets(
     }
     for (const member of net.members) {
       if (member.side === "out") {
-        visit(member.entityId);
+        visit(member.entityId, net.color);
       }
     }
   }
 }
 
-/** Sum output bags of every `out` member on nets attached to this entity's `in` side. */
+/** Per-color input bags (#40) — does not sum red into green. */
+function coloredInputNets(
+  entityId: string,
+  circuit: ImportedCircuit,
+  outputs: ReadonlyMap<string, SignalBag>,
+): ColoredInputs {
+  const red = emptyBag();
+  const green = emptyBag();
+  forEachProducerOnInputNets(entityId, circuit, (producerId, color) => {
+    const bag = outputs.get(producerId);
+    if (bag === undefined) {
+      return;
+    }
+    const target = color === "red" ? red : green;
+    for (const [name, count] of bag) {
+      bagSet(target, name, toInt32(bagGet(target, name) + count));
+    }
+  });
+  return { red, green };
+}
+
+/** Merged bag for output-port sampling. */
 function sumInputNets(
   entityId: string,
   circuit: ImportedCircuit,
   outputs: ReadonlyMap<string, SignalBag>,
 ): SignalBag {
-  const input = emptyBag();
-  forEachProducerOnInputNets(entityId, circuit, (producerId) => {
-    const bag = outputs.get(producerId);
-    if (bag === undefined) {
-      return;
-    }
-    for (const [name, count] of bag) {
-      bagSet(input, name, toInt32(bagGet(input, name) + count));
-    }
-  });
-  return input;
+  const colored = coloredInputNets(entityId, circuit, outputs);
+  return mergeBags(colored.red, colored.green);
 }
 
 /**
@@ -157,7 +171,7 @@ function sequentialUpdate(
   outputs: Map<string, SignalBag>,
 ): void {
   for (const entity of entities) {
-    outputs.set(entity.id, evalEntity(entity, sumInputNets(entity.id, circuit, outputs)));
+    outputs.set(entity.id, evalEntity(entity, coloredInputNets(entity.id, circuit, outputs)));
   }
 }
 
@@ -168,7 +182,7 @@ function parallelUpdate(
 ): void {
   const next = new Map<string, SignalBag>();
   for (const entity of entities) {
-    next.set(entity.id, evalEntity(entity, sumInputNets(entity.id, circuit, outputs)));
+    next.set(entity.id, evalEntity(entity, coloredInputNets(entity.id, circuit, outputs)));
   }
   for (const [id, bag] of next) {
     outputs.set(id, bag);

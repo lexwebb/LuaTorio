@@ -1,4 +1,5 @@
 import type { CircuitEntity } from "../combinators.js";
+import { type ColoredInputs, type EvalNet, selectNetworks, toColored } from "./colors.js";
 import { bagAdd, bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js";
 
 type SignalRef = { type?: unknown; name?: unknown };
@@ -96,7 +97,9 @@ function readConditionOperand(
   side: "first" | "second",
   eachValue?: number,
 ): number {
-  const fromSignal = signalName(side === "first" ? condition.first_signal : condition.second_signal);
+  const fromSignal = signalName(
+    side === "first" ? condition.first_signal : condition.second_signal,
+  );
   if (fromSignal === SIGNAL_EACH) {
     return eachValue ?? 0;
   }
@@ -119,7 +122,11 @@ function conditionUsesEach(condition: Record<string, unknown>): boolean {
 
 function conditionsUseEach(conditions: unknown[]): boolean {
   for (const raw of conditions) {
-    if (raw !== null && typeof raw === "object" && conditionUsesEach(raw as Record<string, unknown>)) {
+    if (
+      raw !== null &&
+      typeof raw === "object" &&
+      conditionUsesEach(raw as Record<string, unknown>)
+    ) {
       return true;
     }
   }
@@ -163,14 +170,18 @@ export function evalConstant(entity: CircuitEntity): SignalBag {
  * Arithmetic with optional EACH:
  * - ONE operand may be `signal-each` → apply op per present signal
  * - Output `signal-each` → map results per signal; otherwise sum onto the output signal
+ * - Per-operand `*_signal_networks` select red / green / both (#40)
  */
-export function evalArithmetic(entity: CircuitEntity, net: SignalBag): SignalBag {
+export function evalArithmetic(entity: CircuitEntity, net: EvalNet): SignalBag {
   const out = emptyBag();
   const conditions = entity.control_behavior.arithmetic_conditions;
   if (conditions === null || typeof conditions !== "object") {
     return out;
   }
   const c = conditions as Record<string, unknown>;
+  const inputs = toColored(net);
+  const firstNet = selectNetworks(inputs, c.first_signal_networks);
+  const secondNet = selectNetworks(inputs, c.second_signal_networks);
   const op = typeof c.operation === "string" ? c.operation : "+";
   const firstName = signalName(c.first_signal);
   const secondName = signalName(c.second_signal);
@@ -182,11 +193,16 @@ export function evalArithmetic(entity: CircuitEntity, net: SignalBag): SignalBag
     if (eachOnFirst && eachOnSecond) {
       throw new Error("simulate: arithmetic cannot use signal-each on both operands");
     }
+    const eachNet = eachOnFirst ? firstNet : secondNet;
     let sum = 0;
-    for (const name of presentSignals(net)) {
-      const eachVal = bagGet(net, name);
-      const left = eachOnFirst ? eachVal : readOperand(net, "first_signal", "first_constant", c);
-      const right = eachOnSecond ? eachVal : readOperand(net, "second_signal", "second_constant", c);
+    for (const name of presentSignals(eachNet)) {
+      const eachVal = bagGet(eachNet, name);
+      const left = eachOnFirst
+        ? eachVal
+        : readOperand(firstNet, "first_signal", "first_constant", c);
+      const right = eachOnSecond
+        ? eachVal
+        : readOperand(secondNet, "second_signal", "second_constant", c);
       const result = evalArithOp(op, left, right);
       if (output === SIGNAL_EACH) {
         bagSet(out, name, result);
@@ -200,31 +216,45 @@ export function evalArithmetic(entity: CircuitEntity, net: SignalBag): SignalBag
     return out;
   }
 
-  const left = readOperand(net, "first_signal", "first_constant", c);
-  const right = readOperand(net, "second_signal", "second_constant", c);
+  const left = readOperand(firstNet, "first_signal", "first_constant", c);
+  const right = readOperand(secondNet, "second_signal", "second_constant", c);
   bagSet(out, output, evalArithOp(op, left, right));
   return out;
 }
 
 function evalOneCondition(
-  net: SignalBag,
+  inputs: ColoredInputs,
   condition: Record<string, unknown>,
   eachValue?: number,
+  eachName?: string,
 ): boolean {
   const comparator = typeof condition.comparator === "string" ? condition.comparator : "=";
+  const firstNet = selectNetworks(inputs, condition.first_signal_networks);
+  const secondNet = selectNetworks(inputs, condition.second_signal_networks);
   const firstName = signalName(condition.first_signal);
 
   // Everything / Anything on the first operand (only outside EACH mode).
   // Empty net: Everything is vacuously true (Array.every); Anything is false (Array.some).
-  if (eachValue === undefined && (firstName === SIGNAL_EVERYTHING || firstName === SIGNAL_ANYTHING)) {
-    const signals = presentSignals(net);
-    const right = readConditionOperand(net, condition, "second");
-    const passes = (name: string): boolean => compare(comparator, bagGet(net, name), right);
+  if (
+    eachValue === undefined &&
+    (firstName === SIGNAL_EVERYTHING || firstName === SIGNAL_ANYTHING)
+  ) {
+    const signals = presentSignals(firstNet);
+    const right = readConditionOperand(secondNet, condition, "second");
+    const passes = (name: string): boolean => compare(comparator, bagGet(firstNet, name), right);
     return firstName === SIGNAL_EVERYTHING ? signals.every(passes) : signals.some(passes);
   }
 
-  const left = readConditionOperand(net, condition, "first", eachValue);
-  const right = readConditionOperand(net, condition, "second", eachValue);
+  // EACH mode: eachValue is taken from the EACH operand's selected networks.
+  const left =
+    signalName(condition.first_signal) === SIGNAL_EACH && eachValue !== undefined
+      ? eachValue
+      : readConditionOperand(firstNet, condition, "first", eachValue);
+  const right =
+    signalName(condition.second_signal) === SIGNAL_EACH && eachValue !== undefined
+      ? eachValue
+      : readConditionOperand(secondNet, condition, "second", eachValue);
+  void eachName;
   return compare(comparator, left, right);
 }
 
@@ -233,9 +263,10 @@ function evalOneCondition(
  * `compare_type` on condition i joins it with the preceding conditions (default `"or"`).
  */
 function evalDeciderConditions(
-  net: SignalBag,
+  inputs: ColoredInputs,
   conditions: unknown[],
   eachValue?: number,
+  eachName?: string,
 ): boolean {
   let anyOrGroup = false;
   let andAccum = true;
@@ -245,7 +276,7 @@ function evalDeciderConditions(
       return false;
     }
     const condition = raw as Record<string, unknown>;
-    const pass = evalOneCondition(net, condition, eachValue);
+    const pass = evalOneCondition(inputs, condition, eachValue, eachName);
     if (i === 0) {
       andAccum = pass;
       continue;
@@ -270,7 +301,7 @@ function emitCount(copy: boolean, constant: number, net: SignalBag, fromName: st
 function emitDeciderOutputs(
   outputs: unknown,
   entity: CircuitEntity,
-  net: SignalBag,
+  inputs: ColoredInputs,
   out: SignalBag,
   eachName?: string,
 ): void {
@@ -285,41 +316,58 @@ function emitDeciderOutputs(
     const outName = signalName(output.signal) ?? entity.outputSignal;
     const copy = output.copy_count_from_input === true;
     const constant = asNumber(output.constant) ?? 1;
+    const copyNet = selectNetworks(inputs, output.networks);
 
     if (outName === SIGNAL_EACH) {
       if (eachName === undefined) {
         continue;
       }
-      bagAdd(out, eachName, emitCount(copy, constant, net, eachName));
+      bagAdd(out, eachName, emitCount(copy, constant, copyNet, eachName));
       continue;
     }
 
     if (outName === SIGNAL_EVERYTHING) {
-      for (const name of presentSignals(net)) {
-        bagAdd(out, name, emitCount(copy, constant, net, name));
+      for (const name of presentSignals(copyNet)) {
+        bagAdd(out, name, emitCount(copy, constant, copyNet, name));
       }
       continue;
     }
 
     if (outName === SIGNAL_ANYTHING) {
-      const pick = eachName ?? presentSignals(net)[0];
+      const pick = eachName ?? presentSignals(copyNet)[0];
       if (pick === undefined) {
         continue;
       }
-      bagAdd(out, pick, emitCount(copy, constant, net, pick));
+      bagAdd(out, pick, emitCount(copy, constant, copyNet, pick));
       continue;
     }
 
     // Specific signal: in EACH mode, copy uses that signal's count.
-    const value = copy
-      ? bagGet(net, eachName !== undefined ? eachName : outName)
-      : constant;
+    const value = copy ? bagGet(copyNet, eachName !== undefined ? eachName : outName) : constant;
     bagAdd(out, outName, value);
   }
 }
 
+/** Union of signals present on either color (for EACH iteration when mixed networks). */
+function eachPresentUnion(inputs: ColoredInputs, conditions: unknown[]): SignalBag {
+  // Prefer the first EACH operand's networks if we can find one; else both.
+  for (const raw of conditions) {
+    if (raw === null || typeof raw !== "object") {
+      continue;
+    }
+    const condition = raw as Record<string, unknown>;
+    if (signalName(condition.first_signal) === SIGNAL_EACH) {
+      return selectNetworks(inputs, condition.first_signal_networks);
+    }
+    if (signalName(condition.second_signal) === SIGNAL_EACH) {
+      return selectNetworks(inputs, condition.second_signal_networks);
+    }
+  }
+  return selectNetworks(inputs, undefined);
+}
+
 /** Evaluate a decider combinator against its input network (incl. EACH / ANY / EVERYTHING). */
-export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
+export function evalDecider(entity: CircuitEntity, net: EvalNet): SignalBag {
   const out = emptyBag();
   const root = entity.control_behavior.decider_conditions;
   if (root === null || typeof root !== "object") {
@@ -327,23 +375,25 @@ export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
   }
   const block = root as { conditions?: unknown; outputs?: unknown; else_outputs?: unknown };
   const conditions = Array.isArray(block.conditions) ? block.conditions : [];
+  const inputs = toColored(net);
 
   if (conditionsUseEach(conditions)) {
     // Per-signal evaluation: each present signal activates normal or else outputs.
-    for (const name of presentSignals(net)) {
-      const ok = evalDeciderConditions(net, conditions, bagGet(net, name));
-      emitDeciderOutputs(ok ? block.outputs : block.else_outputs, entity, net, out, name);
+    const eachNet = eachPresentUnion(inputs, conditions);
+    for (const name of presentSignals(eachNet)) {
+      const ok = evalDeciderConditions(inputs, conditions, bagGet(eachNet, name), name);
+      emitDeciderOutputs(ok ? block.outputs : block.else_outputs, entity, inputs, out, name);
     }
     return out;
   }
 
-  const ok = evalDeciderConditions(net, conditions);
-  emitDeciderOutputs(ok ? block.outputs : block.else_outputs, entity, net, out);
+  const ok = evalDeciderConditions(inputs, conditions);
+  emitDeciderOutputs(ok ? block.outputs : block.else_outputs, entity, inputs, out);
   return out;
 }
 
-/** Evaluate any non-latch entity given its current input network. */
-export function evalEntity(entity: CircuitEntity, net: SignalBag): SignalBag {
+/** Evaluate any non-latch entity given its current input network(s). */
+export function evalEntity(entity: CircuitEntity, net: EvalNet): SignalBag {
   switch (entity.kind) {
     case "constant":
       return evalConstant(entity);

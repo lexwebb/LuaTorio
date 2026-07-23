@@ -42,9 +42,9 @@ interface ImportedCircuit {
 }
 ```
 
-**Simulate imported:** each tick, for each combinator, sum signal bags from nets attached to its **input** side (per color; #40 splits red vs green). Write outputs onto nets attached to its **output** side. Constants drive continuously; latches use `role` or heuristic (self-net feedback).
+**Simulate imported:** each tick, for each combinator, build per-color input bags from nets on its **input** side; `*_signal_networks` selects red / green / both (#40). Write outputs onto nets attached to its **output** side. Constants drive continuously; latches use `role` or heuristic (self-net feedback).
 
-**Bridge from emit:** `CircuitGraph` → `ImportedCircuit` by treating each directed edge as joining `from`’s out with `to`’s in on one color (today: green only). Enables one sim backend later.
+**Bridge from emit:** `CircuitGraph` → `ImportedCircuit` by treating each directed edge as joining `from`’s out with `to`’s in on that edge’s color. Enables one sim backend.
 
 ## Milestone plan
 

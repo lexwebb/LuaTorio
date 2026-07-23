@@ -44,8 +44,14 @@ export function compile(source: string, options?: CompileOptions): CompileResult
 
 export type { AnalyzedExpr, AnalyzedProgram, AnalyzedStatement } from "./analyze.js";
 export { analyze, SemanticError } from "./analyze.js";
-export type { CircuitEntity, CircuitGraph, CombinatorKind, WireEdge } from "./combinators.js";
-export { lowerToCombinators } from "./combinators.js";
+export type {
+  CircuitEntity,
+  CircuitGraph,
+  CombinatorKind,
+  WireColor,
+  WireEdge,
+} from "./combinators.js";
+export { lowerToCombinators, redWire } from "./combinators.js";
 export type { EmitOptions, EmitResult } from "./emit.js";
 export { emitBlueprint } from "./emit.js";
 export type { IRModule, IRNode } from "./ir.js";
@@ -60,7 +66,6 @@ export type {
   ConnectorSide,
   ImportedCircuit,
   NetEndpoint,
-  WireColor,
 } from "./sim/import.js";
 export {
   BlueprintImportError,

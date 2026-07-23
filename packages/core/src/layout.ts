@@ -1,4 +1,10 @@
-import type { CircuitEntity, CircuitGraph, CombinatorKind, WireEdge } from "./combinators.js";
+import type {
+  CircuitEntity,
+  CircuitGraph,
+  CombinatorKind,
+  WireColor,
+  WireEdge,
+} from "./combinators.js";
 
 /** A `CircuitEntity` with a blueprint position and `entity_number` assigned. */
 export interface PlacedEntity extends CircuitEntity {
@@ -20,15 +26,21 @@ export interface LaidOutCircuit {
   inputs: CircuitGraph["inputs"];
 }
 
+const RED_WIRE_INPUT = 1;
 const GREEN_WIRE_INPUT = 2;
+const RED_WIRE_OUTPUT = 3;
 const GREEN_WIRE_OUTPUT = 4;
 
 /** 2-tile spacing between successive entities' x positions. */
 const X_SPACING = 2;
 
-/** Green-wire connector id for `kind` on the given endpoint side of a `WireEdge`. */
-function greenConnector(kind: CombinatorKind, side: "from" | "to"): number {
-  return kind !== "constant" && side === "from" ? GREEN_WIRE_OUTPUT : GREEN_WIRE_INPUT;
+/** Wire connector id for `kind` on the given endpoint side of a colored `WireEdge`. */
+function wireConnector(kind: CombinatorKind, side: "from" | "to", color: WireColor): number {
+  const isOut = kind !== "constant" && side === "from";
+  if (color === "red") {
+    return isOut ? RED_WIRE_OUTPUT : RED_WIRE_INPUT;
+  }
+  return isOut ? GREEN_WIRE_OUTPUT : GREEN_WIRE_INPUT;
 }
 
 /**
@@ -96,9 +108,9 @@ export function layout(graph: CircuitGraph): LaidOutCircuit {
 
   const wires: FactorioWire[] = graph.wires.map((wire) => [
     entityNumberById.get(wire.from) as number,
-    greenConnector(kindById.get(wire.from) as CombinatorKind, "from"),
+    wireConnector(kindById.get(wire.from) as CombinatorKind, "from", wire.color),
     entityNumberById.get(wire.to) as number,
-    greenConnector(kindById.get(wire.to) as CombinatorKind, "to"),
+    wireConnector(kindById.get(wire.to) as CombinatorKind, "to", wire.color),
   ]);
 
   return { entities, wires, outputs: graph.outputs, inputs: graph.inputs };

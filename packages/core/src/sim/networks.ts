@@ -1,8 +1,10 @@
 import type { CircuitEntity, CircuitGraph, WireEdge } from "../combinators.js";
+import type { ColoredInputs } from "./colors.js";
+import { bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js";
 
 /**
  * For each consumer entity id, the producer entity ids whose outputs feed its input
- * (`WireEdge.from` → `WireEdge.to`).
+ * (`WireEdge.from` → `WireEdge.to`), any color.
  */
 export function producersByConsumer(wires: readonly WireEdge[]): Map<string, string[]> {
   const map = new Map<string, string[]>();
@@ -15,6 +17,55 @@ export function producersByConsumer(wires: readonly WireEdge[]): Map<string, str
     }
   }
   return map;
+}
+
+/** Per-color producer lists for each consumer (#40). */
+export function producersByConsumerColor(
+  wires: readonly WireEdge[],
+): Map<string, { red: string[]; green: string[] }> {
+  const map = new Map<string, { red: string[]; green: string[] }>();
+  for (const wire of wires) {
+    let entry = map.get(wire.to);
+    if (entry === undefined) {
+      entry = { red: [], green: [] };
+      map.set(wire.to, entry);
+    }
+    entry[wire.color].push(wire.from);
+  }
+  return map;
+}
+
+function sumFromProducers(
+  producerIds: readonly string[],
+  outputs: ReadonlyMap<string, SignalBag>,
+): SignalBag {
+  const input = emptyBag();
+  for (const from of producerIds) {
+    const bag = outputs.get(from);
+    if (bag === undefined) {
+      continue;
+    }
+    for (const [name, count] of bag) {
+      bagSet(input, name, toInt32(bagGet(input, name) + count));
+    }
+  }
+  return input;
+}
+
+/** Build red/green input bags for a consumer from colored producer edges. */
+export function coloredInputBags(
+  entityId: string,
+  producers: ReadonlyMap<string, { red: string[]; green: string[] }>,
+  outputs: ReadonlyMap<string, SignalBag>,
+): ColoredInputs {
+  const entry = producers.get(entityId);
+  if (entry === undefined) {
+    return { red: emptyBag(), green: emptyBag() };
+  }
+  return {
+    red: sumFromProducers(entry.red, outputs),
+    green: sumFromProducers(entry.green, outputs),
+  };
 }
 
 /**

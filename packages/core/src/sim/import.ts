@@ -1,7 +1,6 @@
-import type { CircuitEntity, CircuitGraph, CombinatorKind } from "../combinators.js";
+import type { CircuitEntity, CircuitGraph, CombinatorKind, WireColor } from "../combinators.js";
 
-/** Factorio wire color. Red support is structural; #40 will stop summing colors in eval. */
-export type WireColor = "red" | "green";
+export type { WireColor } from "../combinators.js";
 
 export type ConnectorSide = "in" | "out";
 
@@ -308,19 +307,22 @@ export function fromCircuitGraph(graph: CircuitGraph): ImportedCircuit {
 
   const wires: Array<[number, number, number, number]> = [];
   for (const wire of graph.wires) {
-    if (wire.color !== "green") {
-      throw new BlueprintImportError(`fromCircuitGraph: unsupported color '${wire.color}'`);
-    }
     const fromNum = numberById.get(wire.from);
     const toNum = numberById.get(wire.to);
     if (fromNum === undefined || toNum === undefined) {
       throw new BlueprintImportError("fromCircuitGraph: wire endpoint missing entity");
     }
+    const isConst = entityById.get(wire.from)?.kind === "constant";
     const fromConnector =
-      entityById.get(wire.from)?.kind === "constant"
-        ? WIRE_CONNECTOR.greenIn
-        : WIRE_CONNECTOR.greenOut;
-    wires.push([fromNum, fromConnector, toNum, WIRE_CONNECTOR.greenIn]);
+      wire.color === "red"
+        ? isConst
+          ? WIRE_CONNECTOR.redIn
+          : WIRE_CONNECTOR.redOut
+        : isConst
+          ? WIRE_CONNECTOR.greenIn
+          : WIRE_CONNECTOR.greenOut;
+    const toConnector = wire.color === "red" ? WIRE_CONNECTOR.redIn : WIRE_CONNECTOR.greenIn;
+    wires.push([fromNum, fromConnector, toNum, toConnector]);
   }
 
   const byNumber = new Map(entities.map((entity, index) => [index + 1, entity]));

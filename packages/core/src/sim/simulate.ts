@@ -1,6 +1,13 @@
 import type { CircuitEntity, CircuitGraph } from "../combinators.js";
+import type { ColoredInputs } from "./colors.js";
+import { mergeBags } from "./colors.js";
 import { evalConstant, evalEntity, isEmptyConstant } from "./eval.js";
-import { combinationalOrder, producersByConsumer } from "./networks.js";
+import {
+  coloredInputBags,
+  combinationalOrder,
+  producersByConsumer,
+  producersByConsumerColor,
+} from "./networks.js";
 import { bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js";
 
 /**
@@ -38,22 +45,22 @@ function resolveInputs(inputs: SimulateOptions["inputs"], tick: number): Record<
   return typeof inputs === "function" ? inputs(tick) : inputs;
 }
 
+function inputBags(
+  entityId: string,
+  producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
+  outputs: ReadonlyMap<string, SignalBag>,
+): ColoredInputs {
+  return coloredInputBags(entityId, producersColor, outputs);
+}
+
+/** Merged bag for output-port sampling (ports still read the summed network). */
 function sumProducerBags(
   entityId: string,
-  producers: ReadonlyMap<string, string[]>,
+  producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
   outputs: ReadonlyMap<string, SignalBag>,
 ): SignalBag {
-  const input = emptyBag();
-  for (const from of producers.get(entityId) ?? []) {
-    const bag = outputs.get(from);
-    if (bag === undefined) {
-      continue;
-    }
-    for (const [name, count] of bag) {
-      bagSet(input, name, toInt32(bagGet(input, name) + count));
-    }
-  }
-  return input;
+  const colored = inputBags(entityId, producersColor, outputs);
+  return mergeBags(colored.red, colored.green);
 }
 
 /**
@@ -128,10 +135,10 @@ function refreshConstants(
 
 function readOutputPort(
   port: { signal: string; entityId: string },
-  producers: ReadonlyMap<string, string[]>,
+  producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
   outputs: ReadonlyMap<string, SignalBag>,
 ): number {
-  const net = sumProducerBags(port.entityId, producers, outputs);
+  const net = sumProducerBags(port.entityId, producersColor, outputs);
   const named = bagGet(net, port.signal);
   if (named !== 0 || net.has(port.signal)) {
     return named;
@@ -145,12 +152,12 @@ function readOutputPort(
 
 function sampleOutputs(
   graph: CircuitGraph,
-  producers: ReadonlyMap<string, string[]>,
+  producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
   outputs: ReadonlyMap<string, SignalBag>,
 ): Record<string, number> {
   const tickOutputs: Record<string, number> = {};
   for (const port of graph.outputs) {
-    tickOutputs[port.signal] = readOutputPort(port, producers, outputs);
+    tickOutputs[port.signal] = readOutputPort(port, producersColor, outputs);
   }
   return tickOutputs;
 }
@@ -171,12 +178,12 @@ export function comboSettleDepth(graph: CircuitGraph): number {
 
 function parallelUpdate(
   entities: readonly CircuitEntity[],
-  producers: ReadonlyMap<string, string[]>,
+  producersColor: ReadonlyMap<string, { red: string[]; green: string[] }>,
   outputs: Map<string, SignalBag>,
 ): void {
   const next = new Map<string, SignalBag>();
   for (const entity of entities) {
-    next.set(entity.id, evalEntity(entity, sumProducerBags(entity.id, producers, outputs)));
+    next.set(entity.id, evalEntity(entity, inputBags(entity.id, producersColor, outputs)));
   }
   for (const [id, bag] of next) {
     outputs.set(id, bag);
@@ -187,6 +194,7 @@ function parallelUpdate(
 function initSim(graph: CircuitGraph) {
   const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
   const producers = producersByConsumer(graph.wires);
+  const producersColor = producersByConsumerColor(graph.wires);
   const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
   const outputs = new Map<string, SignalBag>();
   for (const entity of graph.entities) {
@@ -194,11 +202,11 @@ function initSim(graph: CircuitGraph) {
   }
   refreshConstants(graph, outputs, inputEntityIds);
   seedLatchOutputs(graph, entityById, producers, outputs);
-  return { entityById, producers, inputEntityIds, outputs };
+  return { entityById, producers, producersColor, inputEntityIds, outputs };
 }
 
 function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
-  const { entityById, producers, inputEntityIds, outputs } = initSim(graph);
+  const { entityById, producersColor, inputEntityIds, outputs } = initSim(graph);
   const comboOrder = combinationalOrder(graph);
   const latches = latchEntitiesOf(graph);
   const ticks: SimulateTick[] = [];
@@ -211,14 +219,14 @@ function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): Simulate
       if (entity.kind === "constant" || entity.role === "latch") {
         continue;
       }
-      outputs.set(entity.id, evalEntity(entity, sumProducerBags(entity.id, producers, outputs)));
+      outputs.set(entity.id, evalEntity(entity, inputBags(entity.id, producersColor, outputs)));
     }
 
     for (const latch of latches) {
-      outputs.set(latch.id, evalEntity(latch, sumProducerBags(latch.id, producers, outputs)));
+      outputs.set(latch.id, evalEntity(latch, inputBags(latch.id, producersColor, outputs)));
     }
 
-    ticks.push({ outputs: sampleOutputs(graph, producers, outputs) });
+    ticks.push({ outputs: sampleOutputs(graph, producersColor, outputs) });
   }
 
   return { ticks };
@@ -228,15 +236,15 @@ function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): Simulate
  * True Factorio: every non-constant combinator double-buffers in parallel each API tick.
  */
 function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
-  const { entityById, producers, inputEntityIds, outputs } = initSim(graph);
+  const { entityById, producersColor, inputEntityIds, outputs } = initSim(graph);
   const delayed = graph.entities.filter((entity) => entity.kind !== "constant");
   const ticks: SimulateTick[] = [];
 
   for (let tick = 0; tick < opts.ticks; tick += 1) {
     applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
     refreshConstants(graph, outputs, inputEntityIds);
-    parallelUpdate(delayed, producers, outputs);
-    ticks.push({ outputs: sampleOutputs(graph, producers, outputs) });
+    parallelUpdate(delayed, producersColor, outputs);
+    ticks.push({ outputs: sampleOutputs(graph, producersColor, outputs) });
   }
 
   return { ticks };
@@ -246,7 +254,7 @@ function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): S
  * Factorio delays on the combo cone (micro-steps), then clock all latches once per API tick.
  */
 function simulateFactorio(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
-  const { entityById, producers, inputEntityIds, outputs } = initSim(graph);
+  const { entityById, producersColor, inputEntityIds, outputs } = initSim(graph);
   const combos = comboEntities(graph);
   const latches = latchEntitiesOf(graph);
   const depth = combos.length;
@@ -257,11 +265,11 @@ function simulateFactorio(graph: CircuitGraph, opts: SimulateOptions): SimulateR
     refreshConstants(graph, outputs, inputEntityIds);
 
     for (let step = 0; step < depth; step += 1) {
-      parallelUpdate(combos, producers, outputs);
+      parallelUpdate(combos, producersColor, outputs);
     }
-    parallelUpdate(latches, producers, outputs);
+    parallelUpdate(latches, producersColor, outputs);
 
-    ticks.push({ outputs: sampleOutputs(graph, producers, outputs) });
+    ticks.push({ outputs: sampleOutputs(graph, producersColor, outputs) });
   }
 
   return { ticks };
