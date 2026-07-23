@@ -6,7 +6,9 @@ local request = {
 
 -- A literal-key lookup samples one scalar channel from the bag.
 local iron = request["iron-plate"]
+local iron_only = bag_filter("include", request, { ["iron-plate"] = 1 })
 
 output("iron-plate", request)
 output("signal-A", request)
 output("signal-B", iron)
+output("signal-C", iron_only["iron-plate"])

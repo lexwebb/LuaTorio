@@ -212,10 +212,13 @@ describe("simulate", () => {
       local request = { ["iron-plate"] = 10, ["signal-A"] = -1 }
       local iron = request["iron-plate"]
       local absent = request["signal-Z"]
+      local doubled = bag_arith("+", request, { ["iron-plate"] = 10, ["signal-A"] = -1 })
+      local ironOnly = bag_filter("include", doubled, { ["iron-plate"] = 1 })
       output("iron-plate", request)
       output("signal-A", request)
       output("signal-B", iron)
       output("signal-C", absent)
+      output("signal-D", ironOnly["iron-plate"])
     `);
 
     const result = simulate(graph, { ticks: 3 });
@@ -224,6 +227,7 @@ describe("simulate", () => {
       "signal-A": -1,
       "signal-B": 10,
       "signal-C": 0,
+      "signal-D": 20,
     });
   });
 
