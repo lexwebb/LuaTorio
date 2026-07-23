@@ -1,5 +1,5 @@
 import type { CircuitEntity } from "../combinators.js";
-import { bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js";
+import { bagAdd, bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js";
 
 type SignalRef = { type?: unknown; name?: unknown };
 
@@ -96,25 +96,17 @@ function readConditionOperand(
   side: "first" | "second",
   eachValue?: number,
 ): number {
-  if (side === "first") {
-    const fromSignal = signalName(condition.first_signal);
-    if (fromSignal === SIGNAL_EACH) {
-      return eachValue ?? 0;
-    }
-    if (fromSignal !== undefined) {
-      return bagGet(net, fromSignal);
-    }
-    const constant = asNumber(condition.first_constant);
-    return constant !== undefined ? toInt32(constant) : 0;
-  }
-  const fromSignal = signalName(condition.second_signal);
+  const fromSignal = signalName(side === "first" ? condition.first_signal : condition.second_signal);
   if (fromSignal === SIGNAL_EACH) {
     return eachValue ?? 0;
   }
   if (fromSignal !== undefined) {
     return bagGet(net, fromSignal);
   }
-  const constant = asNumber(condition.constant) ?? asNumber(condition.second_constant);
+  const constant =
+    side === "first"
+      ? asNumber(condition.first_constant)
+      : (asNumber(condition.constant) ?? asNumber(condition.second_constant));
   return constant !== undefined ? toInt32(constant) : 0;
 }
 
@@ -218,42 +210,19 @@ function evalOneCondition(
   net: SignalBag,
   condition: Record<string, unknown>,
   eachValue?: number,
-  eachName?: string,
 ): boolean {
   const comparator = typeof condition.comparator === "string" ? condition.comparator : "=";
   const firstName = signalName(condition.first_signal);
-  const secondName = signalName(condition.second_signal);
 
-  // Everything / Anything on the first operand (no EACH mode).
+  // Everything / Anything on the first operand (only outside EACH mode).
+  // Empty net: Everything is vacuously true (Array.every); Anything is false (Array.some).
   if (eachValue === undefined && (firstName === SIGNAL_EVERYTHING || firstName === SIGNAL_ANYTHING)) {
     const signals = presentSignals(net);
-    if (firstName === SIGNAL_EVERYTHING) {
-      // Vacuous truth when no signals.
-      if (signals.length === 0) {
-        return true;
-      }
-      for (const name of signals) {
-        const left = bagGet(net, name);
-        const right = readConditionOperand(net, condition, "second");
-        if (!compare(comparator, left, right)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    // Anything: true if some present signal satisfies (false if none).
-    for (const name of signals) {
-      const left = bagGet(net, name);
-      const right = readConditionOperand(net, condition, "second");
-      if (compare(comparator, left, right)) {
-        return true;
-      }
-    }
-    return false;
+    const right = readConditionOperand(net, condition, "second");
+    const passes = (name: string): boolean => compare(comparator, bagGet(net, name), right);
+    return firstName === SIGNAL_EVERYTHING ? signals.every(passes) : signals.some(passes);
   }
 
-  // Everything / Anything as the value under EACH substitution is not used; treat as normal.
-  void eachName;
   const left = readConditionOperand(net, condition, "first", eachValue);
   const right = readConditionOperand(net, condition, "second", eachValue);
   return compare(comparator, left, right);
@@ -267,7 +236,6 @@ function evalDeciderConditions(
   net: SignalBag,
   conditions: unknown[],
   eachValue?: number,
-  eachName?: string,
 ): boolean {
   let anyOrGroup = false;
   let andAccum = true;
@@ -277,7 +245,7 @@ function evalDeciderConditions(
       return false;
     }
     const condition = raw as Record<string, unknown>;
-    const pass = evalOneCondition(net, condition, eachValue, eachName);
+    const pass = evalOneCondition(net, condition, eachValue);
     if (i === 0) {
       andAccum = pass;
       continue;
@@ -293,6 +261,10 @@ function evalDeciderConditions(
     }
   }
   return anyOrGroup || andAccum;
+}
+
+function emitCount(copy: boolean, constant: number, net: SignalBag, fromName: string): number {
+  return copy ? bagGet(net, fromName) : constant;
 }
 
 function emitDeciderOutputs(
@@ -318,38 +290,31 @@ function emitDeciderOutputs(
       if (eachName === undefined) {
         continue;
       }
-      const value = copy ? bagGet(net, eachName) : constant;
-      bagSet(out, eachName, bagGet(out, eachName) + value);
+      bagAdd(out, eachName, emitCount(copy, constant, net, eachName));
       continue;
     }
 
     if (outName === SIGNAL_EVERYTHING) {
-      // Emit every present signal (copy count or constant).
       for (const name of presentSignals(net)) {
-        const value = copy ? bagGet(net, name) : constant;
-        bagSet(out, name, bagGet(out, name) + value);
+        bagAdd(out, name, emitCount(copy, constant, net, name));
       }
       continue;
     }
 
     if (outName === SIGNAL_ANYTHING) {
-      const signals = presentSignals(net);
-      const pick = eachName ?? signals[0];
+      const pick = eachName ?? presentSignals(net)[0];
       if (pick === undefined) {
         continue;
       }
-      const value = copy ? bagGet(net, pick) : constant;
-      bagSet(out, pick, bagGet(out, pick) + value);
+      bagAdd(out, pick, emitCount(copy, constant, net, pick));
       continue;
     }
 
-    // Specific signal. With EACH mode, copy uses the each signal's count when copying.
-    if (copy) {
-      const value = eachName !== undefined ? bagGet(net, eachName) : bagGet(net, outName);
-      bagSet(out, outName, bagGet(out, outName) + value);
-    } else {
-      bagSet(out, outName, bagGet(out, outName) + constant);
-    }
+    // Specific signal: in EACH mode, copy uses that signal's count.
+    const value = copy
+      ? bagGet(net, eachName !== undefined ? eachName : outName)
+      : constant;
+    bagAdd(out, outName, value);
   }
 }
 
@@ -366,8 +331,7 @@ export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
   if (conditionsUseEach(conditions)) {
     // Per-signal evaluation: each present signal activates normal or else outputs.
     for (const name of presentSignals(net)) {
-      const value = bagGet(net, name);
-      const ok = evalDeciderConditions(net, conditions, value, name);
+      const ok = evalDeciderConditions(net, conditions, bagGet(net, name));
       emitDeciderOutputs(ok ? block.outputs : block.else_outputs, entity, net, out, name);
     }
     return out;

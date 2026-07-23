@@ -349,9 +349,8 @@ function lowerTruthAndToOne(
 }
 
 /**
- * Gate `branchId` under `cond`. When the select is only an output (no IR consumers),
- * emit one gate whose entity id is `nodeId` (output port sums the branch signal).
- * Otherwise gate + rename (2).
+ * Gate `branchId` under `cond`. When `outputOnly`, the gate's id is `nodeId`
+ * (no rename); otherwise gate + rename (2).
  */
 function lowerGateAndRename(
   nodeId: string,
@@ -360,18 +359,15 @@ function lowerGateAndRename(
   comparator: "=" | "!=",
   outputOnly: boolean,
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
-  if (outputOnly) {
-    const gate = lowerSelectGate(nodeId, condId, branchId, comparator, 0);
-    return {
-      entities: [gate],
-      wires: [greenWire(condId, nodeId), greenWire(branchId, nodeId)],
-    };
-  }
-  const gateId = `${nodeId}__gate`;
+  const gateId = outputOnly ? nodeId : `${nodeId}__gate`;
   const gate = lowerSelectGate(gateId, condId, branchId, comparator, 0);
+  const wires = [greenWire(condId, gateId), greenWire(branchId, gateId)];
+  if (outputOnly) {
+    return { entities: [gate], wires };
+  }
   return {
     entities: [gate, lowerRename(nodeId, branchId)],
-    wires: [greenWire(condId, gateId), greenWire(branchId, gateId), greenWire(gateId, nodeId)],
+    wires: [...wires, greenWire(gateId, nodeId)],
   };
 }
 
@@ -393,39 +389,25 @@ function lowerGateByCmpAndRename(
   const decider_conditions = whenCmpPasses
     ? { conditions: [condition], outputs: [copy] }
     : { conditions: [condition], outputs: [], else_outputs: [copy] };
+  const gateId = outputOnly ? nodeId : `${nodeId}__gate`;
+  const gate: CircuitEntity = {
+    id: gateId,
+    kind: "decider",
+    name: "decider-combinator",
+    outputSignal: branchId,
+    role: "mux-side",
+    control_behavior: { decider_conditions },
+  };
+  const wires = [
+    ...wireFrom.map((from) => greenWire(from, gateId)),
+    greenWire(branchId, gateId),
+  ];
   if (outputOnly) {
-    return {
-      entities: [
-        {
-          id: nodeId,
-          kind: "decider",
-          name: "decider-combinator",
-          outputSignal: branchId,
-          role: "mux-side",
-          control_behavior: { decider_conditions },
-        },
-      ],
-      wires: [...wireFrom.map((from) => greenWire(from, nodeId)), greenWire(branchId, nodeId)],
-    };
+    return { entities: [gate], wires };
   }
-  const gateId = `${nodeId}__gate`;
   return {
-    entities: [
-      {
-        id: gateId,
-        kind: "decider",
-        name: "decider-combinator",
-        outputSignal: branchId,
-        role: "mux-side",
-        control_behavior: { decider_conditions },
-      },
-      lowerRename(nodeId, branchId),
-    ],
-    wires: [
-      ...wireFrom.map((from) => greenWire(from, gateId)),
-      greenWire(branchId, gateId),
-      greenWire(gateId, nodeId),
-    ],
+    entities: [gate, lowerRename(nodeId, branchId)],
+    wires: [...wires, greenWire(gateId, nodeId)],
   };
 }
 
@@ -728,7 +710,7 @@ function fusedCmpForSelect(
  * - `select(c, lit, 0)` / `select(c, 0, lit)` → 1 decider (constant when cond matches)
  * - `select(c, bool, 0)` / `select(c, 0, bool)` → 1 AND-decider → constant 1
  * - `select(a, a, b)` when a,b boolean → 1 OR-decider → constant 1
- * - `select(c, x, 0)` / `select(c, 0, x)` → gate + rename (2)
+ * - `select(c, x, 0)` / `select(c, 0, x)` → one gate if output-only, else gate + rename
  * - `select(c, x, x)` → rename (1)
  * - otherwise → else_outputs mux + merge (2)
  * When `c` is a sole-use cmp, its condition is inlined and the cmp entity is omitted.
