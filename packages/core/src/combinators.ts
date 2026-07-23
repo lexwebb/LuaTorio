@@ -61,28 +61,6 @@ const COMPARATOR: Record<CmpOp, string> = {
   "~=": "!=",
 };
 
-/** IR node ids referenced by `node`'s incoming edges, in a stable, deterministic order. */
-function childIds(node: IRNode): string[] {
-  switch (node.kind) {
-    case "literal":
-    case "input":
-      return [];
-    case "binop":
-    case "cmp":
-      return [node.left, node.right];
-    case "select":
-      return [node.cond, node.then, node.else];
-    case "memory":
-      return [node.init];
-    case "store":
-      return [node.value];
-    default: {
-      const unreachable: never = node;
-      throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
-    }
-  }
-}
-
 function lowerLiteral(node: Extract<IRNode, { kind: "literal" }>): CircuitEntity {
   return {
     id: node.id,
@@ -107,47 +85,97 @@ function lowerInput(node: Extract<IRNode, { kind: "input" }>): CircuitEntity {
   };
 }
 
-function lowerBinop(node: Extract<IRNode, { kind: "binop" }>): CircuitEntity {
+function lowerBinop(
+  node: Extract<IRNode, { kind: "binop" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entity: CircuitEntity; wireFrom: string[] } {
+  const leftLit = literalValueOf(nodeById.get(node.left));
+  const rightLit = literalValueOf(nodeById.get(node.right));
+
+  const arithmetic_conditions: Record<string, unknown> = {
+    operation: node.op,
+    output_signal: signalRef(node.id),
+  };
+  const wireFrom: string[] = [];
+
+  if (leftLit !== undefined && rightLit === undefined) {
+    arithmetic_conditions.first_constant = leftLit;
+    arithmetic_conditions.second_signal = signalRef(node.right);
+    wireFrom.push(node.right);
+  } else if (rightLit !== undefined && leftLit === undefined) {
+    arithmetic_conditions.first_signal = signalRef(node.left);
+    arithmetic_conditions.second_constant = rightLit;
+    wireFrom.push(node.left);
+  } else if (leftLit !== undefined && rightLit !== undefined) {
+    // Both literals — still emit as constants (optimize should have folded; belt-and-suspenders).
+    arithmetic_conditions.first_constant = leftLit;
+    arithmetic_conditions.second_constant = rightLit;
+  } else {
+    arithmetic_conditions.first_signal = signalRef(node.left);
+    arithmetic_conditions.second_signal = signalRef(node.right);
+    wireFrom.push(node.left, node.right);
+  }
+
   return {
-    id: node.id,
-    kind: "arithmetic",
-    name: "arithmetic-combinator",
-    outputSignal: node.id,
-    control_behavior: {
-      arithmetic_conditions: {
-        first_signal: signalRef(node.left),
-        second_signal: signalRef(node.right),
-        operation: node.op,
-        output_signal: signalRef(node.id),
-      },
+    entity: {
+      id: node.id,
+      kind: "arithmetic",
+      name: "arithmetic-combinator",
+      outputSignal: node.id,
+      control_behavior: { arithmetic_conditions },
     },
+    wireFrom,
   };
 }
 
-function lowerCmp(node: Extract<IRNode, { kind: "cmp" }>): CircuitEntity {
+function lowerCmp(
+  node: Extract<IRNode, { kind: "cmp" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entity: CircuitEntity; wireFrom: string[] } {
+  const leftLit = literalValueOf(nodeById.get(node.left));
+  const rightLit = literalValueOf(nodeById.get(node.right));
+  const condition: Record<string, unknown> = {
+    comparator: COMPARATOR[node.op],
+  };
+  const wireFrom: string[] = [];
+
+  if (leftLit !== undefined && rightLit === undefined) {
+    condition.first_constant = leftLit;
+    condition.second_signal = signalRef(node.right);
+    wireFrom.push(node.right);
+  } else if (rightLit !== undefined && leftLit === undefined) {
+    condition.first_signal = signalRef(node.left);
+    condition.constant = rightLit;
+    wireFrom.push(node.left);
+  } else if (leftLit !== undefined && rightLit !== undefined) {
+    condition.first_constant = leftLit;
+    condition.constant = rightLit;
+  } else {
+    condition.first_signal = signalRef(node.left);
+    condition.second_signal = signalRef(node.right);
+    wireFrom.push(node.left, node.right);
+  }
+
   return {
-    id: node.id,
-    kind: "decider",
-    name: "decider-combinator",
-    outputSignal: node.id,
-    control_behavior: {
-      decider_conditions: {
-        conditions: [
-          {
-            first_signal: signalRef(node.left),
-            comparator: COMPARATOR[node.op],
-            second_signal: signalRef(node.right),
-          },
-        ],
-        outputs: [{ signal: signalRef(node.id), constant: 1 }],
+    entity: {
+      id: node.id,
+      kind: "decider",
+      name: "decider-combinator",
+      outputSignal: node.id,
+      control_behavior: {
+        decider_conditions: {
+          conditions: [condition],
+          outputs: [{ signal: signalRef(node.id), constant: 1 }],
+        },
       },
     },
+    wireFrom,
   };
 }
 
 /**
- * Faithful mux: gate `then` when cond ≠ 0, gate `else` when cond = 0, then add the two
- * (mutually exclusive) signals into `node.id`. Lua truthiness: only 0 is false.
+ * Faithful mux side: gate `branchSignal` when `cond` matches `comparator`/`constant`.
+ * Lua truthiness: only 0 is false.
  */
 function lowerSelectGate(
   id: string,
@@ -171,7 +199,104 @@ function lowerSelectGate(
   };
 }
 
-function lowerSelect(node: Extract<IRNode, { kind: "select" }>): {
+/** Arithmetic rename: copy `fromSignal` onto `id` (used after a gate that kept the branch name). */
+function lowerRename(id: string, fromSignal: string): CircuitEntity {
+  return {
+    id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: id,
+    control_behavior: {
+      arithmetic_conditions: {
+        first_signal: signalRef(fromSignal),
+        second_constant: 0,
+        operation: "+",
+        output_signal: signalRef(id),
+      },
+    },
+  };
+}
+
+/** One decider: when `cond comparator 0`, output a constant on `nodeId`. */
+function lowerConstWhen(
+  nodeId: string,
+  condId: string,
+  comparator: "=" | "!=",
+  outputConstant: number,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  return {
+    entities: [
+      {
+        id: nodeId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: nodeId,
+        control_behavior: {
+          decider_conditions: {
+            conditions: [{ first_signal: signalRef(condId), comparator, constant: 0 }],
+            outputs: [{ signal: signalRef(nodeId), constant: outputConstant }],
+          },
+        },
+      },
+    ],
+    wires: [greenWire(condId, nodeId)],
+  };
+}
+
+/**
+ * One decider with AND of two truthiness checks, outputting constant 1.
+ * Use `condComparator="="` for `select(c, 0, bool)` (true when cond is 0 and other ≠ 0).
+ */
+function lowerTruthAndToOne(
+  nodeId: string,
+  condId: string,
+  otherId: string,
+  condComparator: "=" | "!=" = "!=",
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  return {
+    entities: [
+      {
+        id: nodeId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: nodeId,
+        control_behavior: {
+          decider_conditions: {
+            conditions: [
+              { first_signal: signalRef(condId), comparator: condComparator, constant: 0 },
+              {
+                first_signal: signalRef(otherId),
+                comparator: "!=",
+                constant: 0,
+                compare_type: "and",
+              },
+            ],
+            outputs: [{ signal: signalRef(nodeId), constant: 1 }],
+          },
+        },
+      },
+    ],
+    wires: [greenWire(condId, nodeId), greenWire(otherId, nodeId)],
+  };
+}
+
+/** Gate `branchId` under `cond`, then rename onto `nodeId` (2 entities). */
+function lowerGateAndRename(
+  nodeId: string,
+  condId: string,
+  branchId: string,
+  comparator: "=" | "!=",
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const gateId = `${nodeId}__gate`;
+  const gate = lowerSelectGate(gateId, condId, branchId, comparator, 0);
+  return {
+    entities: [gate, lowerRename(nodeId, branchId)],
+    wires: [greenWire(condId, gateId), greenWire(branchId, gateId), greenWire(gateId, nodeId)],
+  };
+}
+
+/** Full 3-entity mux: then-gate + else-gate + merge. */
+function lowerSelectFullMux(node: Extract<IRNode, { kind: "select" }>): {
   entities: CircuitEntity[];
   wires: WireEdge[];
 } {
@@ -208,10 +333,80 @@ function lowerSelect(node: Extract<IRNode, { kind: "select" }>): {
   };
 }
 
+function literalValueOf(node: IRNode | undefined): number | undefined {
+  return node?.kind === "literal" ? node.value : undefined;
+}
+
+/** Nodes known to carry only 0 or 1 (cmp results / 0-1 literals). */
+function isBooleanValued(node: IRNode | undefined): boolean {
+  if (node === undefined) {
+    return false;
+  }
+  if (node.kind === "cmp") {
+    return true;
+  }
+  if (node.kind === "literal") {
+    return node.value === 0 || node.value === 1;
+  }
+  return false;
+}
+
+/**
+ * Specialize common `select` shapes to cut the 3-entity mux tax:
+ * - `select(c, lit, 0)` / `select(c, 0, lit)` → 1 decider (constant when cond matches)
+ * - `select(c, bool, 0)` / `select(c, 0, bool)` → 1 AND-decider → constant 1
+ * - `select(c, x, 0)` / `select(c, 0, x)` → gate + rename (2)
+ * - `select(c, x, x)` → rename (1)
+ * - otherwise → full 3-entity mux
+ */
+function lowerSelect(
+  node: Extract<IRNode, { kind: "select" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+): {
+  entities: CircuitEntity[];
+  wires: WireEdge[];
+} {
+  const thenNode = nodeById.get(node.then);
+  const elseNode = nodeById.get(node.else);
+  const thenLit = literalValueOf(thenNode);
+  const elseLit = literalValueOf(elseNode);
+
+  if (node.then === node.else) {
+    return {
+      entities: [lowerRename(node.id, node.then)],
+      wires: [greenWire(node.then, node.id)],
+    };
+  }
+
+  if (elseLit === 0 && thenLit !== undefined) {
+    return lowerConstWhen(node.id, node.cond, "!=", thenLit);
+  }
+  if (thenLit === 0 && elseLit !== undefined) {
+    return lowerConstWhen(node.id, node.cond, "=", elseLit);
+  }
+
+  if (elseLit === 0 && isBooleanValued(thenNode)) {
+    return lowerTruthAndToOne(node.id, node.cond, node.then, "!=");
+  }
+  if (thenLit === 0 && isBooleanValued(elseNode)) {
+    return lowerTruthAndToOne(node.id, node.cond, node.else, "=");
+  }
+
+  if (elseLit === 0) {
+    return lowerGateAndRename(node.id, node.cond, node.then, "!=");
+  }
+  if (thenLit === 0) {
+    return lowerGateAndRename(node.id, node.cond, node.else, "=");
+  }
+
+  return lowerSelectFullMux(node);
+}
+
 /** 1-tick delay register: passes `store.value` onto the memory signal (role: latch). */
 function lowerMemory(
   node: Extract<IRNode, { kind: "memory" }>,
   storeValueId: string,
+  initIsZero: boolean,
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
   const entity: CircuitEntity = {
     id: node.id,
@@ -229,10 +424,57 @@ function lowerMemory(
     },
   };
 
-  return {
-    entities: [entity],
-    wires: [greenWire(node.init, node.id), greenWire(storeValueId, node.id)],
+  const wires = [greenWire(storeValueId, node.id)];
+  // Literal 0 init is the default absent signal — no need to place/wire a constant.
+  if (!initIsZero) {
+    wires.unshift(greenWire(node.init, node.id));
+  }
+
+  return { entities: [entity], wires };
+}
+
+/**
+ * Fuse `store(mem, select(en, next, mem))` into then-gate + else-gate + latch that
+ * merges `next + mem → mem` (1-tick enable/hold). Saves the separate select merge entity.
+ */
+function lowerEnabledHoldLatch(
+  memory: Extract<IRNode, { kind: "memory" }>,
+  select: Extract<IRNode, { kind: "select" }>,
+  initIsZero: boolean,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const thenGateId = `${select.id}__then`;
+  const elseGateId = `${select.id}__else`;
+  const thenGate = lowerSelectGate(thenGateId, select.cond, select.then, "!=", 0);
+  const elseGate = lowerSelectGate(elseGateId, select.cond, select.else, "=", 0);
+  const latch: CircuitEntity = {
+    id: memory.id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: memory.id,
+    role: "latch",
+    control_behavior: {
+      arithmetic_conditions: {
+        first_signal: signalRef(select.then),
+        second_signal: signalRef(select.else),
+        operation: "+",
+        output_signal: signalRef(memory.id),
+      },
+    },
   };
+
+  const wires: WireEdge[] = [
+    greenWire(select.cond, thenGateId),
+    greenWire(select.then, thenGateId),
+    greenWire(select.cond, elseGateId),
+    greenWire(select.else, elseGateId),
+    greenWire(thenGateId, memory.id),
+    greenWire(elseGateId, memory.id),
+  ];
+  if (!initIsZero) {
+    wires.push(greenWire(memory.init, memory.id));
+  }
+
+  return { entities: [thenGate, elseGate, latch], wires };
 }
 
 function lowerOutput(output: IRModule["outputs"][number], index: number): CircuitEntity {
@@ -247,54 +489,82 @@ function lowerOutput(output: IRModule["outputs"][number], index: number): Circui
 
 /**
  * Lowers an `IRModule` to an unpositioned circuit graph. Most IR nodes become one entity;
- * `select` expands to three (then-gate, else-gate, merge); `store` has no entity of its own
- * (it only contributes the value→memory wire via the paired `memory` lowering).
+ * `select` expands to 1–3 entities depending on specialization; `store` has no entity of its
+ * own (it only contributes the value→memory wire via the paired `memory` lowering).
+ * Enable/hold `select(en, next, mem)` used as a cell's store value fuses into the latch.
  */
 export function lowerToCombinators(module: IRModule): CircuitGraph {
   const storeValueByCell = new Map<string, string>();
+  const nodeById = new Map(module.nodes.map((node) => [node.id, node]));
   for (const node of module.nodes) {
     if (node.kind === "store") {
       storeValueByCell.set(node.cell, node.value);
     }
   }
 
-  const entities: CircuitEntity[] = [];
-  const wires: WireEdge[] = [];
-
-  function wireChildren(node: IRNode): void {
-    for (const childId of childIds(node)) {
-      wires.push(greenWire(childId, node.id));
+  /** Select node ids absorbed into an enabled-hold latch (do not emit separately). */
+  const absorbedSelectIds = new Set<string>();
+  for (const node of module.nodes) {
+    if (node.kind !== "memory") {
+      continue;
+    }
+    const storeValueId = storeValueByCell.get(node.cell);
+    if (storeValueId === undefined) {
+      continue;
+    }
+    const storeValue = nodeById.get(storeValueId);
+    if (storeValue?.kind === "select" && storeValue.else === node.id) {
+      absorbedSelectIds.add(storeValue.id);
     }
   }
+
+  const entities: CircuitEntity[] = [];
+  const wires: WireEdge[] = [];
 
   for (const node of module.nodes) {
     switch (node.kind) {
       case "literal":
-        entities.push(lowerLiteral(node));
+        // Emitted later only if some kept wire still references this id.
         break;
       case "input":
         entities.push(lowerInput(node));
         break;
-      case "binop":
-        entities.push(lowerBinop(node));
-        wireChildren(node);
+      case "binop": {
+        const lowered = lowerBinop(node, nodeById);
+        entities.push(lowered.entity);
+        for (const from of lowered.wireFrom) {
+          wires.push(greenWire(from, node.id));
+        }
         break;
-      case "cmp":
-        entities.push(lowerCmp(node));
-        wireChildren(node);
+      }
+      case "cmp": {
+        const lowered = lowerCmp(node, nodeById);
+        entities.push(lowered.entity);
+        for (const from of lowered.wireFrom) {
+          wires.push(greenWire(from, node.id));
+        }
         break;
+      }
       case "select": {
-        const expanded = lowerSelect(node);
+        if (absorbedSelectIds.has(node.id)) {
+          break;
+        }
+        const expanded = lowerSelect(node, nodeById);
         entities.push(...expanded.entities);
         wires.push(...expanded.wires);
         break;
       }
       case "memory": {
-        const storeValue = storeValueByCell.get(node.cell);
-        if (storeValue === undefined) {
+        const storeValueId = storeValueByCell.get(node.cell);
+        if (storeValueId === undefined) {
           throw new Error(`internal error: memory cell '${node.cell}' has no store`);
         }
-        const expanded = lowerMemory(node, storeValue);
+        const storeValue = nodeById.get(storeValueId);
+        const initIsZero = literalValueOf(nodeById.get(node.init)) === 0;
+        const expanded =
+          storeValue?.kind === "select" && absorbedSelectIds.has(storeValue.id)
+            ? lowerEnabledHoldLatch(node, storeValue, initIsZero)
+            : lowerMemory(node, storeValueId, initIsZero);
         entities.push(...expanded.entities);
         wires.push(...expanded.wires);
         break;
@@ -305,6 +575,21 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
       }
+    }
+  }
+
+  // Materialize literals that are still referenced as wire endpoints (e.g. nonzero memory inits).
+  const referenced = new Set<string>();
+  for (const wire of wires) {
+    referenced.add(wire.from);
+    referenced.add(wire.to);
+  }
+  for (const output of module.outputs) {
+    referenced.add(output.nodeId);
+  }
+  for (const node of module.nodes) {
+    if (node.kind === "literal" && referenced.has(node.id)) {
+      entities.push(lowerLiteral(node));
     }
   }
 

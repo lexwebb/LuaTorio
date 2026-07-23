@@ -64,12 +64,17 @@ function evalCmp(op: CmpOp, l: number, r: number): number {
 function constantFold(module: IRModule): IRModule {
   const alias = new Map<string, string>();
   const literalValueOf = new Map<string, number>();
+  /** Node ids known to carry only 0/1 (cmp results, or selects derived from them). */
+  const booleanIds = new Set<string>();
   const nodes: IRNode[] = [];
 
   for (const node of module.nodes) {
     switch (node.kind) {
       case "literal":
         literalValueOf.set(node.id, node.value);
+        if (node.value === 0 || node.value === 1) {
+          booleanIds.add(node.id);
+        }
         nodes.push(node);
         break;
       case "input":
@@ -83,6 +88,9 @@ function constantFold(module: IRModule): IRModule {
         if (lv !== undefined && rv !== undefined) {
           const value = evalBinop(node.op, lv, rv);
           literalValueOf.set(node.id, value);
+          if (value === 0 || value === 1) {
+            booleanIds.add(node.id);
+          }
           nodes.push({ kind: "literal", id: node.id, value });
         } else {
           nodes.push({ ...node, left, right });
@@ -97,8 +105,10 @@ function constantFold(module: IRModule): IRModule {
         if (lv !== undefined && rv !== undefined) {
           const value = evalCmp(node.op, lv, rv);
           literalValueOf.set(node.id, value);
+          booleanIds.add(node.id);
           nodes.push({ kind: "literal", id: node.id, value });
         } else {
+          booleanIds.add(node.id);
           nodes.push({ ...node, left, right });
         }
         break;
@@ -110,8 +120,28 @@ function constantFold(module: IRModule): IRModule {
         const condValue = literalValueOf.get(cond);
         if (condValue !== undefined) {
           alias.set(node.id, condValue !== 0 ? thenId : elseId);
-        } else {
-          nodes.push({ ...node, cond, then: thenId, else: elseId });
+          break;
+        }
+        // select(c, x, x) → x
+        if (thenId === elseId) {
+          alias.set(node.id, thenId);
+          break;
+        }
+        const thenLit = literalValueOf.get(thenId);
+        const elseLit = literalValueOf.get(elseId);
+        // select(c, 1, 0) when c is already 0/1 → c (redundant truthify)
+        if (thenLit === 1 && elseLit === 0 && booleanIds.has(cond)) {
+          alias.set(node.id, cond);
+          break;
+        }
+        nodes.push({ ...node, cond, then: thenId, else: elseId });
+        // Track boolean-producing selects for further folds.
+        if (thenLit === 1 && elseLit === 0) {
+          booleanIds.add(node.id);
+        } else if (elseLit === 0 && booleanIds.has(thenId)) {
+          booleanIds.add(node.id);
+        } else if (thenLit === 0 && booleanIds.has(elseId)) {
+          booleanIds.add(node.id);
         }
         break;
       }

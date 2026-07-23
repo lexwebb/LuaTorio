@@ -31,13 +31,20 @@ describe("compile", () => {
     expect(JSON.parse(result.blueprint).blueprint.label).toBe("My Circuit");
   });
 
-  it("still compiles with optimize: false (folds nothing away)", () => {
-    const optimized = compile(`output("signal-B", 1 + 2)`);
-    const unoptimized = compile(`output("signal-B", 1 + 2)`, { optimize: false });
+  it("still compiles with optimize: false (folds nothing away at IR)", () => {
+    const optimized = compile(`output("signal-B", 1 + 2)`, { json: true });
+    const unoptimized = compile(`output("signal-B", 1 + 2)`, { optimize: false, json: true });
 
-    // Constant folding collapses `1 + 2` into a single literal when optimize runs (default);
-    // skipping it keeps the two literal operands plus the arithmetic combinator around.
-    expect(unoptimized.stats.combinators).toBeGreaterThan(optimized.stats.combinators);
+    const optEntities = JSON.parse(optimized.blueprint).blueprint.entities as Array<{
+      name: string;
+    }>;
+    const unoptEntities = JSON.parse(unoptimized.blueprint).blueprint.entities as Array<{
+      name: string;
+    }>;
+    // IR constant-fold collapses to a literal; combinator-level still folds 1+2 into one
+    // arithmetic with two constants when optimize is off.
+    expect(optEntities.some((e) => e.name === "arithmetic-combinator")).toBe(false);
+    expect(unoptEntities.some((e) => e.name === "arithmetic-combinator")).toBe(true);
   });
 
   it("propagates ParseError from the parse stage", () => {

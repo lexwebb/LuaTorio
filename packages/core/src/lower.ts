@@ -191,23 +191,18 @@ function lowerEnable(runMemId: string, condId: string, ctx: LowerContext): strin
   });
 }
 
-/** `__run' = select(__run, select(cond, 1, 0), 0)` — sticky exit once cond fails while running. */
+/**
+ * `__run' = select(__run, cond, 0)` — sticky exit once cond fails while running.
+ * Same truthiness as the older `select(__run, select(cond, 1, 0), 0)` form; when `cond` is
+ * already a 0/1 cmp (the common loop case), CSE can share this with `enable`.
+ */
 function lowerRunUpdate(runMemId: string, condId: string, ctx: LowerContext): void {
-  const oneId = pushNode(ctx, { kind: "literal", id: nextId(ctx), value: 1 });
-  const zeroId = getZeroNodeId(ctx);
-  const innerId = pushNode(ctx, {
-    kind: "select",
-    id: nextId(ctx),
-    cond: condId,
-    then: oneId,
-    else: zeroId,
-  });
   const nextRunId = pushNode(ctx, {
     kind: "select",
     id: nextId(ctx),
     cond: runMemId,
-    then: innerId,
-    else: zeroId,
+    then: condId,
+    else: getZeroNodeId(ctx),
   });
   pushNode(ctx, { kind: "store", id: nextId(ctx), cell: RUN_CELL, value: nextRunId });
 }

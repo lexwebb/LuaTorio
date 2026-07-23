@@ -117,6 +117,41 @@ describe("optimize", () => {
     expect(after.nodes.some((node) => node.id === "__t2")).toBe(false);
   });
 
+  it("aliases select(c, x, x) to x", () => {
+    const before: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-A" },
+        { kind: "select", id: "__t2", cond: "__t1", then: "__t1", else: "__t1" },
+      ],
+      outputs: [{ signal: "signal-B", nodeId: "__t2" }],
+      inputs: [{ signal: "signal-A", nodeId: "__t1" }],
+    };
+
+    const after = optimize(before);
+
+    expect(after.outputs[0]?.nodeId).toBe("__t1");
+    expect(after.nodes.some((node) => node.kind === "select")).toBe(false);
+  });
+
+  it("aliases select(cmp, 1, 0) to the cmp (redundant truthify)", () => {
+    const before: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-A" },
+        { kind: "literal", id: "__t2", value: 0 },
+        { kind: "cmp", id: "__t3", op: ">", left: "__t1", right: "__t2" },
+        { kind: "literal", id: "__t4", value: 1 },
+        { kind: "select", id: "__t5", cond: "__t3", then: "__t4", else: "__t2" },
+      ],
+      outputs: [{ signal: "signal-B", nodeId: "__t5" }],
+      inputs: [{ signal: "signal-A", nodeId: "__t1" }],
+    };
+
+    const after = optimize(before);
+
+    expect(after.outputs[0]?.nodeId).toBe("__t3");
+    expect(after.nodes.some((node) => node.kind === "select")).toBe(false);
+  });
+
   it("returns a module with no dangling references (every referenced id exists in nodes)", () => {
     const before: IRModule = {
       nodes: [
