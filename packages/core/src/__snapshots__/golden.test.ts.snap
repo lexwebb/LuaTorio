@@ -1065,6 +1065,59 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
 }
 `;
 
+exports[`golden examples > or_flags > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": ">",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+              },
+              {
+                "comparator": ">",
+                "compare_type": "or",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t2",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 1,
+                "signal": {
+                  "name": "__t7",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 1,
+        "name": "decider-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "or_flags",
+    "wires": [],
+  },
+}
+`;
+
 exports[`golden examples > while_count > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {

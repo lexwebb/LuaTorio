@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T13:00:20.865Z",
+  "generatedAt": "2026-07-23T13:14:20.886Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -138,6 +138,23 @@
         "placeholder_io": 4
       },
       "muxShare": 0.75
+    },
+    {
+      "name": "or_flags",
+      "source": "example",
+      "kind": "example",
+      "combinators": 4,
+      "wires": 3,
+      "buckets": {
+        "latch": 0,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 1,
+        "arithmetic_other": 0,
+        "constant_value": 0,
+        "placeholder_io": 3
+      },
+      "muxShare": 0
     },
     {
       "name": "while_count",
@@ -3560,18 +3577,18 @@
     }
   ],
   "totals": {
-    "programs": 209,
-    "combinators": 1240,
+    "programs": 210,
+    "combinators": 1244,
     "buckets": {
       "latch": 300,
       "mux_side": 150,
       "mux_merge": 3,
-      "decider_other": 203,
+      "decider_other": 204,
       "arithmetic_other": 108,
       "constant_value": 100,
-      "placeholder_io": 376
+      "placeholder_io": 379
     },
-    "muxShareMean": 0.1067783094098884
+    "muxShareMean": 0.10626984126984132
   },
   "opportunities": [
     {
@@ -3583,13 +3600,13 @@
     {
       "id": "drop-placeholders",
       "title": "Drop empty I/O placeholder constants from blueprints",
-      "evidence": "Placeholders are 30% of all entities (376).",
+      "evidence": "Placeholders are 30% of all entities (379).",
       "estimatedImpact": "medium"
     },
     {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=108, other deciders=203.",
+      "evidence": "Non-mux arith=108, other deciders=204.",
       "estimatedImpact": "medium"
     },
     {

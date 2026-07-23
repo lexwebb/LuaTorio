@@ -131,7 +131,6 @@ describe("lowerToCombinators", () => {
     const graph = lowerToCombinators(module);
     const gate = graph.entities.find((entity) => entity.id === "__t4__gate");
     const rename = graph.entities.find((entity) => entity.id === "__t4");
-
     expect(gate).toMatchObject({
       kind: "decider",
       role: "mux-side",
@@ -536,4 +535,128 @@ describe("lowerToCombinators", () => {
       expect.arrayContaining([{ from: iLatch!.id, to: iLatch!.id, color: "green" }]),
     );
   });
+
+  it("specializes boolean or select(a, a, b) to one OR-decider", () => {
+    const module: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-A" },
+        { kind: "literal", id: "__t2", value: 0 },
+        { kind: "cmp", id: "__t3", op: ">", left: "__t1", right: "__t2" },
+        { kind: "input", id: "__t4", signal: "signal-B" },
+        { kind: "cmp", id: "__t5", op: ">", left: "__t4", right: "__t2" },
+        { kind: "select", id: "__t6", cond: "__t3", then: "__t3", else: "__t5" },
+      ],
+      outputs: [{ signal: "signal-C", nodeId: "__t6" }],
+      inputs: [
+        { signal: "signal-A", nodeId: "__t1" },
+        { signal: "signal-B", nodeId: "__t4" },
+      ],
+    };
+
+    const graph = lowerToCombinators(module);
+    expect(graph.entities.find((entity) => entity.id === "__t3")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t5")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t6")).toMatchObject({
+      kind: "decider",
+      control_behavior: {
+        decider_conditions: {
+          conditions: [
+            { first_signal: { type: "virtual", name: "__t1" }, comparator: ">", constant: 0 },
+            {
+              first_signal: { type: "virtual", name: "__t4" },
+              comparator: ">",
+              constant: 0,
+              compare_type: "or",
+            },
+          ],
+          outputs: [{ signal: { type: "virtual", name: "__t6" }, constant: 1 }],
+        },
+      },
+    });
+  });
+
+  it("fuses shared-cond full muxes into one multi-output else_outputs decider", () => {
+    const module: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-S" },
+        { kind: "input", id: "__t2", signal: "signal-A" },
+        { kind: "input", id: "__t3", signal: "signal-B" },
+        { kind: "input", id: "__t4", signal: "signal-C" },
+        { kind: "input", id: "__t5", signal: "signal-D" },
+        { kind: "select", id: "__t6", cond: "__t1", then: "__t2", else: "__t3" },
+        { kind: "select", id: "__t7", cond: "__t1", then: "__t4", else: "__t5" },
+      ],
+      outputs: [
+        { signal: "signal-X", nodeId: "__t6" },
+        { signal: "signal-Y", nodeId: "__t7" },
+      ],
+      inputs: [
+        { signal: "signal-S", nodeId: "__t1" },
+        { signal: "signal-A", nodeId: "__t2" },
+        { signal: "signal-B", nodeId: "__t3" },
+        { signal: "signal-C", nodeId: "__t4" },
+        { signal: "signal-D", nodeId: "__t5" },
+      ],
+    };
+
+    const graph = lowerToCombinators(module);
+    const mux = graph.entities.find((entity) => entity.id === "__mux___t1");
+    expect(mux).toMatchObject({
+      kind: "decider",
+      role: "mux-side",
+      control_behavior: {
+        decider_conditions: {
+          outputs: [
+            { signal: { type: "virtual", name: "__t2" }, copy_count_from_input: true },
+            { signal: { type: "virtual", name: "__t4" }, copy_count_from_input: true },
+          ],
+          else_outputs: [
+            { signal: { type: "virtual", name: "__t3" }, copy_count_from_input: true },
+            { signal: { type: "virtual", name: "__t5" }, copy_count_from_input: true },
+          ],
+        },
+      },
+    });
+    expect(graph.entities.find((entity) => entity.id === "__t6__mux")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t7__mux")).toBeUndefined();
+  });
+
+  it("fuses sole-use sticky select(mem, bool, 0) into one decider latch", () => {
+    const module: IRModule = {
+      nodes: [
+        { kind: "literal", id: "__t1", value: 1 },
+        { kind: "memory", id: "__t2", cell: "flag", init: "__t1" },
+        { kind: "input", id: "__t3", signal: "signal-A" },
+        { kind: "literal", id: "__t4", value: 0 },
+        { kind: "cmp", id: "__t5", op: ">", left: "__t3", right: "__t4" },
+        { kind: "select", id: "__t6", cond: "__t2", then: "__t5", else: "__t4" },
+        { kind: "store", id: "__t7", cell: "flag", value: "__t6" },
+      ],
+      outputs: [{ signal: "signal-B", nodeId: "__t2" }],
+      inputs: [{ signal: "signal-A", nodeId: "__t3" }],
+    };
+
+    const graph = lowerToCombinators(module);
+    expect(graph.entities.find((entity) => entity.id === "__t6")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t5")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t2")).toMatchObject({
+      kind: "decider",
+      role: "latch",
+      control_behavior: {
+        decider_conditions: {
+          conditions: [
+            { first_signal: { type: "virtual", name: "__t2" }, comparator: "!=", constant: 0 },
+            {
+              first_signal: { type: "virtual", name: "__t3" },
+              comparator: ">",
+              constant: 0,
+              compare_type: "and",
+            },
+          ],
+          outputs: [{ signal: { type: "virtual", name: "__t2" }, constant: 1 }],
+        },
+      },
+    });
+  });
+
 });

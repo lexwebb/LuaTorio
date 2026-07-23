@@ -161,7 +161,46 @@ function emitDeciderOutputs(
   }
 }
 
-/** Evaluate a decider combinator (AND of conditions) against its input network. */
+function evalOneCondition(net: SignalBag, condition: Record<string, unknown>): boolean {
+  const comparator = typeof condition.comparator === "string" ? condition.comparator : "=";
+  const left = readConditionOperand(net, condition, "first");
+  const right = readConditionOperand(net, condition, "second");
+  return compare(comparator, left, right);
+}
+
+/**
+ * Factorio 2.x: AND binds tighter than OR.
+ * `compare_type` on condition i joins it with the preceding conditions (default `"or"`).
+ * So A OR B AND C OR D ≡ A ∨ (B ∧ C) ∨ D.
+ */
+function evalDeciderConditions(net: SignalBag, conditions: unknown[]): boolean {
+  let anyOrGroup = false;
+  let andAccum = true;
+  for (let i = 0; i < conditions.length; i += 1) {
+    const raw = conditions[i];
+    if (raw === null || typeof raw !== "object") {
+      return false;
+    }
+    const condition = raw as Record<string, unknown>;
+    const pass = evalOneCondition(net, condition);
+    if (i === 0) {
+      andAccum = pass;
+      continue;
+    }
+    const join = condition.compare_type;
+    if (join === undefined || join === "or") {
+      anyOrGroup = anyOrGroup || andAccum;
+      andAccum = pass;
+    } else if (join === "and") {
+      andAccum = andAccum && pass;
+    } else {
+      throw new Error(`simulate: unsupported compare_type '${String(join)}'`);
+    }
+  }
+  return anyOrGroup || andAccum;
+}
+
+/** Evaluate a decider combinator against its input network. */
 export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
   const out = emptyBag();
   const root = entity.control_behavior.decider_conditions;
@@ -170,29 +209,7 @@ export function evalDecider(entity: CircuitEntity, net: SignalBag): SignalBag {
   }
   const block = root as { conditions?: unknown; outputs?: unknown; else_outputs?: unknown };
   const conditions = Array.isArray(block.conditions) ? block.conditions : [];
-  let ok = true;
-  for (let i = 0; i < conditions.length; i += 1) {
-    const raw = conditions[i];
-    if (raw === null || typeof raw !== "object") {
-      ok = false;
-      break;
-    }
-    const condition = raw as Record<string, unknown>;
-    if (i > 0) {
-      const join = condition.compare_type;
-      // Only AND is emitted today; treat missing join as AND.
-      if (join !== undefined && join !== "and") {
-        throw new Error(`simulate: unsupported compare_type '${String(join)}'`);
-      }
-    }
-    const comparator = typeof condition.comparator === "string" ? condition.comparator : "=";
-    const left = readConditionOperand(net, condition, "first");
-    const right = readConditionOperand(net, condition, "second");
-    if (!compare(comparator, left, right)) {
-      ok = false;
-      break;
-    }
-  }
+  const ok = evalDeciderConditions(net, conditions);
 
   // Factorio 2.x: `outputs` when conditions pass, `else_outputs` when they fail.
   emitDeciderOutputs(ok ? block.outputs : block.else_outputs, entity, net, out);

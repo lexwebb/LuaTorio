@@ -156,5 +156,7 @@ Update `docs/superpowers/specs/2026-07-23-circuit-sim-fuzz-design.md` backlog me
 - [x] Fuzz + while_count / for_sum / mux / clamp goldens
 - [x] Re-run opt profile; mux/clamp/conditional-counter down (mux 10→9, clamp 13→11, conditional-counter 8→7)
 - [x] Emit: fuse sole-use `cmp` into select/const-when/gate/mux deciders (blueprint: clamp 4→3, mux 5→4)
-- [ ] P1: multi-output + OR conditions
-- [ ] P2: SR / EACH memory
+- [x] P1: VM OR + AND-before-OR; boolean `select(a,a,b)` → one OR-decider; shared-cond multi-output mux
+- [x] P2: sticky `select(mem, bool, 0)` → one decider latch (when select is sole-use)
+- [ ] Follow-up: EACH / ANY / EVERYTHING packing (needs wildcard VM) — not required to close #32
+- [ ] Follow-up: full cookbook SR with independent set/reset (no Lua IR shape yet)
