@@ -128,10 +128,10 @@ function lowerBinop(
   };
 }
 
-function lowerCmp(
+function cmpCondition(
   node: Extract<IRNode, { kind: "cmp" }>,
   nodeById: ReadonlyMap<string, IRNode>,
-): { entity: CircuitEntity; wireFrom: string[] } {
+): { condition: Record<string, unknown>; wireFrom: string[] } {
   const leftLit = literalValueOf(nodeById.get(node.left));
   const rightLit = literalValueOf(nodeById.get(node.right));
   const condition: Record<string, unknown> = {
@@ -156,6 +156,14 @@ function lowerCmp(
     wireFrom.push(node.left, node.right);
   }
 
+  return { condition, wireFrom };
+}
+
+function lowerCmp(
+  node: Extract<IRNode, { kind: "cmp" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entity: CircuitEntity; wireFrom: string[] } {
+  const { condition, wireFrom } = cmpCondition(node, nodeById);
   return {
     entity: {
       id: node.id,
@@ -269,6 +277,61 @@ function lowerConstWhen(
   };
 }
 
+/** `select(cmp, lit, 0)` — inline cmp into the const-when decider (no separate cmp entity). */
+function lowerConstWhenFromCmp(
+  nodeId: string,
+  cmp: Extract<IRNode, { kind: "cmp" }>,
+  outputConstant: number,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const { condition, wireFrom } = cmpCondition(cmp, nodeById);
+  return {
+    entities: [
+      {
+        id: nodeId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: nodeId,
+        control_behavior: {
+          decider_conditions: {
+            conditions: [condition],
+            outputs: [{ signal: signalRef(nodeId), constant: outputConstant }],
+          },
+        },
+      },
+    ],
+    wires: wireFrom.map((from) => greenWire(from, nodeId)),
+  };
+}
+
+/** `select(cmp, 0, lit)` — when cmp fails, emit constant via `else_outputs`. */
+function lowerConstWhenFromCmpElse(
+  nodeId: string,
+  cmp: Extract<IRNode, { kind: "cmp" }>,
+  elseConstant: number,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const { condition, wireFrom } = cmpCondition(cmp, nodeById);
+  return {
+    entities: [
+      {
+        id: nodeId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: nodeId,
+        control_behavior: {
+          decider_conditions: {
+            conditions: [condition],
+            outputs: [],
+            else_outputs: [{ signal: signalRef(nodeId), constant: elseConstant }],
+          },
+        },
+      },
+    ],
+    wires: wireFrom.map((from) => greenWire(from, nodeId)),
+  };
+}
+
 /**
  * One decider with AND of two truthiness checks, outputting constant 1.
  * Use `condComparator="="` for `select(c, 0, bool)` (true when cond is 0 and other ≠ 0).
@@ -322,6 +385,83 @@ function lowerGateAndRename(
 }
 
 /**
+ * Gate `branchId` with an inlined sole-use cmp, then rename onto `nodeId`.
+ * `whenCmpPasses`: `select(cmp, x, 0)`; else `select(cmp, 0, x)` via `else_outputs`.
+ */
+function lowerGateByCmpAndRename(
+  nodeId: string,
+  cmp: Extract<IRNode, { kind: "cmp" }>,
+  branchId: string,
+  nodeById: ReadonlyMap<string, IRNode>,
+  whenCmpPasses: boolean,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const gateId = `${nodeId}__gate`;
+  const { condition, wireFrom } = cmpCondition(cmp, nodeById);
+  const gate: CircuitEntity = {
+    id: gateId,
+    kind: "decider",
+    name: "decider-combinator",
+    outputSignal: branchId,
+    role: "mux-side",
+    control_behavior: {
+      decider_conditions: whenCmpPasses
+        ? {
+            conditions: [condition],
+            outputs: [{ signal: signalRef(branchId), copy_count_from_input: true }],
+          }
+        : {
+            conditions: [condition],
+            outputs: [],
+            else_outputs: [{ signal: signalRef(branchId), copy_count_from_input: true }],
+          },
+    },
+  };
+  return {
+    entities: [gate, lowerRename(nodeId, branchId)],
+    wires: [
+      ...wireFrom.map((from) => greenWire(from, gateId)),
+      greenWire(branchId, gateId),
+      greenWire(gateId, nodeId),
+    ],
+  };
+}
+
+/** `select(cmp, bool, 0)` — cmp ∧ (other ≠ 0) → constant 1. */
+function lowerTruthAndFromCmp(
+  nodeId: string,
+  cmp: Extract<IRNode, { kind: "cmp" }>,
+  otherId: string,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const { condition, wireFrom } = cmpCondition(cmp, nodeById);
+  return {
+    entities: [
+      {
+        id: nodeId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: nodeId,
+        control_behavior: {
+          decider_conditions: {
+            conditions: [
+              condition,
+              {
+                first_signal: signalRef(otherId),
+                comparator: "!=",
+                constant: 0,
+                compare_type: "and",
+              },
+            ],
+            outputs: [{ signal: signalRef(nodeId), constant: 1 }],
+          },
+        },
+      },
+    ],
+    wires: [...wireFrom.map((from) => greenWire(from, nodeId)), greenWire(otherId, nodeId)],
+  };
+}
+
+/**
  * General mux via one `else_outputs` decider + arithmetic merge (−1 vs two gates).
  * Copy keeps branch signal names; merge renames onto `node.id`.
  */
@@ -356,6 +496,53 @@ function lowerSelectFullMux(node: Extract<IRNode, { kind: "select" }>): {
   };
 }
 
+/** Full mux with sole-use cmp inlined into the `else_outputs` decider. */
+function lowerSelectFullMuxFromCmp(
+  node: Extract<IRNode, { kind: "select" }>,
+  cmp: Extract<IRNode, { kind: "cmp" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const muxId = `${node.id}__mux`;
+  const { condition, wireFrom } = cmpCondition(cmp, nodeById);
+  const mux: CircuitEntity = {
+    id: muxId,
+    kind: "decider",
+    name: "decider-combinator",
+    outputSignal: node.then,
+    role: "mux-side",
+    control_behavior: {
+      decider_conditions: {
+        conditions: [condition],
+        outputs: [{ signal: signalRef(node.then), copy_count_from_input: true }],
+        else_outputs: [{ signal: signalRef(node.else), copy_count_from_input: true }],
+      },
+    },
+  };
+  const merge: CircuitEntity = {
+    id: node.id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: node.id,
+    control_behavior: {
+      arithmetic_conditions: {
+        first_signal: signalRef(node.then),
+        second_signal: signalRef(node.else),
+        operation: "+",
+        output_signal: signalRef(node.id),
+      },
+    },
+  };
+  return {
+    entities: [mux, merge],
+    wires: [
+      ...wireFrom.map((from) => greenWire(from, muxId)),
+      greenWire(node.then, muxId),
+      greenWire(node.else, muxId),
+      greenWire(muxId, node.id),
+    ],
+  };
+}
+
 function literalValueOf(node: IRNode | undefined): number | undefined {
   return node?.kind === "literal" ? node.value : undefined;
 }
@@ -374,6 +561,19 @@ function isBooleanValued(node: IRNode | undefined): boolean {
   return false;
 }
 
+/** Sole-use `cmp` usable as an inlined select condition (not shared elsewhere). */
+function soleUseCmp(
+  condId: string,
+  nodeById: ReadonlyMap<string, IRNode>,
+  useCount: ReadonlyMap<string, number>,
+): Extract<IRNode, { kind: "cmp" }> | undefined {
+  if ((useCount.get(condId) ?? 0) > 1) {
+    return undefined;
+  }
+  const cond = nodeById.get(condId);
+  return cond?.kind === "cmp" ? cond : undefined;
+}
+
 /**
  * Specialize common `select` shapes to cut the 3-entity mux tax:
  * - `select(c, lit, 0)` / `select(c, 0, lit)` → 1 decider (constant when cond matches)
@@ -381,10 +581,12 @@ function isBooleanValued(node: IRNode | undefined): boolean {
  * - `select(c, x, 0)` / `select(c, 0, x)` → gate + rename (2)
  * - `select(c, x, x)` → rename (1)
  * - otherwise → else_outputs mux + merge (2)
+ * When `c` is a sole-use cmp, its condition is inlined and the cmp entity is omitted.
  */
 function lowerSelect(
   node: Extract<IRNode, { kind: "select" }>,
   nodeById: ReadonlyMap<string, IRNode>,
+  useCount: ReadonlyMap<string, number>,
 ): {
   entities: CircuitEntity[];
   wires: WireEdge[];
@@ -393,6 +595,7 @@ function lowerSelect(
   const elseNode = nodeById.get(node.else);
   const thenLit = literalValueOf(thenNode);
   const elseLit = literalValueOf(elseNode);
+  const fusedCmp = soleUseCmp(node.cond, nodeById, useCount);
 
   if (node.then === node.else) {
     return {
@@ -402,27 +605,40 @@ function lowerSelect(
   }
 
   if (elseLit === 0 && thenLit !== undefined) {
-    return lowerConstWhen(node.id, node.cond, "!=", thenLit);
+    return fusedCmp
+      ? lowerConstWhenFromCmp(node.id, fusedCmp, thenLit, nodeById)
+      : lowerConstWhen(node.id, node.cond, "!=", thenLit);
   }
   if (thenLit === 0 && elseLit !== undefined) {
-    return lowerConstWhen(node.id, node.cond, "=", elseLit);
+    return fusedCmp
+      ? lowerConstWhenFromCmpElse(node.id, fusedCmp, elseLit, nodeById)
+      : lowerConstWhen(node.id, node.cond, "=", elseLit);
   }
 
   if (elseLit === 0 && isBooleanValued(thenNode)) {
-    return lowerTruthAndToOne(node.id, node.cond, node.then, "!=");
+    return fusedCmp
+      ? lowerTruthAndFromCmp(node.id, fusedCmp, node.then, nodeById)
+      : lowerTruthAndToOne(node.id, node.cond, node.then, "!=");
   }
   if (thenLit === 0 && isBooleanValued(elseNode)) {
+    // Inverted truth-and still needs a 0/1 cond signal; skip cmp fuse.
     return lowerTruthAndToOne(node.id, node.cond, node.else, "=");
   }
 
   if (elseLit === 0) {
-    return lowerGateAndRename(node.id, node.cond, node.then, "!=");
+    return fusedCmp
+      ? lowerGateByCmpAndRename(node.id, fusedCmp, node.then, nodeById, true)
+      : lowerGateAndRename(node.id, node.cond, node.then, "!=");
   }
   if (thenLit === 0) {
-    return lowerGateAndRename(node.id, node.cond, node.else, "=");
+    return fusedCmp
+      ? lowerGateByCmpAndRename(node.id, fusedCmp, node.else, nodeById, false)
+      : lowerGateAndRename(node.id, node.cond, node.else, "=");
   }
 
-  return lowerSelectFullMux(node);
+  return fusedCmp
+    ? lowerSelectFullMuxFromCmp(node, fusedCmp, nodeById)
+    : lowerSelectFullMux(node);
 }
 
 /** 1-tick delay register: passes `store.value` onto the memory signal (role: latch). */
@@ -620,6 +836,8 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const absorbedSelectIds = new Set<string>();
   /** `mem + δ` binops only used by an incremental hold — skip emitting them. */
   const absorbedBinopIds = new Set<string>();
+  /** Sole-use cmps inlined into a select's decider — skip emitting them. */
+  const absorbedCmpIds = new Set<string>();
   const useCount = countNodeUses(module);
   for (const node of module.nodes) {
     if (node.kind !== "memory") {
@@ -641,6 +859,25 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
     ) {
       absorbedBinopIds.add(storeValue.then);
     }
+  }
+  for (const node of module.nodes) {
+    if (node.kind !== "select" || absorbedSelectIds.has(node.id)) {
+      continue;
+    }
+    // Latch-absorbed selects still need the cond as a 0/1 signal.
+    if (node.then === node.else) {
+      continue;
+    }
+    const fused = soleUseCmp(node.cond, nodeById, useCount);
+    if (fused === undefined) {
+      continue;
+    }
+    const thenLit = literalValueOf(nodeById.get(node.then));
+    // Match lowerSelect: inverted truth-and does not fuse.
+    if (thenLit === 0 && isBooleanValued(nodeById.get(node.else))) {
+      continue;
+    }
+    absorbedCmpIds.add(fused.id);
   }
 
   const entities: CircuitEntity[] = [];
@@ -666,6 +903,9 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         break;
       }
       case "cmp": {
+        if (absorbedCmpIds.has(node.id)) {
+          break;
+        }
         const lowered = lowerCmp(node, nodeById);
         entities.push(lowered.entity);
         for (const from of lowered.wireFrom) {
@@ -677,7 +917,7 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         if (absorbedSelectIds.has(node.id)) {
           break;
         }
-        const expanded = lowerSelect(node, nodeById);
+        const expanded = lowerSelect(node, nodeById, useCount);
         entities.push(...expanded.entities);
         wires.push(...expanded.wires);
         break;

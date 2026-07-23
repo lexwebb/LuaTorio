@@ -130,9 +130,9 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
             "outputs": [
               {
-                "constant": 1,
+                "constant": 100,
                 "signal": {
-                  "name": "__t8",
+                  "name": "__t10",
                   "type": "virtual",
                 },
               },
@@ -143,37 +143,6 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         "name": "decider-combinator",
         "position": {
           "x": 0,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "≠",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t8",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "constant": 100,
-                "signal": {
-                  "name": "__t10",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 2,
-        "name": "decider-combinator",
-        "position": {
-          "x": 2,
           "y": 0,
         },
       },
@@ -210,10 +179,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             ],
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "decider-combinator",
         "position": {
-          "x": 4,
+          "x": 2,
           "y": 0,
         },
       },
@@ -235,10 +204,10 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
             },
           },
         },
-        "entity_number": 4,
+        "entity_number": 3,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 6,
+          "x": 4,
           "y": 0,
         },
       },
@@ -254,21 +223,15 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         2,
       ],
       [
-        2,
+        1,
         4,
-        3,
         2,
-      ],
-      [
-        2,
-        4,
-        3,
         2,
       ],
       [
+        2,
+        4,
         3,
-        4,
-        4,
         2,
       ],
     ],
@@ -280,40 +243,6 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
 {
   "blueprint": {
     "entities": [
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "<",
-                "first_signal": {
-                  "name": "__t1",
-                  "type": "virtual",
-                },
-                "second_signal": {
-                  "name": "__t2",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "constant": 1,
-                "signal": {
-                  "name": "__t4",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 1,
-        "name": "decider-combinator",
-        "position": {
-          "x": 0,
-          "y": 0,
-        },
-      },
       {
         "control_behavior": {
           "decider_conditions": {
@@ -341,10 +270,10 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
             ],
           },
         },
-        "entity_number": 2,
+        "entity_number": 1,
         "name": "decider-combinator",
         "position": {
-          "x": 2,
+          "x": 0,
           "y": 0,
         },
       },
@@ -353,10 +282,13 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
           "decider_conditions": {
             "conditions": [
               {
-                "comparator": "≠",
-                "constant": 0,
+                "comparator": "<",
                 "first_signal": {
-                  "name": "__t4",
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+                "second_signal": {
+                  "name": "__t2",
                   "type": "virtual",
                 },
               },
@@ -381,10 +313,10 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
             ],
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "decider-combinator",
         "position": {
-          "x": 4,
+          "x": 2,
           "y": 0,
         },
       },
@@ -396,13 +328,7 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
       [
         1,
         4,
-        3,
         2,
-      ],
-      [
-        2,
-        4,
-        3,
         2,
       ],
     ],
@@ -1002,9 +928,9 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             ],
             "outputs": [
               {
-                "constant": 1,
+                "copy_count_from_input": true,
                 "signal": {
-                  "name": "__t5",
+                  "name": "__t2",
                   "type": "virtual",
                 },
               },
@@ -1015,37 +941,6 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
         "name": "decider-combinator",
         "position": {
           "x": 0,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "≠",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t5",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
-                  "name": "__t2",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 2,
-        "name": "decider-combinator",
-        "position": {
-          "x": 2,
           "y": 0,
         },
       },
@@ -1064,10 +959,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             "second_constant": 0,
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 4,
+          "x": 2,
           "y": 0,
         },
       },
@@ -1104,10 +999,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             ],
           },
         },
-        "entity_number": 4,
+        "entity_number": 3,
         "name": "decider-combinator",
         "position": {
-          "x": 6,
+          "x": 4,
           "y": 0,
         },
       },
@@ -1129,10 +1024,10 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
             },
           },
         },
-        "entity_number": 5,
+        "entity_number": 4,
         "name": "arithmetic-combinator",
         "position": {
-          "x": 8,
+          "x": 6,
           "y": 0,
         },
       },
@@ -1154,21 +1049,15 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
         2,
       ],
       [
+        2,
+        4,
         3,
-        4,
-        4,
         2,
       ],
       [
         3,
         4,
         4,
-        2,
-      ],
-      [
-        4,
-        4,
-        5,
         2,
       ],
     ],

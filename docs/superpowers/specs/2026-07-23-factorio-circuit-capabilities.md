@@ -155,3 +155,6 @@ Update `docs/superpowers/specs/2026-07-23-circuit-sim-fuzz-design.md` backlog me
 - [x] Emit: non-incremental enable-hold → one decider + latch
 - [x] Fuzz + while_count / for_sum / mux / clamp goldens
 - [x] Re-run opt profile; mux/clamp/conditional-counter down (mux 10→9, clamp 13→11, conditional-counter 8→7)
+- [x] Emit: fuse sole-use `cmp` into select/const-when/gate/mux deciders (blueprint: clamp 4→3, mux 5→4)
+- [ ] P1: multi-output + OR conditions
+- [ ] P2: SR / EACH memory

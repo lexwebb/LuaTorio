@@ -195,6 +195,81 @@ describe("lowerToCombinators", () => {
     expect(graph.entities.filter((entity) => entity.id.startsWith("__t4")).length).toBe(1);
   });
 
+  it("fuses sole-use cmp into select(cmp, lit, 0) as one const-when decider", () => {
+    const module: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-A" },
+        { kind: "literal", id: "__t2", value: 100 },
+        { kind: "cmp", id: "__t3", op: ">", left: "__t1", right: "__t2" },
+        { kind: "literal", id: "__t4", value: 100 },
+        { kind: "literal", id: "__t5", value: 0 },
+        { kind: "select", id: "__t6", cond: "__t3", then: "__t4", else: "__t5" },
+      ],
+      outputs: [{ signal: "signal-B", nodeId: "__t6" }],
+      inputs: [{ signal: "signal-A", nodeId: "__t1" }],
+    };
+
+    const graph = lowerToCombinators(module);
+    expect(graph.entities.find((entity) => entity.id === "__t3")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t6")).toEqual({
+      id: "__t6",
+      kind: "decider",
+      name: "decider-combinator",
+      outputSignal: "__t6",
+      control_behavior: {
+        decider_conditions: {
+          conditions: [
+            {
+              first_signal: { type: "virtual", name: "__t1" },
+              comparator: ">",
+              constant: 100,
+            },
+          ],
+          outputs: [{ signal: { type: "virtual", name: "__t6" }, constant: 100 }],
+        },
+      },
+    });
+    expect(graph.wires.filter((wire) => wire.to === "__t6")).toEqual([
+      { from: "__t1", to: "__t6", color: "green" },
+    ]);
+  });
+
+  it("fuses sole-use cmp into select(cmp, x, 0) gate (no separate cmp entity)", () => {
+    const module: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-A" },
+        { kind: "literal", id: "__t2", value: 0 },
+        { kind: "cmp", id: "__t3", op: ">", left: "__t1", right: "__t2" },
+        { kind: "input", id: "__t4", signal: "signal-B" },
+        { kind: "select", id: "__t5", cond: "__t3", then: "__t4", else: "__t2" },
+      ],
+      outputs: [{ signal: "signal-C", nodeId: "__t5" }],
+      inputs: [
+        { signal: "signal-A", nodeId: "__t1" },
+        { signal: "signal-B", nodeId: "__t4" },
+      ],
+    };
+
+    const graph = lowerToCombinators(module);
+    expect(graph.entities.find((entity) => entity.id === "__t3")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t5__gate")).toMatchObject({
+      kind: "decider",
+      role: "mux-side",
+      control_behavior: {
+        decider_conditions: {
+          conditions: [
+            {
+              first_signal: { type: "virtual", name: "__t1" },
+              comparator: ">",
+              constant: 0,
+            },
+          ],
+          outputs: [{ signal: { type: "virtual", name: "__t4" }, copy_count_from_input: true }],
+        },
+      },
+    });
+  });
+
   it("specializes select(c, cmp, 0) to one AND-decider outputting constant 1", () => {
     const module: IRModule = {
       nodes: [
