@@ -35,7 +35,10 @@ function defaultInputValue(signal: string): number {
   return 0;
 }
 
-function bagsEqual(a: Record<string, number> | undefined, b: Record<string, number> | undefined): boolean {
+function bagsEqual(
+  a: Record<string, number> | undefined,
+  b: Record<string, number> | undefined,
+): boolean {
   const left = a ?? {};
   const right = b ?? {};
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
@@ -148,8 +151,7 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
     }
   }
 
-  const selectedBag =
-    selectedId !== undefined ? viewTick?.entities?.[selectedId] : undefined;
+  const entityBags = viewTick?.entities;
 
   const allOutputsZero =
     viewTick !== undefined && outputKeys.every((key) => (viewTick.outputs[key] ?? 0) === 0);
@@ -276,7 +278,7 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
         laidOut={outcome.laidOut}
         selectedId={selectedId}
         onSelect={setSelectedId}
-        selectedBag={selectedBag}
+        entityBags={entityBags}
         activeIds={activeIds}
       />
 
@@ -312,8 +314,8 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
 
       <p className="sim-icon-disclaimer">
         Combinator icons © Wube Software — vendored for this non-commercial fan playground only; not
-        for redistribution. See <code>factorio-icons/NOTICE</code>. Layout uses layered placement for
-        the canvas (blueprint emit still uses a single row).
+        for redistribution. See <code>factorio-icons/NOTICE</code>. Layout uses layered placement
+        for the canvas (blueprint emit still uses a single row).
       </p>
     </div>
   );
