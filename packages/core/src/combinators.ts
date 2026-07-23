@@ -446,6 +446,37 @@ function lowerTruthAndFromCmp(
   };
 }
 
+/** `select(cmpA, cmpB, 0)` — two inlined cmps ANDed → constant 1. */
+function lowerTruthAndTwoCmps(
+  nodeId: string,
+  left: Extract<IRNode, { kind: "cmp" }>,
+  right: Extract<IRNode, { kind: "cmp" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const a = cmpCondition(left, nodeById);
+  const b = cmpCondition(right, nodeById);
+  return {
+    entities: [
+      {
+        id: nodeId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: nodeId,
+        control_behavior: {
+          decider_conditions: {
+            conditions: [a.condition, { ...b.condition, compare_type: "and" }],
+            outputs: [{ signal: signalRef(nodeId), constant: 1 }],
+          },
+        },
+      },
+    ],
+    wires: [
+      ...a.wireFrom.map((from) => greenWire(from, nodeId)),
+      ...b.wireFrom.map((from) => greenWire(from, nodeId)),
+    ],
+  };
+}
+
 /**
  * Boolean OR with cmp(s) inlined when not referenced outside this `select(a, a, b)`.
  * Left may be counted twice (cond+then); allow useCount <= 2 in that case.
@@ -749,6 +780,14 @@ function lowerSelect(
   }
 
   if (elseLit === 0 && isBooleanValued(thenNode)) {
+    // Inline sole-use then-cmp: select(c, cmp, 0) → one AND (c ≠ 0 ∧ cmp).
+    const thenCmp = soleUseCmp(node.then, nodeById, useCount);
+    if (thenCmp !== undefined && fusedCmp !== undefined) {
+      return lowerTruthAndTwoCmps(node.id, fusedCmp, thenCmp, nodeById);
+    }
+    if (thenCmp !== undefined) {
+      return lowerTruthAndFromCmp(node.id, thenCmp, node.cond, nodeById);
+    }
     return fusedCmp
       ? lowerTruthAndFromCmp(node.id, fusedCmp, node.then, nodeById)
       : lowerTruthAndToOne(node.id, node.cond, node.then, "!=");
@@ -890,6 +929,10 @@ function memPlusDelta(
  * Incremental enable-hold when `next = mem + δ`: gate only δ, latch `Q + gated_δ`
  * with Q feedback (no else-gate). Literal δ is emitted under a unique signal so it
  * cannot collide with a nonzero init on the latch net (e.g. `for i = 1, n` / `i+1`).
+ *
+ * When `stickyEnable` is set, the hold's cond was a multi-use sticky `__run∧cond`
+ * select absorbed into the run latch — expand the gate to `[run ≠ 0 ∧ then]` so we
+ * do not depend on the sticky output (wrong tick).
  */
 function lowerIncrementalHoldLatch(
   memory: Extract<IRNode, { kind: "memory" }>,
@@ -897,34 +940,45 @@ function lowerIncrementalHoldLatch(
   deltaId: string,
   initIsZero: boolean,
   nodeById: ReadonlyMap<string, IRNode>,
+  stickyEnable?: { runId: string; thenId: string },
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
   const deltaGateId = `${select.id}__d`;
   const deltaLit = literalValueOf(nodeById.get(deltaId));
+  const gatedDeltaSignal = deltaLit !== undefined ? deltaGateId : deltaId;
 
-  let deltaGate: CircuitEntity;
-  let gatedDeltaSignal: string;
-  if (deltaLit !== undefined) {
-    gatedDeltaSignal = deltaGateId;
-    deltaGate = {
-      id: deltaGateId,
-      kind: "decider",
-      name: "decider-combinator",
-      outputSignal: deltaGateId,
-      role: "mux-side",
-      control_behavior: {
-        decider_conditions: {
-          conditions: [{ first_signal: signalRef(select.cond), comparator: "!=", constant: 0 }],
-          outputs: [{ signal: signalRef(deltaGateId), constant: deltaLit }],
-        },
-      },
-    };
-  } else {
-    gatedDeltaSignal = deltaId;
-    deltaGate = lowerSelectGate(deltaGateId, select.cond, deltaId, "!=", 0);
+  const { conditions, wireFrom } = stickyEnable
+    ? stickyEnableGateConditions(stickyEnable.runId, stickyEnable.thenId, nodeById)
+    : {
+        conditions: [{ first_signal: signalRef(select.cond), comparator: "!=", constant: 0 }],
+        wireFrom: [select.cond],
+      };
+
+  const outputs =
+    deltaLit !== undefined
+      ? [{ signal: signalRef(deltaGateId), constant: deltaLit }]
+      : [{ signal: signalRef(deltaId), copy_count_from_input: true }];
+
+  const deltaGate: CircuitEntity = {
+    id: deltaGateId,
+    kind: "decider",
+    name: "decider-combinator",
+    outputSignal: gatedDeltaSignal,
+    role: "mux-side",
+    control_behavior: {
+      decider_conditions: { conditions, outputs },
+    },
+  };
+
+  const wires: WireEdge[] = [];
+  const wiredFrom = new Set<string>();
+  for (const from of wireFrom) {
+    if (wiredFrom.has(from)) {
+      continue;
+    }
+    wiredFrom.add(from);
+    wires.push(greenWire(from, deltaGateId));
   }
-
-  const wires: WireEdge[] = [greenWire(select.cond, deltaGateId)];
-  if (deltaLit === undefined) {
+  if (deltaLit === undefined && !wiredFrom.has(deltaId)) {
     wires.push(greenWire(deltaId, deltaGateId));
   }
   wires.push(
@@ -939,6 +993,37 @@ function lowerIncrementalHoldLatch(
   return {
     entities: [deltaGate, lowerLatch(memory.id, memory.id, gatedDeltaSignal)],
     wires,
+  };
+}
+
+/** Gate conditions for hold when enable was absorbed into a sticky run latch. */
+function stickyEnableGateConditions(
+  runId: string,
+  thenId: string,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { conditions: Record<string, unknown>[]; wireFrom: string[] } {
+  const thenNode = nodeById.get(thenId);
+  if (thenNode?.kind === "cmp") {
+    const { condition, wireFrom } = cmpCondition(thenNode, nodeById);
+    return {
+      conditions: [
+        { first_signal: signalRef(runId), comparator: "!=", constant: 0 },
+        { ...condition, compare_type: "and" },
+      ],
+      wireFrom: [runId, ...wireFrom],
+    };
+  }
+  return {
+    conditions: [
+      { first_signal: signalRef(runId), comparator: "!=", constant: 0 },
+      {
+        first_signal: signalRef(thenId),
+        comparator: "!=",
+        constant: 0,
+        compare_type: "and",
+      },
+    ],
+    wireFrom: [runId, thenId],
   };
 }
 
@@ -1020,10 +1105,18 @@ function lowerEnabledHoldLatch(
   select: Extract<IRNode, { kind: "select" }>,
   initIsZero: boolean,
   nodeById: ReadonlyMap<string, IRNode>,
+  stickyEnable?: { runId: string; thenId: string },
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
   const deltaId = memPlusDelta(select.then, memory.id, nodeById);
   if (deltaId !== undefined) {
-    return lowerIncrementalHoldLatch(memory, select, deltaId, initIsZero, nodeById);
+    return lowerIncrementalHoldLatch(
+      memory,
+      select,
+      deltaId,
+      initIsZero,
+      nodeById,
+      stickyEnable,
+    );
   }
 
   const muxId = `${select.id}__mux`;
@@ -1082,6 +1175,11 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const useCount = countNodeUses(module);
   /** Sticky-clear selects fused into a decider latch (`select(mem, bool, 0)`). */
   const stickyClearSelectIds = new Set<string>();
+  /**
+   * Multi-use sticky enable selects: also used as `cond` of enable-holds.
+   * Hold gates expand to `[run ≠ 0 ∧ then]` instead of reading the sticky output.
+   */
+  const stickyEnableBySelectId = new Map<string, { runId: string; thenId: string }>();
   /** Free-running `mem+δ` stores folded into the latch (memory id → δ id). */
   const freeRunningDeltaByMemory = new Map<string, string>();
   for (const node of module.nodes) {
@@ -1115,16 +1213,38 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       }
       continue;
     }
-    // Sticky clear only when this select is solely the store value (not also an enable).
-    if (
-      isStickyClearSelect(storeValue, node.id, nodeById) &&
-      (useCount.get(storeValue.id) ?? 0) <= 1
-    ) {
-      absorbedSelectIds.add(storeValue.id);
-      stickyClearSelectIds.add(storeValue.id);
-      const thenCmp = soleUseCmp(storeValue.then, nodeById, useCount);
-      if (thenCmp !== undefined) {
-        absorbedCmpIds.add(thenCmp.id);
+    // Sticky clear: sole-use, or only also used as cond of enable-hold selects.
+    if (isStickyClearSelect(storeValue, node.id, nodeById)) {
+      const users = nodesReferencing(storeValue.id, module);
+      const onlyStoreAndHolds = users.every((user) => {
+        if (user.kind === "store" && user.value === storeValue.id && user.cell === node.cell) {
+          return true;
+        }
+        return (
+          user.kind === "select" &&
+          user.cond === storeValue.id &&
+          nodeById.get(user.else)?.kind === "memory"
+        );
+      });
+      if (onlyStoreAndHolds) {
+        absorbedSelectIds.add(storeValue.id);
+        stickyClearSelectIds.add(storeValue.id);
+        const thenCmp = soleUseCmp(storeValue.then, nodeById, useCount);
+        if (thenCmp !== undefined) {
+          absorbedCmpIds.add(thenCmp.id);
+        } else {
+          // Hold gates also inline this then-cmp; absorb even if useCount>1 after expansion.
+          const thenNode = nodeById.get(storeValue.then);
+          if (thenNode?.kind === "cmp") {
+            absorbedCmpIds.add(thenNode.id);
+          }
+        }
+        if ((useCount.get(storeValue.id) ?? 0) > 1) {
+          stickyEnableBySelectId.set(storeValue.id, {
+            runId: node.id,
+            thenId: storeValue.then,
+          });
+        }
       }
     }
   }
@@ -1147,6 +1267,16 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
     const fused = fusedCmpForSelect(node, nodeById, useCount);
     if (fused !== undefined) {
       absorbedCmpIds.add(fused.id);
+    }
+    // Sole-use then-cmp inlined into select(c, cmp, 0) truth-AND (see lowerSelect).
+    if (
+      literalValueOf(nodeById.get(node.else)) === 0 &&
+      isBooleanValued(nodeById.get(node.then))
+    ) {
+      const thenCmp = soleUseCmp(node.then, nodeById, useCount);
+      if (thenCmp !== undefined) {
+        absorbedCmpIds.add(thenCmp.id);
+      }
     }
   }
 
@@ -1259,7 +1389,13 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         }
         const expanded =
           storeValue?.kind === "select" && absorbedSelectIds.has(storeValue.id)
-            ? lowerEnabledHoldLatch(node, storeValue, initIsZero, nodeById)
+            ? lowerEnabledHoldLatch(
+                node,
+                storeValue,
+                initIsZero,
+                nodeById,
+                stickyEnableBySelectId.get(storeValue.cond),
+              )
             : lowerMemory(node, storeValueId, initIsZero);
         entities.push(...expanded.entities);
         wires.push(...expanded.wires);
@@ -1305,6 +1441,44 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const filteredWires = wires.filter((wire) => known.has(wire.from) && known.has(wire.to));
 
   return { entities, wires: filteredWires, outputs, inputs };
+}
+
+/** Nodes that reference `id` (as operands / store value / etc.). */
+function nodesReferencing(id: string, module: IRModule): IRNode[] {
+  const users: IRNode[] = [];
+  for (const node of module.nodes) {
+    switch (node.kind) {
+      case "literal":
+      case "input":
+        break;
+      case "binop":
+      case "cmp":
+        if (node.left === id || node.right === id) {
+          users.push(node);
+        }
+        break;
+      case "select":
+        if (node.cond === id || node.then === id || node.else === id) {
+          users.push(node);
+        }
+        break;
+      case "memory":
+        if (node.init === id) {
+          users.push(node);
+        }
+        break;
+      case "store":
+        if (node.value === id) {
+          users.push(node);
+        }
+        break;
+      default: {
+        const unreachable: never = node;
+        throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
+      }
+    }
+  }
+  return users;
 }
 
 /** How many times each node id is referenced by other nodes / outputs (not by itself). */

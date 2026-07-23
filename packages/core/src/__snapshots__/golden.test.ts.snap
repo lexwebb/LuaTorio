@@ -219,40 +219,6 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
               {
                 "comparator": "<",
                 "first_signal": {
-                  "name": "__t2",
-                  "type": "virtual",
-                },
-                "second_signal": {
-                  "name": "__t3",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "constant": 1,
-                "signal": {
-                  "name": "__t5",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 1,
-        "name": "decider-combinator",
-        "position": {
-          "x": 0,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "<",
-                "first_signal": {
                   "name": "__t1",
                   "type": "virtual",
                 },
@@ -262,11 +228,14 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
                 },
               },
               {
-                "comparator": "≠",
+                "comparator": "<",
                 "compare_type": "and",
-                "constant": 0,
                 "first_signal": {
-                  "name": "__t5",
+                  "name": "__t2",
+                  "type": "virtual",
+                },
+                "second_signal": {
+                  "name": "__t3",
                   "type": "virtual",
                 },
               },
@@ -282,10 +251,10 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
             ],
           },
         },
-        "entity_number": 2,
+        "entity_number": 1,
         "name": "decider-combinator",
         "position": {
-          "x": 2,
+          "x": 0,
           "y": 0,
         },
       },
@@ -293,14 +262,7 @@ exports[`golden examples > comparison-chain > compiles to a blueprint JSON plan 
     "icons": [],
     "item": "blueprint",
     "label": "comparison-chain",
-    "wires": [
-      [
-        1,
-        4,
-        2,
-        2,
-      ],
-    ],
+    "wires": [],
   },
 }
 `;
@@ -584,7 +546,16 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
           "decider_conditions": {
             "conditions": [
               {
+                "comparator": "≠",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t8",
+                  "type": "virtual",
+                },
+              },
+              {
                 "comparator": "≤",
+                "compare_type": "and",
                 "constant": 10,
                 "first_signal": {
                   "name": "__t4",
@@ -596,7 +567,7 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
               {
                 "constant": 1,
                 "signal": {
-                  "name": "__t6",
+                  "name": "__t8",
                   "type": "virtual",
                 },
               },
@@ -612,21 +583,39 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
       },
       {
         "control_behavior": {
-          "arithmetic_conditions": {
-            "first_signal": {
-              "name": "__t9",
-              "type": "virtual",
-            },
-            "operation": "+",
-            "output_signal": {
-              "name": "__t8",
-              "type": "virtual",
-            },
-            "second_constant": 0,
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": "≠",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t8",
+                  "type": "virtual",
+                },
+              },
+              {
+                "comparator": "≤",
+                "compare_type": "and",
+                "constant": 10,
+                "first_signal": {
+                  "name": "__t4",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "copy_count_from_input": true,
+                "signal": {
+                  "name": "__t4",
+                  "type": "virtual",
+                },
+              },
+            ],
           },
         },
         "entity_number": 4,
-        "name": "arithmetic-combinator",
+        "name": "decider-combinator",
         "position": {
           "x": 6,
           "y": 0,
@@ -645,73 +634,11 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
                 },
               },
               {
-                "comparator": "≠",
+                "comparator": "≤",
                 "compare_type": "and",
-                "constant": 0,
+                "constant": 10,
                 "first_signal": {
-                  "name": "__t6",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "constant": 1,
-                "signal": {
-                  "name": "__t9",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 5,
-        "name": "decider-combinator",
-        "position": {
-          "x": 8,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "≠",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t9",
-                  "type": "virtual",
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "copy_count_from_input": true,
-                "signal": {
                   "name": "__t4",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 6,
-        "name": "decider-combinator",
-        "position": {
-          "x": 10,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "≠",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t9",
                   "type": "virtual",
                 },
               },
@@ -727,10 +654,10 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
             ],
           },
         },
-        "entity_number": 7,
+        "entity_number": 5,
         "name": "decider-combinator",
         "position": {
-          "x": 12,
+          "x": 8,
           "y": 0,
         },
       },
@@ -752,10 +679,10 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
             ],
           },
         },
-        "entity_number": 8,
+        "entity_number": 6,
         "name": "constant-combinator",
         "position": {
-          "x": 14,
+          "x": 10,
           "y": 0,
         },
       },
@@ -765,51 +692,63 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
     "label": "for_sum",
     "wires": [
       [
+        3,
+        4,
+        4,
+        2,
+      ],
+      [
+        2,
+        4,
+        4,
+        2,
+      ],
+      [
+        4,
+        4,
+        1,
+        2,
+      ],
+      [
+        1,
+        4,
+        1,
+        2,
+      ],
+      [
+        3,
+        4,
+        5,
+        2,
+      ],
+      [
+        2,
+        4,
+        5,
+        2,
+      ],
+      [
         5,
         4,
+        2,
+        2,
+      ],
+      [
+        2,
+        4,
+        2,
+        2,
+      ],
+      [
         6,
         2,
+        2,
+        2,
       ],
       [
-        2,
+        3,
         4,
-        6,
-        2,
-      ],
-      [
-        6,
-        4,
-        1,
-        2,
-      ],
-      [
-        1,
-        4,
-        1,
-        2,
-      ],
-      [
-        5,
-        4,
-        7,
-        2,
-      ],
-      [
-        7,
-        4,
-        2,
-        2,
-      ],
-      [
-        2,
-        4,
-        2,
-        2,
-      ],
-      [
-        8,
-        2,
-        2,
+        3,
         2,
       ],
       [
@@ -819,27 +758,9 @@ exports[`golden examples > for_sum > compiles to a blueprint JSON plan matching 
         2,
       ],
       [
-        8,
+        6,
         2,
-        4,
-        2,
-      ],
-      [
-        5,
-        4,
-        4,
-        2,
-      ],
-      [
-        4,
-        4,
-        5,
-        2,
-      ],
-      [
         3,
-        4,
-        5,
         2,
       ],
     ],
@@ -1084,32 +1005,19 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
       },
       {
         "control_behavior": {
-          "arithmetic_conditions": {
-            "first_signal": {
-              "name": "__t7",
-              "type": "virtual",
-            },
-            "operation": "+",
-            "output_signal": {
-              "name": "__t5",
-              "type": "virtual",
-            },
-            "second_constant": 0,
-          },
-        },
-        "entity_number": 2,
-        "name": "arithmetic-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
           "decider_conditions": {
             "conditions": [
               {
+                "comparator": "≠",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t5",
+                  "type": "virtual",
+                },
+              },
+              {
                 "comparator": "<",
+                "compare_type": "and",
                 "first_signal": {
                   "name": "__t2",
                   "type": "virtual",
@@ -1124,17 +1032,17 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
               {
                 "constant": 1,
                 "signal": {
-                  "name": "__t6",
+                  "name": "__t5",
                   "type": "virtual",
                 },
               },
             ],
           },
         },
-        "entity_number": 3,
+        "entity_number": 2,
         "name": "decider-combinator",
         "position": {
-          "x": 4,
+          "x": 2,
           "y": 0,
         },
       },
@@ -1151,42 +1059,14 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
                 },
               },
               {
-                "comparator": "≠",
+                "comparator": "<",
                 "compare_type": "and",
-                "constant": 0,
                 "first_signal": {
-                  "name": "__t6",
+                  "name": "__t2",
                   "type": "virtual",
                 },
-              },
-            ],
-            "outputs": [
-              {
-                "constant": 1,
-                "signal": {
-                  "name": "__t7",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 4,
-        "name": "decider-combinator",
-        "position": {
-          "x": 6,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "≠",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t7",
+                "second_signal": {
+                  "name": "__t3",
                   "type": "virtual",
                 },
               },
@@ -1202,10 +1082,10 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
             ],
           },
         },
-        "entity_number": 5,
+        "entity_number": 3,
         "name": "decider-combinator",
         "position": {
-          "x": 8,
+          "x": 4,
           "y": 0,
         },
       },
@@ -1227,10 +1107,10 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
             ],
           },
         },
-        "entity_number": 6,
+        "entity_number": 4,
         "name": "constant-combinator",
         "position": {
-          "x": 10,
+          "x": 6,
           "y": 0,
         },
       },
@@ -1240,33 +1120,9 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
     "label": "while_count",
     "wires": [
       [
+        2,
         4,
-        4,
-        5,
-        2,
-      ],
-      [
-        5,
-        4,
-        1,
-        2,
-      ],
-      [
-        1,
-        4,
-        1,
-        2,
-      ],
-      [
-        6,
-        2,
-        2,
-        2,
-      ],
-      [
-        4,
-        4,
-        2,
+        3,
         2,
       ],
       [
@@ -1276,15 +1132,33 @@ exports[`golden examples > while_count > compiles to a blueprint JSON plan match
         2,
       ],
       [
-        2,
+        3,
         4,
-        4,
+        1,
         2,
       ],
       [
-        3,
+        1,
         4,
+        1,
+        2,
+      ],
+      [
+        2,
         4,
+        2,
+        2,
+      ],
+      [
+        1,
+        4,
+        2,
+        2,
+      ],
+      [
+        4,
+        2,
+        2,
         2,
       ],
     ],

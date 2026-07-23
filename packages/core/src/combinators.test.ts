@@ -283,7 +283,7 @@ describe("lowerToCombinators", () => {
     });
   });
 
-  it("specializes select(c, cmp, 0) to one AND-decider outputting constant 1", () => {
+  it("specializes select(c, cmp, 0) to one AND-decider with inlined then-cmp", () => {
     const module: IRModule = {
       nodes: [
         { kind: "input", id: "__t1", signal: "signal-A" },
@@ -300,17 +300,20 @@ describe("lowerToCombinators", () => {
     };
 
     const graph = lowerToCombinators(module);
-    const andDecider = graph.entities.find((entity) => entity.id === "__t5");
-
-    expect(andDecider).toMatchObject({
+    expect(graph.entities.find((entity) => entity.id === "__t3")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t5")).toMatchObject({
       kind: "decider",
       outputSignal: "__t5",
       control_behavior: {
         decider_conditions: {
           conditions: [
-            { first_signal: { type: "virtual", name: "__t4" }, comparator: "!=", constant: 0 },
             {
-              first_signal: { type: "virtual", name: "__t3" },
+              first_signal: { type: "virtual", name: "__t1" },
+              comparator: ">",
+              constant: 0,
+            },
+            {
+              first_signal: { type: "virtual", name: "__t4" },
               comparator: "!=",
               constant: 0,
               compare_type: "and",
@@ -529,11 +532,12 @@ describe("lowerToCombinators", () => {
     const graph = lowerToCombinators(module);
     const latches = graph.entities.filter((entity) => entity.role === "latch");
     const muxSides = graph.entities.filter((entity) => entity.role === "mux-side");
-    // One body cell (i) uses incremental hold: 1 mux-side + latch with Q feedback.
-    // __run uses a plain latch (else=0 path), not enable-hold fusion.
-    expect(graph.entities.length).toBe(8);
+    // Body cell incremental hold + sticky __run latch (enable AND absorbed).
+    // Loop cond cmp is inlined into sticky + hold gate.
+    expect(graph.entities.length).toBe(6);
     expect(muxSides.length).toBe(1);
     expect(latches.length).toBe(2);
+    expect(latches.some((entity) => entity.kind === "decider")).toBe(true);
     const iLatch = latches.find((entity) => {
       const cond = entity.control_behavior.arithmetic_conditions as
         | { first_signal?: { name?: string }; second_signal?: { name?: string } }
