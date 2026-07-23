@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T13:40:05.684Z",
+  "generatedAt": "2026-07-23T14:04:30.143Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -3598,15 +3598,9 @@
       "estimatedImpact": "high"
     },
     {
-      "id": "drop-placeholders",
-      "title": "Drop empty I/O placeholder constants from blueprints",
-      "evidence": "Placeholders are 32% of all entities (379).",
-      "estimatedImpact": "medium"
-    },
-    {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=58, other deciders=204.",
+      "evidence": "Non-mux arith=58, other deciders=204 (graph; blueprints omit 379 I/O pads).",
       "estimatedImpact": "medium"
     },
     {

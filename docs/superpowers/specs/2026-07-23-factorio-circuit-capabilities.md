@@ -124,10 +124,10 @@ Previous backlog overweighted **selector-as-mux**. Wiki says selector is index/f
 - EACH packing for multi-channel cells (v4-ish).
 - Higher risk; prove per pattern with fuzz.
 
-### P3 — Drop empty I/O placeholders
+### P3 — Drop empty I/O placeholders — **done** (#35 / `d338857`)
 
-- Still ~30% of entity count; not “logic,” but blueprint clutter / stats.
-- Sim can keep markers; emit omits or stats exclude.
+- Emit omits empty I/O pads from blueprints and `stats`; sim keeps markers for inject/read.
+- Identity `output(input(...))` keeps pads so the blueprint stays placeable.
 
 ### P4 — Selector combinator (re-scoped)
 

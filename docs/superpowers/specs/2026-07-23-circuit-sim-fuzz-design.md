@@ -77,7 +77,7 @@ Re-grounded from wiki/runtime research (`2026-07-23-factorio-circuit-capabilitie
 1. **Decider `else_outputs`** for mux / enable-hold (before selector)
 2. Multi-condition **OR** + multi-output
 3. Tighter SR / EACH latches — EACH merge + wildcards landed (#33); full cookbook SR remains cookbook-only
-4. Drop empty I/O placeholders from blueprints (or stats)
+4. Drop empty I/O placeholders from blueprints — **done** (#35)
 5. **Selector** only for index/sort/count/channel work — not primary if/else mux
 6. Channel packing (v4 wires)
 

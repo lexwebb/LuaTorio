@@ -152,8 +152,6 @@ function buildOpportunities(
     .reduce((s, [, n]) => s + n, 0);
   const muxPct = real === 0 ? 0 : ((totals.mux_side + totals.mux_merge) / real) * 100;
   const latchPct = real === 0 ? 0 : (totals.latch / real) * 100;
-  const allEntities = real + totals.placeholder_io;
-  const phPct = allEntities === 0 ? 0 : (totals.placeholder_io / allEntities) * 100;
 
   const whileRows = all.filter((r) => r.kind === "while" || r.name.includes("while"));
   const avgWhile =
@@ -181,19 +179,13 @@ function buildOpportunities(
     });
   }
 
-  if (phPct >= 8) {
-    opportunities.push({
-      id: "drop-placeholders",
-      title: "Drop empty I/O placeholder constants from blueprints",
-      evidence: `Placeholders are ${phPct.toFixed(0)}% of all entities (${totals.placeholder_io}).`,
-      estimatedImpact: "medium",
-    });
-  }
+  // Empty I/O placeholders remain in CircuitGraph for sim inject/read, but emit
+  // already omits them from blueprints/stats (`emit.ts` / #35) — do not re-flag.
 
   opportunities.push({
     id: "fold-arith-decider",
     title: "Further arith/decider folding (constants, shared cmps)",
-    evidence: `Non-mux arith=${totals.arithmetic_other}, other deciders=${totals.decider_other}.`,
+    evidence: `Non-mux arith=${totals.arithmetic_other}, other deciders=${totals.decider_other} (graph; blueprints omit ${totals.placeholder_io} I/O pads).`,
     estimatedImpact: "medium",
   });
 
