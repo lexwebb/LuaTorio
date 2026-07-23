@@ -342,7 +342,7 @@ describe("lowerToCombinators", () => {
     expect(graph.entities.find((entity) => entity.id === "__t4__else")).toBeUndefined();
   });
 
-  it("lowers memory+store to a latch arithmetic with feedback from the store value", () => {
+  it("folds free-running store(mem, mem+δ) into one Q+δ latch", () => {
     const module: IRModule = {
       nodes: [
         { kind: "literal", id: "__t1", value: 0 },
@@ -364,32 +364,20 @@ describe("lowerToCombinators", () => {
       outputSignal: "__t2",
       control_behavior: {
         arithmetic_conditions: {
-          first_signal: { type: "virtual", name: "__t4" },
-          second_constant: 0,
+          first_signal: { type: "virtual", name: "__t2" },
+          second_constant: 1,
           operation: "+",
           output_signal: { type: "virtual", name: "__t2" },
         },
       },
     });
     expect(graph.entities.some((entity) => entity.id === "__t5")).toBe(false);
-    expect(graph.entities.some((entity) => entity.id === "__t1")).toBe(false); // zero init elided
-    expect(graph.entities.some((entity) => entity.id === "__t3")).toBe(false); // +1 as constant
-    expect(graph.wires).toEqual(
-      expect.arrayContaining([
-        { from: "__t4", to: "__t2", color: "green" },
-        { from: "__t2", to: "__t4", color: "green" },
-      ]),
-    );
-    expect(graph.entities.find((entity) => entity.id === "__t4")).toMatchObject({
-      control_behavior: {
-        arithmetic_conditions: {
-          first_signal: { type: "virtual", name: "__t2" },
-          second_constant: 1,
-          operation: "+",
-          output_signal: { type: "virtual", name: "__t4" },
-        },
-      },
-    });
+    expect(graph.entities.some((entity) => entity.id === "__t4")).toBe(false);
+    expect(graph.entities.some((entity) => entity.id === "__t1")).toBe(false);
+    expect(graph.entities.some((entity) => entity.id === "__t3")).toBe(false);
+    expect(graph.wires.filter((wire) => wire.to === "__t2")).toEqual([
+      { from: "__t2", to: "__t2", color: "green" },
+    ]);
   });
 
   it("wires every IR edge from producer to consumer", () => {

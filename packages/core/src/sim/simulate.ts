@@ -3,10 +3,23 @@ import { evalConstant, evalEntity, isEmptyConstant } from "./eval.js";
 import { combinationalOrder, producersByConsumer } from "./networks.js";
 import { bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js";
 
+/**
+ * Simulation timing model.
+ * - `"factorio"` (default): each non-latch combinator has 1-tick delay; within one API tick the
+ *   combo cone settles (up to depth micro-steps), then `role: "latch"` clocks once. Matches
+ *   Factorio per-combinator latency while preserving synchronous language `tick()` semantics.
+ * - `"factorio-parallel"`: every non-constant combinator updates in parallel each API tick
+ *   (literal Factorio sandbox; compiled loops need emit depth 0 between latches).
+ * - `"latch-sync"`: **@deprecated** legacy bridge — combo combinational same-tick; only latches delay.
+ */
+export type SimulateMode = "factorio" | "factorio-parallel" | "latch-sync";
+
 export interface SimulateOptions {
   ticks: number;
   /** Injected onto input-port placeholder entities each tick (by user signal name). */
   inputs?: Record<string, number> | ((tick: number) => Record<string, number>);
+  /** Timing model. Default `"factorio"`. */
+  mode?: SimulateMode;
 }
 
 export interface SimulateTick {
@@ -93,9 +106,6 @@ function applyInputInjection(
     const bag = emptyBag();
     const value = inputValues[port.signal];
     if (value !== undefined) {
-      // Downstream combinators reference the input *node id* as the wire signal
-      // (`first_signal: __t1`), while `outputSignal` is the Lua-facing name (signal-A).
-      // Emit under both so control_behavior and human traces agree.
       bagSet(bag, entity.id, value);
       bagSet(bag, entity.outputSignal, value);
     }
@@ -116,11 +126,6 @@ function refreshConstants(
   }
 }
 
-/**
- * Read an output marker's value. Wires usually carry a temp/memory signal id, while
- * `port.signal` is the Lua-facing name used as the trace key — prefer an exact match on
- * the input network, otherwise the sole (or summed) count on that network.
- */
 function readOutputPort(
   port: { signal: string; entityId: string },
   producers: ReadonlyMap<string, string[]>,
@@ -138,35 +143,53 @@ function readOutputPort(
   return sum;
 }
 
-/**
- * Tick-accurate green-wire simulator for a pre-layout `CircuitGraph`.
- *
- * ## Delay model (latch-synchronous)
- *
- * Factorio gives every combinator a 1-tick delay. Our emitter puts **combinational** depth
- * (arith/decider gates, `+1`, cmp, mux sides) in series with each `role: "latch"` memory
- * cell. Interpreting every entity as registered would multi-tick each source-level assign
- * and break clocked `while`/`for` desugar (and free-running `x=x+1`).
- *
- * This MVP therefore treats:
- * - `role: "latch"` — **1-tick** registers (Q holds; D sampled at tick end)
- * - all other arithmetic/decider — **combinational** within the tick (topo order)
- * - constants / input placeholders — continuous drive
- *
- * ## Traces
- *
- * Each tick: inject inputs → eval combinational logic from current latch Q → update
- * latch Q ← D → sample `graph.outputs` (marker input networks).
- *
- * Free-running `x=x+1` from 0: after `t` ticks, `signal-A === t`.
- * Clocked loops: one body iteration per tick while `__run ∧ cond` (matching `lower.ts`).
- */
-export function simulate(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
+function sampleOutputs(
+  graph: CircuitGraph,
+  producers: ReadonlyMap<string, string[]>,
+  outputs: ReadonlyMap<string, SignalBag>,
+): Record<string, number> {
+  const tickOutputs: Record<string, number> = {};
+  for (const port of graph.outputs) {
+    tickOutputs[port.signal] = readOutputPort(port, producers, outputs);
+  }
+  return tickOutputs;
+}
+
+/** Non-latch, non-constant entities (combinational cone under settle-then-clock). */
+function comboEntities(graph: CircuitGraph): CircuitEntity[] {
+  return graph.entities.filter((entity) => entity.kind !== "constant" && entity.role !== "latch");
+}
+
+function latchEntitiesOf(graph: CircuitGraph): CircuitEntity[] {
+  return graph.entities.filter((entity) => entity.role === "latch");
+}
+
+/** Upper bound on combo micro-steps needed to propagate through the non-latch cone. */
+export function comboSettleDepth(graph: CircuitGraph): number {
+  const n = comboEntities(graph).length;
+  return n === 0 ? 0 : n;
+}
+
+function parallelUpdate(
+  entities: readonly CircuitEntity[],
+  producers: ReadonlyMap<string, string[]>,
+  outputs: Map<string, SignalBag>,
+): void {
+  const next = new Map<string, SignalBag>();
+  for (const entity of entities) {
+    next.set(entity.id, evalEntity(entity, sumProducerBags(entity.id, producers, outputs)));
+  }
+  for (const [id, bag] of next) {
+    outputs.set(id, bag);
+  }
+}
+
+function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
   const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
   const producers = producersByConsumer(graph.wires);
   const comboOrder = combinationalOrder(graph);
   const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
-  const latchEntities = graph.entities.filter((entity) => entity.role === "latch");
+  const latches = latchEntitiesOf(graph);
 
   const outputs = new Map<string, SignalBag>();
   for (const entity of graph.entities) {
@@ -189,16 +212,100 @@ export function simulate(graph: CircuitGraph, opts: SimulateOptions): SimulateRe
       outputs.set(entity.id, evalEntity(entity, sumProducerBags(entity.id, producers, outputs)));
     }
 
-    for (const latch of latchEntities) {
+    for (const latch of latches) {
       outputs.set(latch.id, evalEntity(latch, sumProducerBags(latch.id, producers, outputs)));
     }
 
-    const tickOutputs: Record<string, number> = {};
-    for (const port of graph.outputs) {
-      tickOutputs[port.signal] = readOutputPort(port, producers, outputs);
-    }
-    ticks.push({ outputs: tickOutputs });
+    ticks.push({ outputs: sampleOutputs(graph, producers, outputs) });
   }
 
   return { ticks };
+}
+
+/**
+ * True Factorio: every non-constant combinator double-buffers in parallel each API tick.
+ */
+function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
+  const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
+  const producers = producersByConsumer(graph.wires);
+  const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
+  const delayed = graph.entities.filter((entity) => entity.kind !== "constant");
+
+  const outputs = new Map<string, SignalBag>();
+  for (const entity of graph.entities) {
+    outputs.set(entity.id, emptyBag());
+  }
+
+  refreshConstants(graph, outputs, inputEntityIds);
+  seedLatchOutputs(graph, entityById, producers, outputs);
+
+  const ticks: SimulateTick[] = [];
+
+  for (let tick = 0; tick < opts.ticks; tick += 1) {
+    applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
+    refreshConstants(graph, outputs, inputEntityIds);
+    parallelUpdate(delayed, producers, outputs);
+    ticks.push({ outputs: sampleOutputs(graph, producers, outputs) });
+  }
+
+  return { ticks };
+}
+
+/**
+ * Factorio delays on the combo cone (micro-steps), then clock all latches once per API tick.
+ */
+function simulateFactorio(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
+  const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
+  const producers = producersByConsumer(graph.wires);
+  const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
+  const combos = comboEntities(graph);
+  const latches = latchEntitiesOf(graph);
+  const depth = comboSettleDepth(graph);
+
+  const outputs = new Map<string, SignalBag>();
+  for (const entity of graph.entities) {
+    outputs.set(entity.id, emptyBag());
+  }
+
+  refreshConstants(graph, outputs, inputEntityIds);
+  seedLatchOutputs(graph, entityById, producers, outputs);
+
+  const ticks: SimulateTick[] = [];
+
+  for (let tick = 0; tick < opts.ticks; tick += 1) {
+    applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
+    refreshConstants(graph, outputs, inputEntityIds);
+
+    for (let step = 0; step < depth; step += 1) {
+      parallelUpdate(combos, producers, outputs);
+    }
+    parallelUpdate(latches, producers, outputs);
+
+    ticks.push({ outputs: sampleOutputs(graph, producers, outputs) });
+  }
+
+  return { ticks };
+}
+
+/**
+ * Tick-accurate green-wire simulator for a pre-layout `CircuitGraph`.
+ *
+ * Default `mode: "factorio"` applies 1-tick delay to each non-latch combinator while settling
+ * the combo cone before clocking `role: "latch"` memories once per API tick (language clock).
+ * Use `factorio-parallel` for a pure every-combinator-every-tick sandbox.
+ */
+export function simulate(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
+  const mode = opts.mode ?? "factorio";
+  switch (mode) {
+    case "latch-sync":
+      return simulateLatchSync(graph, opts);
+    case "factorio-parallel":
+      return simulateFactorioParallel(graph, opts);
+    case "factorio":
+      return simulateFactorio(graph, opts);
+    default: {
+      const unreachable: never = mode;
+      throw new Error(`simulate: unknown mode '${String(unreachable)}'`);
+    }
+  }
 }

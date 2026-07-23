@@ -796,6 +796,52 @@ function lowerMemory(
   return { entities: [entity], wires };
 }
 
+/**
+ * Free-running `store(mem, mem + δ)` → one latch `Q + δ` with Q feedback (no separate + binop).
+ * Literal δ uses `second_constant` so no extra constant entity is required on the wire.
+ */
+function lowerFreeRunningDeltaLatch(
+  memory: Extract<IRNode, { kind: "memory" }>,
+  deltaId: string,
+  initIsZero: boolean,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const deltaLit = literalValueOf(nodeById.get(deltaId));
+  const wires: WireEdge[] = [greenWire(memory.id, memory.id)];
+  if (!initIsZero) {
+    wires.push(greenWire(memory.init, memory.id));
+  }
+
+  if (deltaLit !== undefined) {
+    return {
+      entities: [
+        {
+          id: memory.id,
+          kind: "arithmetic",
+          name: "arithmetic-combinator",
+          outputSignal: memory.id,
+          role: "latch",
+          control_behavior: {
+            arithmetic_conditions: {
+              first_signal: signalRef(memory.id),
+              second_constant: deltaLit,
+              operation: "+",
+              output_signal: signalRef(memory.id),
+            },
+          },
+        },
+      ],
+      wires,
+    };
+  }
+
+  wires.push(greenWire(deltaId, memory.id));
+  return {
+    entities: [lowerLatch(memory.id, memory.id, deltaId)],
+    wires,
+  };
+}
+
 /** If `thenId` is `memoryId + δ` (either operand order), return δ. */
 function memPlusDelta(
   thenId: string,
@@ -1013,6 +1059,7 @@ function lowerOutput(output: IRModule["outputs"][number], index: number): Circui
  * own (it only contributes the value→memory wire via the paired `memory` lowering).
  * Enable/hold `select(en, next, mem)` used as a cell's store value fuses into the latch;
  * when `next = mem + δ` that fusion is incremental (gate δ only).
+ * Free-running `store(mem, mem+δ)` folds into one `Q+δ` latch (Factorio-accurate clock).
  */
 export function lowerToCombinators(module: IRModule): CircuitGraph {
   const storeValueByCell = new Map<string, string>();
@@ -1032,6 +1079,8 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const useCount = countNodeUses(module);
   /** Sticky-clear selects fused into a decider latch (`select(mem, bool, 0)`). */
   const stickyClearSelectIds = new Set<string>();
+  /** Free-running `mem+δ` stores folded into the latch (memory id → δ id). */
+  const freeRunningDeltaByMemory = new Map<string, string>();
   for (const node of module.nodes) {
     if (node.kind !== "memory") {
       continue;
@@ -1041,6 +1090,14 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       continue;
     }
     const storeValue = nodeById.get(storeValueId);
+    if (storeValue?.kind === "binop") {
+      const deltaId = memPlusDelta(storeValue.id, node.id, nodeById);
+      if (deltaId !== undefined && (useCount.get(storeValue.id) ?? 0) <= 1) {
+        absorbedBinopIds.add(storeValue.id);
+        freeRunningDeltaByMemory.set(node.id, deltaId);
+      }
+      continue;
+    }
     if (storeValue?.kind !== "select") {
       continue;
     }
@@ -1184,6 +1241,13 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         const initIsZero = literalValueOf(nodeById.get(node.init)) === 0;
         if (storeValue?.kind === "select" && stickyClearSelectIds.has(storeValue.id)) {
           const expanded = lowerStickyAndLatch(node, storeValue, initIsZero, nodeById, useCount);
+          entities.push(...expanded.entities);
+          wires.push(...expanded.wires);
+          break;
+        }
+        const freeDelta = freeRunningDeltaByMemory.get(node.id);
+        if (freeDelta !== undefined) {
+          const expanded = lowerFreeRunningDeltaLatch(node, freeDelta, initIsZero, nodeById);
           entities.push(...expanded.entities);
           wires.push(...expanded.wires);
           break;

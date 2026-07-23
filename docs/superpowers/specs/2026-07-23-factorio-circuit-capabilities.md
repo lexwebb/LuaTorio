@@ -29,7 +29,8 @@
 ### Timing
 
 - Every combinator (arith + decider + selector) has **1 tick** of latency before its output is visible on the wire.
-- LuaTorio’s VM is **latch-synchronous** (only `role: "latch"` delayed) on purpose so desugared loops work; full Factorio delay is stricter.
+- LuaTorio default `simulate` (`mode: "factorio"`, #34): apply that delay to the **non-latch** cone (settle micro-steps), then clock `role: "latch"` once per language tick so `tick()` / free-running assigns stay synchronous. Use `factorio-parallel` for a pure every-combinator-every-tick sandbox. `latch-sync` is deprecated.
+- Free-running `store(mem, mem+δ)` emits one `Q+δ` latch (no separate + combinator).
 
 ### Constant combinator
 

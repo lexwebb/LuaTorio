@@ -57,5 +57,5 @@ export type { Chunk } from "./parse.js";
 export { ParseError, parse } from "./parse.js";
 export type { ReferenceOptions, ReferenceResult } from "./sim/reference.js";
 export { reference } from "./sim/reference.js";
-export type { SimulateOptions, SimulateResult, SimulateTick } from "./sim/simulate.js";
-export { simulate } from "./sim/simulate.js";
+export type { SimulateMode, SimulateOptions, SimulateResult, SimulateTick } from "./sim/simulate.js";
+export { comboSettleDepth, simulate } from "./sim/simulate.js";

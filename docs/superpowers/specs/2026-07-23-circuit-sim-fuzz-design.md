@@ -17,12 +17,16 @@ Emitter optimizations (select specialization, latch fusion, …) change entity g
 
 Operate on `CircuitGraph` (pre-layout): entities + directed green `WireEdge`s (`from` = producer output → `to` = consumer input), matching how we emit.
 
-### Tick semantics (Factorio-faithful enough)
+### Tick semantics (Factorio-faithful default)
+
+Default `simulate(..., { mode: "factorio" })`:
 
 - Each combinator has an **input bag** and **output bag** of `signal → int32`
-- Wire networks: union of endpoints; each tick, a network’s signal is the **sum** of all connected **outputs** writing that signal
-- Combinators **read** the previous tick’s network sums on their input side, **compute**, and register new outputs for the **next** tick (1-tick delay)
-- Constant combinators (non-empty filters) continuously contribute their filters to their output
+- Wire networks: sum of connected **outputs** writing each signal (green only today)
+- **Non-latch** combinators each have **1-tick** delay; within one API / language tick the combo cone settles through up to `comboSettleDepth` parallel micro-steps, then all `role: "latch"` memories clock **once**
+- Constant combinators (non-empty filters) and input placeholders drive **continuously**
+- `mode: "factorio-parallel"`: every non-constant combinator updates in parallel each API tick (sandbox for raw Factorio timing; compiled loops need depth-0 cones)
+- `mode: "latch-sync"`: **deprecated** migration bridge (combo combinational; only latches delay)
 
 ### Supported entity behaviors
 
@@ -30,11 +34,10 @@ Operate on `CircuitGraph` (pre-layout): entities + directed green `WireEdge`s (`
 |---|---|
 | `constant` | Emit section filters each tick (empty sections = I/O placeholder, emit nothing) |
 | `arithmetic` | `first (±const/signal) op second (±const/signal) → output_signal` |
-| `decider` | AND of conditions; on success emit constant or `copy_count_from_input` |
+| `decider` | Conditions with AND-before-OR; `outputs` / `else_outputs`; constant or `copy_count_from_input` |
 
-Out of scope for MVP: red wire, logistic, selector combinator, each/any/everything wildcards,
-decider `else_outputs` / OR joins (add when emitter uses them — see
-`2026-07-23-factorio-circuit-capabilities.md`).
+Out of scope for now: red wire, logistic, selector combinator, each/any/everything wildcards
+(see #33 and `2026-07-23-factorio-circuit-capabilities.md`).
 
 ### API sketch
 

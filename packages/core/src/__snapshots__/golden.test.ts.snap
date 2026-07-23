@@ -8,7 +8,7 @@ exports[`golden examples > accumulator > compiles to a blueprint JSON plan match
         "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
-              "name": "__t4",
+              "name": "__t2",
               "type": "virtual",
             },
             "operation": "+",
@@ -16,7 +16,10 @@ exports[`golden examples > accumulator > compiles to a blueprint JSON plan match
               "name": "__t2",
               "type": "virtual",
             },
-            "second_constant": 0,
+            "second_signal": {
+              "name": "__t3",
+              "type": "virtual",
+            },
           },
         },
         "entity_number": 1,
@@ -26,46 +29,15 @@ exports[`golden examples > accumulator > compiles to a blueprint JSON plan match
           "y": 0,
         },
       },
-      {
-        "control_behavior": {
-          "arithmetic_conditions": {
-            "first_signal": {
-              "name": "__t2",
-              "type": "virtual",
-            },
-            "operation": "+",
-            "output_signal": {
-              "name": "__t4",
-              "type": "virtual",
-            },
-            "second_signal": {
-              "name": "__t3",
-              "type": "virtual",
-            },
-          },
-        },
-        "entity_number": 2,
-        "name": "arithmetic-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
     ],
     "icons": [],
     "item": "blueprint",
     "label": "accumulator",
     "wires": [
       [
-        2,
-        4,
-        1,
-        2,
-      ],
-      [
         1,
         4,
-        2,
+        1,
         2,
       ],
     ],
@@ -525,7 +497,7 @@ exports[`golden examples > counter > compiles to a blueprint JSON plan matching 
         "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
-              "name": "__t4",
+              "name": "__t2",
               "type": "virtual",
             },
             "operation": "+",
@@ -533,7 +505,7 @@ exports[`golden examples > counter > compiles to a blueprint JSON plan matching 
               "name": "__t2",
               "type": "virtual",
             },
-            "second_constant": 0,
+            "second_constant": 1,
           },
         },
         "entity_number": 1,
@@ -543,43 +515,15 @@ exports[`golden examples > counter > compiles to a blueprint JSON plan matching 
           "y": 0,
         },
       },
-      {
-        "control_behavior": {
-          "arithmetic_conditions": {
-            "first_signal": {
-              "name": "__t2",
-              "type": "virtual",
-            },
-            "operation": "+",
-            "output_signal": {
-              "name": "__t4",
-              "type": "virtual",
-            },
-            "second_constant": 1,
-          },
-        },
-        "entity_number": 2,
-        "name": "arithmetic-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
     ],
     "icons": [],
     "item": "blueprint",
     "label": "counter",
     "wires": [
       [
-        2,
-        4,
-        1,
-        2,
-      ],
-      [
         1,
         4,
-        2,
+        1,
         2,
       ],
     ],
