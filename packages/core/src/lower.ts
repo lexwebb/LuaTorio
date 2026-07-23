@@ -99,6 +99,8 @@ function lowerExpr(
       const elseId = lowerExpr(expr.else, env, ctx);
       return pushNode(ctx, { kind: "select", id: nextId(ctx), cond, then: thenId, else: elseId });
     }
+    case "sr":
+      throw new Error("internal error: sr() must be lowered via assignment, not as a bare expression");
     default: {
       const unreachable: never = expr;
       throw new Error(`internal error: unhandled expression kind '${JSON.stringify(unreachable)}'`);
@@ -223,6 +225,21 @@ function lowerAssignStore(
   enableId: string | undefined,
 ): void {
   const memId = requireMemoryId(memoryIdByCell, statement.name);
+  if (statement.expr.kind === "sr") {
+    const setId = lowerExpr(statement.expr.set, env, ctx);
+    const resetId = lowerExpr(statement.expr.reset, env, ctx);
+    const srId = pushNode(ctx, {
+      kind: "sr",
+      id: nextId(ctx),
+      state: memId,
+      set: setId,
+      reset: resetId,
+    });
+    const storeValue =
+      enableId !== undefined ? wrapWithEnable(enableId, srId, memId, ctx) : srId;
+    pushNode(ctx, { kind: "store", id: nextId(ctx), cell: statement.name, value: storeValue });
+    return;
+  }
   const valueId = lowerExpr(statement.expr, env, ctx);
   const storeValue =
     enableId !== undefined ? wrapWithEnable(enableId, valueId, memId, ctx) : valueId;

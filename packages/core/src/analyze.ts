@@ -68,6 +68,14 @@ export type AnalyzedExpr =
       else: AnalyzedExpr;
       line: number;
       column: number;
+    }
+  | {
+      kind: "sr";
+      state: AnalyzedExpr;
+      set: AnalyzedExpr;
+      reset: AnalyzedExpr;
+      line: number;
+      column: number;
     };
 
 export type AnalyzedAssign = {
@@ -601,6 +609,15 @@ function analyzeAssignmentStatement(
   markReassigned(name, ctx.reassigned, line, column);
 
   const expr = analyzeExpr(initExpr, ctx.declared, ctx.inputs);
+  if (expr.kind === "sr") {
+    if (expr.state.kind !== "ref" || expr.state.name !== name) {
+      throw new SemanticError(
+        "sr(state, set, reset) state must be the same local being assigned",
+        line,
+        column,
+      );
+    }
+  }
   ctx.seenFreeRunningStore = true;
   ctx.statements.push({ kind: "assign", name, expr, line, column });
 }
@@ -713,7 +730,7 @@ function analyzeExpr(
         column,
       };
     case "CallExpression":
-      return analyzeCallExpr(expr, inputs);
+      return analyzeCallExpr(expr, declared, inputs);
     case "StringLiteral":
       throw new SemanticError(
         "string literals are only allowed as input()/output() signal names in v1",
@@ -749,7 +766,11 @@ function analyzeBinaryExpr(
   return { kind: "cmp", op: expr.operator as CmpOp, left, right, line, column };
 }
 
-function analyzeCallExpr(expr: CallExpression, inputs: AnalyzedProgram["inputs"]): AnalyzedExpr {
+function analyzeCallExpr(
+  expr: CallExpression,
+  declared: Set<string>,
+  inputs: AnalyzedProgram["inputs"],
+): AnalyzedExpr {
   const { line, column } = locOf(expr);
   const calleeName = describeCallee(expr.base);
 
@@ -762,6 +783,16 @@ function analyzeCallExpr(expr: CallExpression, inputs: AnalyzedProgram["inputs"]
   }
 
   rejectTickInExpression(calleeName, line, column);
+
+  if (calleeName === "sr") {
+    if (expr.arguments.length !== 3) {
+      throw new SemanticError("sr(state, set, reset) requires exactly 3 arguments", line, column);
+    }
+    const state = analyzeExpr(expr.arguments[0]!, declared, inputs);
+    const set = analyzeExpr(expr.arguments[1]!, declared, inputs);
+    const reset = analyzeExpr(expr.arguments[2]!, declared, inputs);
+    return { kind: "sr", state, set, reset, line, column };
+  }
 
   if (calleeName !== "input") {
     const found = calleeName ? ` to '${calleeName}'` : "";

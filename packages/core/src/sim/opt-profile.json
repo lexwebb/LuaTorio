@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T14:26:58.011Z",
+  "generatedAt": "2026-07-23T14:45:20.222Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -150,6 +150,23 @@
         "mux_side": 0,
         "mux_merge": 0,
         "decider_other": 1,
+        "arithmetic_other": 0,
+        "constant_value": 0,
+        "placeholder_io": 3
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "sr_latch",
+      "source": "example",
+      "kind": "example",
+      "combinators": 4,
+      "wires": 4,
+      "buckets": {
+        "latch": 1,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
         "arithmetic_other": 0,
         "constant_value": 0,
         "placeholder_io": 3
@@ -3577,18 +3594,18 @@
     }
   ],
   "totals": {
-    "programs": 210,
-    "combinators": 984,
+    "programs": 211,
+    "combinators": 988,
     "buckets": {
-      "latch": 300,
+      "latch": 301,
       "mux_side": 149,
       "mux_merge": 0,
       "decider_other": 2,
       "arithmetic_other": 54,
       "constant_value": 100,
-      "placeholder_io": 379
+      "placeholder_io": 382
     },
-    "muxShareMean": 0.14444444444444432
+    "muxShareMean": 0.1437598736176934
   },
   "opportunities": [
     {
@@ -3600,13 +3617,13 @@
     {
       "id": "latch-tricks",
       "title": "Tighter latches (EACH / SR / absorb more into latch)",
-      "evidence": "Latches are 50% of real entities (300 total). While-kind programs avg 6.0 combinators.",
+      "evidence": "Latches are 50% of real entities (301 total). While-kind programs avg 6.0 combinators.",
       "estimatedImpact": "high"
     },
     {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=54, other deciders=2 (graph; blueprints omit 379 I/O pads).",
+      "evidence": "Non-mux arith=54, other deciders=2 (graph; blueprints omit 382 I/O pads).",
       "estimatedImpact": "medium"
     },
     {

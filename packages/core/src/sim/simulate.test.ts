@@ -32,6 +32,18 @@ describe("simulate", () => {
     }
   });
 
+  it("sr_latch sets, holds, then resets", () => {
+    const graph = graphOf(loadExample("sr_latch.lua"));
+    const result = simulate(graph, {
+      ticks: 6,
+      inputs: (t) => ({
+        "signal-S": t === 1 ? 1 : 0,
+        "signal-R": t === 4 ? 1 : 0,
+      }),
+    });
+    expect(result.ticks.map((tick) => tick.outputs["signal-Q"] ?? 0)).toEqual([0, 1, 1, 1, 0, 0]);
+  });
+
   it("while_count with L=5 settles at signal-A === 5", () => {
     const graph = graphOf(loadExample("while_count.lua"));
     const result = simulate(graph, { ticks: 12, inputs: { "signal-L": 5 } });

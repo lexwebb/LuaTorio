@@ -157,6 +157,15 @@ function constantFold(module: IRModule): IRModule {
       case "store":
         nodes.push({ ...node, value: resolve(node.value, alias) });
         break;
+      case "sr":
+        nodes.push({
+          ...node,
+          state: resolve(node.state, alias),
+          set: resolve(node.set, alias),
+          reset: resolve(node.reset, alias),
+        });
+        booleanIds.add(node.id);
+        break;
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -189,6 +198,8 @@ function structuralKey(node: IRNode): string {
       return `memory:${node.cell}:${node.init}`;
     case "store":
       return `store:${node.cell}:${node.value}`;
+    case "sr":
+      return `sr:${node.state}:${node.set}:${node.reset}`;
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -216,6 +227,13 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
       return { ...node, init: resolve(node.init, alias) };
     case "store":
       return { ...node, value: resolve(node.value, alias) };
+    case "sr":
+      return {
+        ...node,
+        state: resolve(node.state, alias),
+        set: resolve(node.set, alias),
+        reset: resolve(node.reset, alias),
+      };
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -266,6 +284,8 @@ function childIds(node: IRNode): string[] {
       return [node.init];
     case "store":
       return [node.value];
+    case "sr":
+      return [node.state, node.set, node.reset];
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);

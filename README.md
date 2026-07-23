@@ -82,6 +82,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`accumulator.lua`](examples/accumulator.lua) | v2 memory: accumulate `signal-A` each tick |
 | [`conditional-counter.lua`](examples/conditional-counter.lua) | v2 if/else: muxed next-state (`if c then x+1 else x-1`) |
 | [`while_count.lua`](examples/while_count.lua) | v2 clocked while: count up to `signal-L` (`tick()` barrier) |
+| [`sr_latch.lua`](examples/sr_latch.lua) | Cookbook SR via `sr(q, set, reset)` — one decider latch |
 | [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
 
 ## Language Reference
@@ -102,6 +103,7 @@ Programs are a flat sequence of statements. See the
 | `tick()` | Syntactic barrier only (no IR); required as last statement of a while/for body |
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
+| `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
 | Arithmetic: `+ - * / %` | Lowers to arithmetic combinators |
 | Comparisons: `< > <= >= == ~=` | Lowers to a decider combinator (1/0 output) |
 | `a and b or c` | Standard Lua ternary idiom; desugars to a `select` (mux) |

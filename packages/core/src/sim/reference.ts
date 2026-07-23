@@ -95,6 +95,15 @@ function evalExpr(
       const cond = evalExpr(expr.cond, env, inputs);
       return truthy(cond) ? evalExpr(expr.then, env, inputs) : evalExpr(expr.else, env, inputs);
     }
+    case "sr": {
+      const state = evalExpr(expr.state, env, inputs);
+      const set = evalExpr(expr.set, env, inputs);
+      const reset = evalExpr(expr.reset, env, inputs);
+      if (truthy(reset)) {
+        return 0;
+      }
+      return truthy(state) || truthy(set) ? 1 : 0;
+    }
     default: {
       const unreachable: never = expr;
       throw new Error(`reference: bad expr '${JSON.stringify(unreachable)}'`);

@@ -1271,6 +1271,63 @@ function lowerDeltaChooseLatch(
 }
 
 /**
+ * Cookbook SR latch: Q' = (Q ∨ set) ∧ ¬reset → constant 1.
+ * Decider AND-before-OR: (Q≠0 ∧ R=0) ∨ (S≠0 ∧ R=0).
+ */
+function lowerSrLatch(
+  memory: Extract<IRNode, { kind: "memory" }>,
+  sr: Extract<IRNode, { kind: "sr" }>,
+  initIsZero: boolean,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const wires: WireEdge[] = [
+    greenWire(memory.id, memory.id),
+    greenWire(sr.set, memory.id),
+    greenWire(sr.reset, memory.id),
+  ];
+  if (!initIsZero) {
+    wires.push(greenWire(memory.init, memory.id));
+  }
+  return {
+    entities: [
+      {
+        id: memory.id,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: memory.id,
+        role: "latch",
+        control_behavior: {
+          decider_conditions: {
+            conditions: [
+              { first_signal: signalRef(memory.id), comparator: "!=", constant: 0 },
+              {
+                first_signal: signalRef(sr.reset),
+                comparator: "=",
+                constant: 0,
+                compare_type: "and",
+              },
+              {
+                first_signal: signalRef(sr.set),
+                comparator: "!=",
+                constant: 0,
+                compare_type: "or",
+              },
+              {
+                first_signal: signalRef(sr.reset),
+                comparator: "=",
+                constant: 0,
+                compare_type: "and",
+              },
+            ],
+            outputs: [{ signal: signalRef(memory.id), constant: 1 }],
+          },
+        },
+      },
+    ],
+    wires,
+  };
+}
+
+/**
  * Fuse `store(mem, select(en, next, mem))` into an enable/hold latch.
  *
  * When `next = mem + δ`: gate only δ, latch `Q + gated_δ` with Q feedback.
@@ -1367,6 +1424,9 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       elseDelta: number;
     }
   >();
+  /** `store(mem, sr(mem, set, reset))` → one cookbook SR decider latch. */
+  const srByMemory = new Map<string, Extract<IRNode, { kind: "sr" }>>();
+  const absorbedSrIds = new Set<string>();
   for (const node of module.nodes) {
     if (node.kind !== "memory") {
       continue;
@@ -1381,6 +1441,13 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       if (deltaId !== undefined && (useCount.get(storeValue.id) ?? 0) <= 1) {
         absorbedBinopIds.add(storeValue.id);
         freeRunningDeltaByMemory.set(node.id, deltaId);
+      }
+      continue;
+    }
+    if (storeValue?.kind === "sr" && storeValue.state === node.id) {
+      if ((useCount.get(storeValue.id) ?? 0) <= 1) {
+        absorbedSrIds.add(storeValue.id);
+        srByMemory.set(node.id, storeValue);
       }
       continue;
     }
@@ -1589,6 +1656,13 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
           wires.push(...expanded.wires);
           break;
         }
+        const srNode = srByMemory.get(node.id);
+        if (srNode !== undefined) {
+          const expanded = lowerSrLatch(node, srNode, initIsZero);
+          entities.push(...expanded.entities);
+          wires.push(...expanded.wires);
+          break;
+        }
         const deltaChoose = deltaChooseByMemory.get(node.id);
         if (deltaChoose !== undefined) {
           const expanded = lowerDeltaChooseLatch(
@@ -1626,6 +1700,11 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         break;
       }
       case "store":
+        break;
+      case "sr":
+        if (!absorbedSrIds.has(node.id)) {
+          throw new Error(`internal error: sr node '${node.id}' was not fused into a latch`);
+        }
         break;
       default: {
         const unreachable: never = node;
@@ -1696,6 +1775,11 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
+      case "sr":
+        if (node.state === id || node.set === id || node.reset === id) {
+          users.push(node);
+        }
+        break;
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -1734,6 +1818,11 @@ function countNodeUses(module: IRModule): Map<string, number> {
         break;
       case "store":
         add(node.value);
+        break;
+      case "sr":
+        add(node.state);
+        add(node.set);
+        add(node.reset);
         break;
       default: {
         const unreachable: never = node;
