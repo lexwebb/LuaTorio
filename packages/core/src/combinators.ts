@@ -1,4 +1,14 @@
 import type { IRModule, IRNode } from "./ir.js";
+import {
+  fusedCmpForSelect,
+  isBooleanOrSelect,
+  isBooleanValued,
+  literalValueOf,
+  matchAndOrMux,
+  matchMemoryStore,
+  memPlusDelta,
+  soleUseCmp,
+} from "./ir-match.js";
 
 type CmpOp = Extract<IRNode, { kind: "cmp" }>["op"];
 
@@ -584,48 +594,6 @@ function lowerTruthOrWithOptionalCmps(
   };
 }
 
-function isBooleanOrSelect(
-  node: Extract<IRNode, { kind: "select" }>,
-  nodeById: ReadonlyMap<string, IRNode>,
-): boolean {
-  return (
-    node.cond === node.then &&
-    isBooleanValued(nodeById.get(node.then)) &&
-    isBooleanValued(nodeById.get(node.else))
-  );
-}
-
-/**
- * Lua `c and x or y` → nested `select(select(c,x,0), g, y)`.
- * Gate `g` must be used only as this outer's cond+then (useCount === 2).
- */
-function matchAndOrMux(
-  node: Extract<IRNode, { kind: "select" }>,
-  nodeById: ReadonlyMap<string, IRNode>,
-  useCount: ReadonlyMap<string, number>,
-):
-  | {
-      inner: Extract<IRNode, { kind: "select" }>;
-      x: string;
-      y: string;
-    }
-  | undefined {
-  if (node.cond !== node.then) {
-    return undefined;
-  }
-  if ((useCount.get(node.cond) ?? 0) !== 2) {
-    return undefined;
-  }
-  const inner = nodeById.get(node.cond);
-  if (inner?.kind !== "select") {
-    return undefined;
-  }
-  if (literalValueOf(nodeById.get(inner.else)) !== 0) {
-    return undefined;
-  }
-  return { inner, x: inner.then, y: node.else };
-}
-
 /**
  * Emit `c and x or y` as one else_outputs decider + EACH merge.
  * Preserves circuit truthiness: yield x only when c≠0 and x≠0; else y.
@@ -804,37 +772,6 @@ function lowerSelectFullMuxFromCmp(
   };
 }
 
-function literalValueOf(node: IRNode | undefined): number | undefined {
-  return node?.kind === "literal" ? node.value : undefined;
-}
-
-/** Nodes known to carry only 0 or 1 (cmp results / 0-1 literals). */
-function isBooleanValued(node: IRNode | undefined): boolean {
-  if (node === undefined) {
-    return false;
-  }
-  if (node.kind === "cmp") {
-    return true;
-  }
-  if (node.kind === "literal") {
-    return node.value === 0 || node.value === 1;
-  }
-  return false;
-}
-
-/** Sole-use `cmp` usable as an inlined select condition (not shared elsewhere). */
-function soleUseCmp(
-  condId: string,
-  nodeById: ReadonlyMap<string, IRNode>,
-  useCount: ReadonlyMap<string, number>,
-): Extract<IRNode, { kind: "cmp" }> | undefined {
-  if ((useCount.get(condId) ?? 0) > 1) {
-    return undefined;
-  }
-  const cond = nodeById.get(condId);
-  return cond?.kind === "cmp" ? cond : undefined;
-}
-
 /**
  * Decider condition from a sole-use cmp (inlined), else `condId ≠ 0`.
  * Returns the cmp when absorbed so callers can track `absorbedCmpIds`.
@@ -854,29 +791,6 @@ function condFromSoleUseCmpOrSignal(
     return { conditions: [condition], wireFrom, cmp };
   }
   return { conditions: [truthyCond(condId)], wireFrom: [condId] };
-}
-
-/**
- * Cmp that `lowerSelect` will inline (sole-use; not unused; not inverted truth-and).
- * Absorption of cmp entities must use this same predicate.
- */
-function fusedCmpForSelect(
-  node: Extract<IRNode, { kind: "select" }>,
-  nodeById: ReadonlyMap<string, IRNode>,
-  useCount: ReadonlyMap<string, number>,
-): Extract<IRNode, { kind: "cmp" }> | undefined {
-  if (node.then === node.else) {
-    return undefined;
-  }
-  const fused = soleUseCmp(node.cond, nodeById, useCount);
-  if (fused === undefined) {
-    return undefined;
-  }
-  // Inverted truth-and still needs a 0/1 cond signal.
-  if (literalValueOf(nodeById.get(node.then)) === 0 && isBooleanValued(nodeById.get(node.else))) {
-    return undefined;
-  }
-  return fused;
 }
 
 /**
@@ -1045,25 +959,6 @@ function lowerFreeRunningDeltaLatch(
     entities: [lowerLatch(memory.id, memory.id, deltaLit ?? deltaId)],
     wires,
   };
-}
-
-/** If `thenId` is `memoryId + δ` (either operand order), return δ. */
-function memPlusDelta(
-  thenId: string,
-  memoryId: string,
-  nodeById: ReadonlyMap<string, IRNode>,
-): string | undefined {
-  const thenNode = nodeById.get(thenId);
-  if (thenNode?.kind !== "binop" || thenNode.op !== "+") {
-    return undefined;
-  }
-  if (thenNode.left === memoryId) {
-    return thenNode.right;
-  }
-  if (thenNode.right === memoryId) {
-    return thenNode.left;
-  }
-  return undefined;
 }
 
 /**
@@ -1281,22 +1176,6 @@ function stickyEnableGateConditions(
   };
 }
 
-/**
- * `store(mem, select(mem, bool, 0))` with the select unused elsewhere — one decider latch
- * (cookbook sticky/SR-shaped: Q' = Q ∧ cond as constant 1). Init wires when nonzero.
- */
-function isStickyClearSelect(
-  select: Extract<IRNode, { kind: "select" }>,
-  memoryId: string,
-  nodeById: ReadonlyMap<string, IRNode>,
-): boolean {
-  return (
-    select.cond === memoryId &&
-    literalValueOf(nodeById.get(select.else)) === 0 &&
-    isBooleanValued(nodeById.get(select.then))
-  );
-}
-
 function lowerStickyAndLatch(
   memory: Extract<IRNode, { kind: "memory" }>,
   select: Extract<IRNode, { kind: "select" }>,
@@ -1338,27 +1217,6 @@ function lowerStickyAndLatch(
     wires,
     absorbedCmpIds,
   };
-}
-
-/** If `expr` is `memory ± lit`, return the signed delta. */
-function memDeltaLiteral(
-  exprId: string,
-  memoryId: string,
-  nodeById: ReadonlyMap<string, IRNode>,
-): number | undefined {
-  const expr = nodeById.get(exprId);
-  if (expr?.kind !== "binop") {
-    return undefined;
-  }
-  if (expr.op === "+") {
-    const deltaId = memPlusDelta(exprId, memoryId, nodeById);
-    return deltaId !== undefined ? literalValueOf(nodeById.get(deltaId)) : undefined;
-  }
-  if (expr.op === "-" && expr.left === memoryId) {
-    const lit = literalValueOf(nodeById.get(expr.right));
-    return lit !== undefined ? -lit : undefined;
-  }
-  return undefined;
 }
 
 /**
@@ -1847,83 +1705,79 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
     if (storeValueId === undefined) {
       continue;
     }
-    const storeValue = nodeById.get(storeValueId);
-    if (storeValue?.kind === "binop") {
-      const deltaId = memPlusDelta(storeValue.id, node.id, nodeById);
-      if (deltaId !== undefined && (useCount.get(storeValue.id) ?? 0) <= 1) {
-        absorbedBinopIds.add(storeValue.id);
-        freeRunningDeltaByMemory.set(node.id, deltaId);
-      }
-      continue;
-    }
-    if (storeValue?.kind === "sr" && storeValue.state === node.id) {
-      if ((useCount.get(storeValue.id) ?? 0) <= 1) {
-        absorbedSrIds.add(storeValue.id);
-        srByMemory.set(node.id, storeValue);
-      }
-      continue;
-    }
-    if (storeValue?.kind !== "select") {
-      continue;
-    }
-    if (storeValue.else === node.id) {
-      absorbedSelectIds.add(storeValue.id);
-      // Elide `mem+δ` only when this select is its sole user.
-      if (
-        memPlusDelta(storeValue.then, node.id, nodeById) !== undefined &&
-        (useCount.get(storeValue.then) ?? 0) <= 1
-      ) {
-        absorbedBinopIds.add(storeValue.then);
-      }
-      continue;
-    }
-    // Sticky clear: sole-use, or only also used as cond of enable-hold selects.
-    if (isStickyClearSelect(storeValue, node.id, nodeById)) {
-      const users = nodesReferencing(storeValue.id, module);
-      const onlyStoreAndHolds = users.every((user) => {
-        if (user.kind === "store" && user.value === storeValue.id && user.cell === node.cell) {
-          return true;
+    const matched = matchMemoryStore(node, storeValueId, nodeById, useCount);
+    switch (matched.kind) {
+      case "free-delta":
+        absorbedBinopIds.add(matched.binopId);
+        freeRunningDeltaByMemory.set(node.id, matched.deltaId);
+        break;
+      case "sr":
+        absorbedSrIds.add(matched.sr.id);
+        srByMemory.set(node.id, matched.sr);
+        break;
+      case "enable-hold":
+        absorbedSelectIds.add(matched.select.id);
+        // Elide `mem+δ` only when this select is its sole user.
+        if (matched.deltaId !== undefined && (useCount.get(matched.select.then) ?? 0) <= 1) {
+          absorbedBinopIds.add(matched.select.then);
         }
-        return (
-          user.kind === "select" &&
-          user.cond === storeValue.id &&
-          nodeById.get(user.else)?.kind === "memory"
+        break;
+      case "sticky-clear": {
+        // Sticky clear: sole-use, or only also used as cond of enable-hold selects.
+        const users = nodesReferencing(matched.select.id, module);
+        const onlyStoreAndHolds = users.every((user) => {
+          if (
+            user.kind === "store" &&
+            user.value === matched.select.id &&
+            user.cell === node.cell
+          ) {
+            return true;
+          }
+          return (
+            user.kind === "select" &&
+            user.cond === matched.select.id &&
+            nodeById.get(user.else)?.kind === "memory"
+          );
+        });
+        if (onlyStoreAndHolds) {
+          absorbedSelectIds.add(matched.select.id);
+          stickyClearSelectIds.add(matched.select.id);
+          // Hold gates also inline this then-cmp; absorb even if useCount>1.
+          const thenNode = nodeById.get(matched.select.then);
+          if (thenNode?.kind === "cmp") {
+            absorbedCmpIds.add(thenNode.id);
+          }
+          if ((useCount.get(matched.select.id) ?? 0) > 1) {
+            stickyEnableBySelectId.set(matched.select.id, {
+              runId: node.id,
+              thenId: matched.select.then,
+            });
+          }
+        }
+        break;
+      }
+      case "delta-choose": {
+        absorbedSelectIds.add(matched.select.id);
+        absorbedBinopIds.add(matched.select.then);
+        absorbedBinopIds.add(matched.select.else);
+        deltaChooseByMemory.set(node.id, {
+          select: matched.select,
+          thenDelta: matched.thenDelta,
+          elseDelta: matched.elseDelta,
+        });
+        const condCmp = soleUseCmp(matched.select.cond, nodeById, useCount);
+        if (condCmp !== undefined) {
+          absorbedCmpIds.add(condCmp.id);
+        }
+        break;
+      }
+      case "plain":
+        break;
+      default: {
+        const unreachable: never = matched;
+        throw new Error(
+          `internal error: unhandled memory store match '${JSON.stringify(unreachable)}'`,
         );
-      });
-      if (onlyStoreAndHolds) {
-        absorbedSelectIds.add(storeValue.id);
-        stickyClearSelectIds.add(storeValue.id);
-        // Hold gates also inline this then-cmp; absorb even if useCount>1.
-        const thenNode = nodeById.get(storeValue.then);
-        if (thenNode?.kind === "cmp") {
-          absorbedCmpIds.add(thenNode.id);
-        }
-        if ((useCount.get(storeValue.id) ?? 0) > 1) {
-          stickyEnableBySelectId.set(storeValue.id, {
-            runId: node.id,
-            thenId: storeValue.then,
-          });
-        }
-      }
-      continue;
-    }
-    // `select(c, mem±δ₁, mem±δ₂)` with sole-use literal deltas.
-    const thenDelta = memDeltaLiteral(storeValue.then, node.id, nodeById);
-    const elseDelta = memDeltaLiteral(storeValue.else, node.id, nodeById);
-    if (
-      thenDelta !== undefined &&
-      elseDelta !== undefined &&
-      (useCount.get(storeValue.id) ?? 0) <= 1 &&
-      (useCount.get(storeValue.then) ?? 0) <= 1 &&
-      (useCount.get(storeValue.else) ?? 0) <= 1
-    ) {
-      absorbedSelectIds.add(storeValue.id);
-      absorbedBinopIds.add(storeValue.then);
-      absorbedBinopIds.add(storeValue.else);
-      deltaChooseByMemory.set(node.id, { select: storeValue, thenDelta, elseDelta });
-      const condCmp = soleUseCmp(storeValue.cond, nodeById, useCount);
-      if (condCmp !== undefined) {
-        absorbedCmpIds.add(condCmp.id);
       }
     }
   }

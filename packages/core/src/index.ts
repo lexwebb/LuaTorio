@@ -55,7 +55,28 @@ export { lowerToCombinators, redWire, signalLabelMap } from "./combinators.js";
 export type { EmitOptions, EmitResult } from "./emit.js";
 export { emitBlueprint } from "./emit.js";
 export type { IRModule, IRNode } from "./ir.js";
-export type { FactorioWire, LaidOutCircuit, LayoutArrangement, LayoutOptions, PlacedEntity } from "./layout.js";
+export type { MemoryStoreMatch } from "./ir-match.js";
+export {
+  fusedCmpForSelect,
+  isBooleanOrSelect,
+  isBooleanValued,
+  isStickyClearSelect,
+  literalValueOf,
+  matchAndOrMux,
+  matchEnableHold,
+  matchMemoryStore,
+  memDeltaLiteral,
+  memPlusDelta,
+  soleUseCmp,
+  useAtMost,
+} from "./ir-match.js";
+export type {
+  FactorioWire,
+  LaidOutCircuit,
+  LayoutArrangement,
+  LayoutOptions,
+  PlacedEntity,
+} from "./layout.js";
 export { layout } from "./layout.js";
 export { lower } from "./lower.js";
 export { optimize } from "./optimize.js";
