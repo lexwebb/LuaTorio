@@ -143,8 +143,22 @@ Ranked by EACH / red-green / copy+const / else_outputs / selector — idioms mos
 
 ## LuaTorio relevance checklist
 
-- [ ] Clock / counter / latch idioms vs `#50` fused decider clock
-- [ ] EACH−EACH / red-green filters vs `each_latch` / future bag arith
-- [ ] Memory cell / pulse extender / edge detector as IR shapes
-- [ ] Selector cookbook uses vs `signal_at` / count
+Tracked follow-ups (filed after first rip):
+
+| Topic | Issue |
+|-------|--------|
+| Import cookbook fixtures for VM parity | [#57](https://github.com/lexwebb/LuaTorio/issues/57) |
+| Bag pairwise EACH arith (`1 math`) | [#58](https://github.com/lexwebb/LuaTorio/issues/58) |
+| Channel presence / limit filters (`3`–`5`) | [#59](https://github.com/lexwebb/LuaTorio/issues/59) |
+| Multi-signal EVERYTHING memory cell (`9`) | [#60](https://github.com/lexwebb/LuaTorio/issues/60) |
+| Edge detector + pulse extender (`19`/`20`) | [#61](https://github.com/lexwebb/LuaTorio/issues/61) |
+| ANY/EVERY wildcard emit (`13`) | [#62](https://github.com/lexwebb/LuaTorio/issues/62) |
+| Scalar hysteresis latch (`6`, low priority) | [#63](https://github.com/lexwebb/LuaTorio/issues/63) |
+
+Suggested order: **#57 → #58/#59 → #60 → #61/#62 → #63**.
+
+Also already in flight / mined:
+
+- [x] Clock / counter idioms vs [#50](https://github.com/lexwebb/LuaTorio/issues/50) fused decider clock
+- [ ] Selector cookbook uses vs [`signal_at`](https://github.com/lexwebb/LuaTorio/issues/47) / count
 - [ ] Map-item-to-recipe / iterate-list as domain examples (not builtins)
