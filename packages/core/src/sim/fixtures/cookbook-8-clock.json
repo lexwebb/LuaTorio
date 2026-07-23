@@ -1,0 +1,42 @@
+{
+  "blueprint": {
+    "item": "blueprint",
+    "label": "cookbook 8 clock — one-decider copy plus one",
+    "entities": [
+      {
+        "entity_number": 1,
+        "name": "decider-combinator",
+        "position": { "x": 0, "y": 0 },
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "first_signal": { "type": "virtual", "name": "signal-A" },
+                "comparator": "<",
+                "constant": 100
+              }
+            ],
+            "outputs": [
+              {
+                "signal": { "type": "virtual", "name": "signal-A" },
+                "copy_count_from_input": true
+              },
+              {
+                "signal": { "type": "virtual", "name": "signal-A" },
+                "copy_count_from_input": false,
+                "constant": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "entity_number": 2,
+        "name": "constant-combinator",
+        "position": { "x": 2, "y": 0 },
+        "control_behavior": { "sections": { "sections": [] } }
+      }
+    ],
+    "wires": [[1, 4, 1, 2], [1, 4, 2, 2]]
+  }
+}

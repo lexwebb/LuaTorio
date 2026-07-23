@@ -157,6 +157,24 @@ Tracked follow-ups (filed after first rip):
 
 Suggested order: **#57 → #58/#59 → #60 → #61/#62 → #63**.
 
+## VM parity fixtures
+
+Issue [#57](https://github.com/lexwebb/LuaTorio/issues/57) adds hand-built, importable
+Factorio 2.0 JSON fixtures under
+`packages/core/src/sim/fixtures/`:
+
+- `cookbook-1-math.json` — `EACH ÷ EACH`, with red-only dividend and green-only divisor.
+- `cookbook-3-filter-include.json` — red data / green presence-mask decider.
+- `cookbook-8-clock.json` — one-decider copy-plus-constant feedback clock.
+
+The importer preserves their color-specific connector topology. The clock has a
+tick-trace assertion. The first two are structural parity fixtures for now:
+pairwise `EACH` arithmetic and cross-color `EACH` presence comparison are not
+yet evaluated faithfully by the VM (tracked by [#58](https://github.com/lexwebb/LuaTorio/issues/58)
+and [#59](https://github.com/lexwebb/LuaTorio/issues/59), respectively). These
+fixtures deliberately remain in the corpus to prevent ingest regressions while
+those VM/emit follow-ups land.
+
 Also already in flight / mined:
 
 - [x] Clock / counter idioms vs [#50](https://github.com/lexwebb/LuaTorio/issues/50) fused decider clock

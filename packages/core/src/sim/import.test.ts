@@ -137,6 +137,62 @@ describe("simulateImported fixtures", () => {
   });
 });
 
+describe("cookbook 2.0 fixtures (#57)", () => {
+  it("imports 1 math with separate red and green EACH input nets", () => {
+    const circuit = fromBlueprint(loadFixture("cookbook-1-math.json"));
+    const arithmetic = circuit.entities.find((entity) => entity.id === "3");
+
+    expect(arithmetic?.kind).toBe("arithmetic");
+    expect(arithmetic?.outputSignal).toBe("signal-each");
+    expect(circuit.nets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          color: "red",
+          members: expect.arrayContaining([
+            expect.objectContaining({ entityId: "1", side: "out", connector: 1 }),
+            expect.objectContaining({ entityId: "3", side: "in", connector: 1 }),
+          ]),
+        }),
+        expect.objectContaining({
+          color: "green",
+          members: expect.arrayContaining([
+            expect.objectContaining({ entityId: "2", side: "out", connector: 2 }),
+            expect.objectContaining({ entityId: "3", side: "in", connector: 2 }),
+          ]),
+        }),
+      ]),
+    );
+  });
+
+  it("imports 3 filter include without collapsing its red data and green mask", () => {
+    const circuit = fromBlueprint(loadFixture("cookbook-3-filter-include.json"));
+    const decider = circuit.entities.find((entity) => entity.id === "3");
+    const conditions = decider?.control_behavior.decider_conditions as {
+      conditions?: Array<Record<string, unknown>>;
+      outputs?: Array<Record<string, unknown>>;
+    };
+
+    expect(decider?.kind).toBe("decider");
+    expect(conditions.conditions?.[0]).toMatchObject({
+      first_signal_networks: { red: true, green: false },
+      second_signal_networks: { red: false, green: true },
+    });
+    expect(conditions.outputs?.[0]).toMatchObject({
+      networks: { red: true, green: false },
+    });
+  });
+
+  it("simulates 8 clock's one-decider copy-plus-constant feedback", () => {
+    const circuit = fromBlueprint(loadFixture("cookbook-8-clock.json"), {
+      outputs: [{ signal: "signal-A", entityId: "2" }],
+    });
+    const result = simulateImported(circuit, { ticks: 4 });
+
+    expect(circuit.entities.find((entity) => entity.id === "1")?.role).toBe("latch");
+    expect(result.ticks.map((tick) => tick.outputs["signal-A"])).toEqual([1, 2, 3, 4]);
+  });
+});
+
 describe("fromCircuitGraph bridge", () => {
   it("matches directed simulate on adder", () => {
     const graph = graphOf(loadExample("adder.lua"));
