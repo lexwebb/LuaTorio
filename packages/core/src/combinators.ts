@@ -433,34 +433,124 @@ function lowerMemory(
   return { entities: [entity], wires };
 }
 
+/** If `thenId` is `memoryId + δ` (either operand order), return δ. */
+function memPlusDelta(
+  thenId: string,
+  memoryId: string,
+  nodeById: ReadonlyMap<string, IRNode>,
+): string | undefined {
+  const thenNode = nodeById.get(thenId);
+  if (thenNode?.kind !== "binop" || thenNode.op !== "+") {
+    return undefined;
+  }
+  if (thenNode.left === memoryId) {
+    return thenNode.right;
+  }
+  if (thenNode.right === memoryId) {
+    return thenNode.left;
+  }
+  return undefined;
+}
+
+function lowerLatch(
+  id: string,
+  firstSignal: string,
+  secondSignal: string,
+): CircuitEntity {
+  return {
+    id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: id,
+    role: "latch",
+    control_behavior: {
+      arithmetic_conditions: {
+        first_signal: signalRef(firstSignal),
+        second_signal: signalRef(secondSignal),
+        operation: "+",
+        output_signal: signalRef(id),
+      },
+    },
+  };
+}
+
 /**
- * Fuse `store(mem, select(en, next, mem))` into then-gate + else-gate + latch that
- * merges `next + mem → mem` (1-tick enable/hold). Saves the separate select merge entity.
+ * Incremental enable-hold when `next = mem + δ`: gate only δ, latch `Q + gated_δ`
+ * with Q feedback (no else-gate). Literal δ is emitted under a unique signal so it
+ * cannot collide with a nonzero init on the latch net (e.g. `for i = 1, n` / `i+1`).
+ */
+function lowerIncrementalHoldLatch(
+  memory: Extract<IRNode, { kind: "memory" }>,
+  select: Extract<IRNode, { kind: "select" }>,
+  deltaId: string,
+  initIsZero: boolean,
+  nodeById: ReadonlyMap<string, IRNode>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const deltaGateId = `${select.id}__d`;
+  const deltaLit = literalValueOf(nodeById.get(deltaId));
+
+  let deltaGate: CircuitEntity;
+  let gatedDeltaSignal: string;
+  if (deltaLit !== undefined) {
+    gatedDeltaSignal = deltaGateId;
+    deltaGate = {
+      id: deltaGateId,
+      kind: "decider",
+      name: "decider-combinator",
+      outputSignal: deltaGateId,
+      role: "mux-side",
+      control_behavior: {
+        decider_conditions: {
+          conditions: [{ first_signal: signalRef(select.cond), comparator: "!=", constant: 0 }],
+          outputs: [{ signal: signalRef(deltaGateId), constant: deltaLit }],
+        },
+      },
+    };
+  } else {
+    gatedDeltaSignal = deltaId;
+    deltaGate = lowerSelectGate(deltaGateId, select.cond, deltaId, "!=", 0);
+  }
+
+  const wires: WireEdge[] = [greenWire(select.cond, deltaGateId)];
+  if (deltaLit === undefined) {
+    wires.push(greenWire(deltaId, deltaGateId));
+  }
+  wires.push(
+    greenWire(deltaGateId, memory.id),
+    // Q feedback: latch still sees `mem` when enable is off (gate silent).
+    greenWire(memory.id, memory.id),
+  );
+  if (!initIsZero) {
+    wires.push(greenWire(memory.init, memory.id));
+  }
+
+  return {
+    entities: [deltaGate, lowerLatch(memory.id, memory.id, gatedDeltaSignal)],
+    wires,
+  };
+}
+
+/**
+ * Fuse `store(mem, select(en, next, mem))` into an enable/hold latch.
+ *
+ * Default: then-gate + else-gate + latch merging `next + mem` (saves the separate select merge).
+ * When `next = mem + δ`: gate only δ, latch `Q + gated_δ` with Q feedback (drops the else-gate).
  */
 function lowerEnabledHoldLatch(
   memory: Extract<IRNode, { kind: "memory" }>,
   select: Extract<IRNode, { kind: "select" }>,
   initIsZero: boolean,
+  nodeById: ReadonlyMap<string, IRNode>,
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const deltaId = memPlusDelta(select.then, memory.id, nodeById);
+  if (deltaId !== undefined) {
+    return lowerIncrementalHoldLatch(memory, select, deltaId, initIsZero, nodeById);
+  }
+
   const thenGateId = `${select.id}__then`;
   const elseGateId = `${select.id}__else`;
   const thenGate = lowerSelectGate(thenGateId, select.cond, select.then, "!=", 0);
   const elseGate = lowerSelectGate(elseGateId, select.cond, select.else, "=", 0);
-  const latch: CircuitEntity = {
-    id: memory.id,
-    kind: "arithmetic",
-    name: "arithmetic-combinator",
-    outputSignal: memory.id,
-    role: "latch",
-    control_behavior: {
-      arithmetic_conditions: {
-        first_signal: signalRef(select.then),
-        second_signal: signalRef(select.else),
-        operation: "+",
-        output_signal: signalRef(memory.id),
-      },
-    },
-  };
 
   const wires: WireEdge[] = [
     greenWire(select.cond, thenGateId),
@@ -474,7 +564,10 @@ function lowerEnabledHoldLatch(
     wires.push(greenWire(memory.init, memory.id));
   }
 
-  return { entities: [thenGate, elseGate, latch], wires };
+  return {
+    entities: [thenGate, elseGate, lowerLatch(memory.id, select.then, select.else)],
+    wires,
+  };
 }
 
 function lowerOutput(output: IRModule["outputs"][number], index: number): CircuitEntity {
@@ -491,7 +584,8 @@ function lowerOutput(output: IRModule["outputs"][number], index: number): Circui
  * Lowers an `IRModule` to an unpositioned circuit graph. Most IR nodes become one entity;
  * `select` expands to 1–3 entities depending on specialization; `store` has no entity of its
  * own (it only contributes the value→memory wire via the paired `memory` lowering).
- * Enable/hold `select(en, next, mem)` used as a cell's store value fuses into the latch.
+ * Enable/hold `select(en, next, mem)` used as a cell's store value fuses into the latch;
+ * when `next = mem + δ` that fusion is incremental (gate δ only).
  */
 export function lowerToCombinators(module: IRModule): CircuitGraph {
   const storeValueByCell = new Map<string, string>();
@@ -504,6 +598,9 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
 
   /** Select node ids absorbed into an enabled-hold latch (do not emit separately). */
   const absorbedSelectIds = new Set<string>();
+  /** `mem + δ` binops only used by an incremental hold — skip emitting them. */
+  const absorbedBinopIds = new Set<string>();
+  const useCount = countNodeUses(module);
   for (const node of module.nodes) {
     if (node.kind !== "memory") {
       continue;
@@ -513,8 +610,16 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       continue;
     }
     const storeValue = nodeById.get(storeValueId);
-    if (storeValue?.kind === "select" && storeValue.else === node.id) {
-      absorbedSelectIds.add(storeValue.id);
+    if (storeValue?.kind !== "select" || storeValue.else !== node.id) {
+      continue;
+    }
+    absorbedSelectIds.add(storeValue.id);
+    // Elide `mem+δ` only when this select is its sole user.
+    if (
+      memPlusDelta(storeValue.then, node.id, nodeById) !== undefined &&
+      (useCount.get(storeValue.then) ?? 0) <= 1
+    ) {
+      absorbedBinopIds.add(storeValue.then);
     }
   }
 
@@ -530,6 +635,9 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         entities.push(lowerInput(node));
         break;
       case "binop": {
+        if (absorbedBinopIds.has(node.id)) {
+          break;
+        }
         const lowered = lowerBinop(node, nodeById);
         entities.push(lowered.entity);
         for (const from of lowered.wireFrom) {
@@ -563,7 +671,7 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         const initIsZero = literalValueOf(nodeById.get(node.init)) === 0;
         const expanded =
           storeValue?.kind === "select" && absorbedSelectIds.has(storeValue.id)
-            ? lowerEnabledHoldLatch(node, storeValue, initIsZero)
+            ? lowerEnabledHoldLatch(node, storeValue, initIsZero, nodeById)
             : lowerMemory(node, storeValueId, initIsZero);
         entities.push(...expanded.entities);
         wires.push(...expanded.wires);
@@ -609,4 +717,43 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const filteredWires = wires.filter((wire) => known.has(wire.from) && known.has(wire.to));
 
   return { entities, wires: filteredWires, outputs, inputs };
+}
+
+/** How many times each node id is referenced by other nodes / outputs (not by itself). */
+function countNodeUses(module: IRModule): Map<string, number> {
+  const uses = new Map<string, number>();
+  const add = (id: string) => {
+    uses.set(id, (uses.get(id) ?? 0) + 1);
+  };
+  for (const output of module.outputs) {
+    add(output.nodeId);
+  }
+  for (const node of module.nodes) {
+    switch (node.kind) {
+      case "literal":
+      case "input":
+        break;
+      case "binop":
+      case "cmp":
+        add(node.left);
+        add(node.right);
+        break;
+      case "select":
+        add(node.cond);
+        add(node.then);
+        add(node.else);
+        break;
+      case "memory":
+        add(node.init);
+        break;
+      case "store":
+        add(node.value);
+        break;
+      default: {
+        const unreachable: never = node;
+        throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
+      }
+    }
+  }
+  return uses;
 }

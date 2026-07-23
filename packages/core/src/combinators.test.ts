@@ -417,4 +417,46 @@ describe("lowerToCombinators", () => {
       expect(knownIds.has(wire.to)).toBe(true);
     }
   });
+
+  it("specializes enable-hold of mem+δ into gate + latch (no else-gate, no mem+δ binop)", async () => {
+    const { analyze } = await import("./analyze.js");
+    const { lower } = await import("./lower.js");
+    const { optimize } = await import("./optimize.js");
+    const { parse } = await import("./parse.js");
+
+    const module = optimize(
+      lower(
+        analyze(
+          parse(`
+            local L = input("signal-L")
+            local i = 0
+            while i < L do
+              i = i + 1
+              tick()
+            end
+            output("signal-A", i)
+          `),
+        ),
+      ),
+    );
+
+    const graph = lowerToCombinators(module);
+    const latches = graph.entities.filter((entity) => entity.role === "latch");
+    const muxSides = graph.entities.filter((entity) => entity.role === "mux-side");
+    // One body cell (i) uses incremental hold: 1 mux-side + latch with Q feedback.
+    // __run uses a plain latch (else=0 path), not enable-hold fusion.
+    expect(graph.entities.length).toBe(8);
+    expect(muxSides.length).toBe(1);
+    expect(latches.length).toBe(2);
+    const iLatch = latches.find((entity) => {
+      const cond = entity.control_behavior.arithmetic_conditions as
+        | { first_signal?: { name?: string }; second_signal?: { name?: string } }
+        | undefined;
+      return cond?.first_signal?.name === entity.id;
+    });
+    expect(iLatch).toBeDefined();
+    expect(graph.wires).toEqual(
+      expect.arrayContaining([{ from: iLatch!.id, to: iLatch!.id, color: "green" }]),
+    );
+  });
 });
