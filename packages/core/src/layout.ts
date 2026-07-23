@@ -1,6 +1,6 @@
 import type { CircuitEntity, CircuitGraph, CombinatorKind, WireEdge } from "./combinators.js";
 
-/** A `CircuitEntity` with a blueprint position and `entity_number` assigned (#9). */
+/** A `CircuitEntity` with a blueprint position and `entity_number` assigned. */
 export interface PlacedEntity extends CircuitEntity {
   entity_number: number;
   position: { x: number; y: number };
@@ -9,7 +9,7 @@ export interface PlacedEntity extends CircuitEntity {
 /**
  * A Factorio 2.0 blueprint `wires` entry: `[src_entity_number, src_connector, dst_entity_number,
  * dst_connector]`. Connector ids are `defines.wire_connector_id` values (see `GREEN_WIRE_*`
- * below); v1 only ever emits green wires (#8's `WireEdge.color` is always `"green"`).
+ * below); v1/v2 phase 1 only ever emits green wires.
  */
 export type FactorioWire = [number, number, number, number];
 
@@ -20,43 +20,38 @@ export interface LaidOutCircuit {
   inputs: CircuitGraph["inputs"];
 }
 
-/**
- * Factorio 2.0 `defines.wire_connector_id` green-wire values. Undocumented on the (stale)
- * blueprint-string-format wiki page; reverse-engineered at
- * https://wiki.factorio.com/Talk:Blueprint_string_format:
- *
- *   circuit_green = 2, combinator_input_green = 2, combinator_output_green = 4
- *
- * A single-connection-point entity (a constant combinator) only ever exposes connector 2 —
- * numerically the same id as a two-sided combinator's *input* side, since both just mean "the
- * entity's one/first connection point". Two-sided combinators (arithmetic/decider) additionally
- * expose a distinct *output*-side connector, 4.
- */
 const GREEN_WIRE_INPUT = 2;
 const GREEN_WIRE_OUTPUT = 4;
 
-/** 2-tile spacing between successive entities' x positions, per the layout design (#9). */
+/** 2-tile spacing between successive entities' x positions. */
 const X_SPACING = 2;
 
 /** Green-wire connector id for `kind` on the given endpoint side of a `WireEdge`. */
 function greenConnector(kind: CombinatorKind, side: "from" | "to"): number {
-  // Only a two-sided combinator's producing ("from") side uses the distinct output connector;
-  // every other case (constant combinators, and any "to"/consuming side) uses connector 2.
   return kind !== "constant" && side === "from" ? GREEN_WIRE_OUTPUT : GREEN_WIRE_INPUT;
 }
 
 /**
- * Orders `entities` topologically (producers before consumers) via Kahn's algorithm, breaking
- * ties by each entity's original index for determinism. Inputs (no incoming wires) and other
- * sources naturally sort first; output boundary markers (#8) and other sinks naturally sort
- * last — giving the "inputs near left, outputs near right" placement the design calls for
- * without any special-casing of `graph.inputs`/`graph.outputs`.
+ * Orders `entities` topologically via Kahn's algorithm. Edges into `role: "latch"` entities
+ * are ignored for ordering so memory feedback cycles can still place; those feedback wires
+ * are still emitted afterward. Non-latch cycles still throw.
  */
 function topologicalOrder(entities: CircuitEntity[], wires: WireEdge[]): CircuitEntity[] {
   const originalIndex = new Map(entities.map((entity, index) => [entity.id, index]));
+  const latchIds = new Set<string>();
+  for (const entity of entities) {
+    if (entity.role === "latch") {
+      latchIds.add(entity.id);
+    }
+  }
+
   const incoming = new Map(entities.map((entity) => [entity.id, 0]));
   const outgoing = new Map<string, string[]>(entities.map((entity) => [entity.id, []]));
   for (const wire of wires) {
+    // Break cycles at latch sinks: do not count wires that target a latch for Kahn degree.
+    if (latchIds.has(wire.to)) {
+      continue;
+    }
     outgoing.get(wire.from)?.push(wire.to);
     incoming.set(wire.to, (incoming.get(wire.to) ?? 0) + 1);
   }
@@ -84,9 +79,8 @@ function topologicalOrder(entities: CircuitEntity[], wires: WireEdge[]): Circuit
 
 /**
  * Assigns positions and Factorio `entity_number`s to a `CircuitGraph` and rewrites its
- * `WireEdge`s into `FactorioWire` tuples (#9). Entities are placed in topological order along a
- * single row (y = 0), `X_SPACING` tiles apart — see `topologicalOrder` for why this alone
- * satisfies "inputs left, outputs right". Blueprint string encoding is out of scope — see #10.
+ * `WireEdge`s into `FactorioWire` tuples. Entities are placed in topological order along a
+ * single row (y = 0), `X_SPACING` tiles apart. Feedback wires into latches are retained.
  */
 export function layout(graph: CircuitGraph): LaidOutCircuit {
   const ordered = topologicalOrder(graph.entities, graph.wires);

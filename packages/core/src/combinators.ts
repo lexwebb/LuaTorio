@@ -2,22 +2,22 @@ import type { IRModule, IRNode } from "./ir.js";
 
 type CmpOp = Extract<IRNode, { kind: "cmp" }>["op"];
 
-/** The three Factorio combinator families a v1 IR node can lower to (#8). */
+/** The three Factorio combinator families a v1/v2 IR node can lower to. */
 export type CombinatorKind = "constant" | "arithmetic" | "decider";
 
 /**
+ * Optional role for layout / expansion:
+ * - `latch` — memory cell; feedback cycles may break here during layout
+ * - `mux-side` — secondary half of a `select` expansion (not the merge entity)
+ */
+export type CircuitRole = "latch" | "mux-side";
+
+/**
  * An unpositioned circuit entity: *what* combinator to place and how its `control_behavior`
- * is configured, but not *where* (layout/positions are #9) or how it's serialized into a
- * blueprint string (encoding is #10).
- *
- * `control_behavior` is a best-effort, Factorio 2.0-shaped record (`arithmetic_conditions` /
- * `decider_conditions`, or a placeholder for constant-combinator boundary markers — see
- * `lowerNode` below). The exact schema (wire-color filters, multi-condition sections, etc.)
- * is refined once the blueprint emitter (#10) is built against a real decode/encode
- * round-trip; for now the shapes here are chosen to be sensible and internally consistent.
+ * is configured, but not *where* (layout) or how it's serialized (emit).
  */
 export interface CircuitEntity {
-  /** IR node id, or a synthetic `__oN` id for output boundary markers (see `lowerToCombinators`). */
+  /** IR node id, synthetic `__oN` output marker, or mux-side id like `__t4__else`. */
   id: string;
   kind: CombinatorKind;
   /** Factorio entity name, e.g. `"arithmetic-combinator"`. */
@@ -25,6 +25,7 @@ export interface CircuitEntity {
   control_behavior: Record<string, unknown>;
   /** Output signal name this entity produces (a temp signal like `__t3`, or a user signal). */
   outputSignal: string;
+  role?: CircuitRole;
 }
 
 export interface WireEdge {
@@ -32,7 +33,7 @@ export interface WireEdge {
   from: string;
   /** Consumer entity id. */
   to: string;
-  /** Always green in v1 — red/green wire allocation is deferred (parent design, "bundles" phase). */
+  /** Always green in v1/v2 phase 1 — red/green allocation is deferred to v4. */
   color: "green";
 }
 
@@ -43,16 +44,14 @@ export interface CircuitGraph {
   inputs: Array<{ signal: string; entityId: string }>;
 }
 
-/**
- * v1 has no signal-type registry yet (parent design: "A future type checker may validate
- * names against a signal registry"), so every signal reference — temp (`__tN`) or
- * user-chosen (`signal-A`, `iron-plate`, ...) — is best-effort typed as `"virtual"` here.
- */
 function signalRef(name: string): { type: "virtual"; name: string } {
   return { type: "virtual", name };
 }
 
-/** IR comparison operators to Factorio decider-combinator comparator strings. */
+function greenWire(from: string, to: string): WireEdge {
+  return { from, to, color: "green" };
+}
+
 const COMPARATOR: Record<CmpOp, string> = {
   "<": "<",
   ">": ">",
@@ -73,6 +72,10 @@ function childIds(node: IRNode): string[] {
       return [node.left, node.right];
     case "select":
       return [node.cond, node.then, node.else];
+    case "memory":
+      return [node.init];
+    case "store":
+      return [node.value];
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -80,160 +83,245 @@ function childIds(node: IRNode): string[] {
   }
 }
 
-/**
- * Lowers a single IR node to its `CircuitEntity`, per the parent design's lowering table.
- *
- * `literal` and `binop`/`cmp` map straightforwardly to real, placeable combinators. `input`
- * is a *boundary placeholder*: a real `input()` reads its signal from an externally-wired
- * circuit network (layout planner, #9), it isn't a fixed-value constant combinator — so it
- * carries no filters, and exists only so the graph has a concrete node to wire from.
- */
-function lowerNode(node: IRNode): CircuitEntity {
-  switch (node.kind) {
-    case "literal":
-      return {
-        id: node.id,
-        kind: "constant",
-        name: "constant-combinator",
-        outputSignal: node.id,
-        control_behavior: {
-          // Factorio 2.0 constant combinators group filters into "sections"; v1 always emits
-          // exactly one section with one filter carrying this node's fixed value.
-          sections: {
-            sections: [
-              { index: 1, filters: [{ index: 1, count: node.value, ...signalRef(node.id) }] },
-            ],
-          },
-        },
-      };
-    case "input":
-      return {
-        id: node.id,
-        kind: "constant",
-        name: "constant-combinator",
-        outputSignal: node.signal,
-        control_behavior: {
-          // No filters: this is a placeholder marker, not a real fixed-value combinator (see
-          // doc comment above).
-          sections: { sections: [] },
-        },
-      };
-    case "binop":
-      return {
-        id: node.id,
-        kind: "arithmetic",
-        name: "arithmetic-combinator",
-        outputSignal: node.id,
-        control_behavior: {
-          arithmetic_conditions: {
+function lowerLiteral(node: Extract<IRNode, { kind: "literal" }>): CircuitEntity {
+  return {
+    id: node.id,
+    kind: "constant",
+    name: "constant-combinator",
+    outputSignal: node.id,
+    control_behavior: {
+      sections: {
+        sections: [{ index: 1, filters: [{ index: 1, count: node.value, ...signalRef(node.id) }] }],
+      },
+    },
+  };
+}
+
+function lowerInput(node: Extract<IRNode, { kind: "input" }>): CircuitEntity {
+  return {
+    id: node.id,
+    kind: "constant",
+    name: "constant-combinator",
+    outputSignal: node.signal,
+    control_behavior: { sections: { sections: [] } },
+  };
+}
+
+function lowerBinop(node: Extract<IRNode, { kind: "binop" }>): CircuitEntity {
+  return {
+    id: node.id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: node.id,
+    control_behavior: {
+      arithmetic_conditions: {
+        first_signal: signalRef(node.left),
+        second_signal: signalRef(node.right),
+        operation: node.op,
+        output_signal: signalRef(node.id),
+      },
+    },
+  };
+}
+
+function lowerCmp(node: Extract<IRNode, { kind: "cmp" }>): CircuitEntity {
+  return {
+    id: node.id,
+    kind: "decider",
+    name: "decider-combinator",
+    outputSignal: node.id,
+    control_behavior: {
+      decider_conditions: {
+        conditions: [
+          {
             first_signal: signalRef(node.left),
+            comparator: COMPARATOR[node.op],
             second_signal: signalRef(node.right),
-            operation: node.op,
-            output_signal: signalRef(node.id),
           },
-        },
-      };
-    case "cmp":
-      return {
-        id: node.id,
-        kind: "decider",
-        name: "decider-combinator",
-        outputSignal: node.id,
-        control_behavior: {
-          decider_conditions: {
-            conditions: [
-              {
-                first_signal: signalRef(node.left),
-                comparator: COMPARATOR[node.op],
-                second_signal: signalRef(node.right),
-              },
-            ],
-            // Decider outputs only fire on a true condition, so "else output 0" falls out
-            // for free (the signal is simply absent from the wire) — matching the parent
-            // table's "if A > B output 1 else 0".
-            outputs: [{ signal: signalRef(node.id), constant: 1 }],
-          },
-        },
-      };
-    case "select":
-      return {
-        id: node.id,
-        kind: "decider",
-        name: "decider-combinator",
-        outputSignal: node.id,
-        control_behavior: {
-          // NOTE (mux simplification): a single decider combinator only emits when its
-          // condition is *true* — there's no built-in "else" — so this models only the
-          // `then` branch (cond > 0 => pass `then`'s value through under this node's output
-          // signal). A faithful mux needs two decider entities feeding the same output
-          // signal on a shared wire (mutually exclusive true/false conditions); expanding
-          // this single logical node into that real shape is deferred to the schema
-          // refinement in #10, once positions/wiring exist to place the second entity.
-          decider_conditions: {
-            conditions: [{ first_signal: signalRef(node.cond), comparator: ">", constant: 0 }],
-            outputs: [{ signal: signalRef(node.id), copy_count_from_input: true }],
-          },
-        },
-      };
-    default: {
-      const unreachable: never = node;
-      throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
-    }
-  }
+        ],
+        outputs: [{ signal: signalRef(node.id), constant: 1 }],
+      },
+    },
+  };
 }
 
 /**
- * Builds the boundary marker entity for one `module.outputs` entry. Mirrors the `input`
- * placeholder above: a real constant combinator can't read another signal's value, so this
- * models `output(sig, val)`'s "reads value signal, exposes as named output" as a graph-level
- * marker wired from the value's producing entity, not a literal placeable combinator. The
- * layout/emitter (#9/#10) resolves it into whatever real entity exposes the value under
- * `signal` (e.g. an arithmetic combinator that renames the signal).
- *
- * Uses a synthetic `__oN` id (1-based, in `module.outputs` order) since an output entry has
- * no IR node id of its own — it just references the value node's id.
+ * Faithful mux: gate `then` when cond ≠ 0, gate `else` when cond = 0, then add the two
+ * (mutually exclusive) signals into `node.id`. Lua truthiness: only 0 is false.
  */
+function lowerSelectGate(
+  id: string,
+  condId: string,
+  branchSignal: string,
+  comparator: "=" | "!=",
+  constant: number,
+): CircuitEntity {
+  return {
+    id,
+    kind: "decider",
+    name: "decider-combinator",
+    outputSignal: branchSignal,
+    role: "mux-side",
+    control_behavior: {
+      decider_conditions: {
+        conditions: [{ first_signal: signalRef(condId), comparator, constant }],
+        outputs: [{ signal: signalRef(branchSignal), copy_count_from_input: true }],
+      },
+    },
+  };
+}
+
+function lowerSelect(node: Extract<IRNode, { kind: "select" }>): {
+  entities: CircuitEntity[];
+  wires: WireEdge[];
+} {
+  const thenGateId = `${node.id}__then`;
+  const elseGateId = `${node.id}__else`;
+  const thenGate = lowerSelectGate(thenGateId, node.cond, node.then, "!=", 0);
+  const elseGate = lowerSelectGate(elseGateId, node.cond, node.else, "=", 0);
+
+  const merge: CircuitEntity = {
+    id: node.id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: node.id,
+    control_behavior: {
+      arithmetic_conditions: {
+        first_signal: signalRef(node.then),
+        second_signal: signalRef(node.else),
+        operation: "+",
+        output_signal: signalRef(node.id),
+      },
+    },
+  };
+
+  return {
+    entities: [thenGate, elseGate, merge],
+    wires: [
+      greenWire(node.cond, thenGateId),
+      greenWire(node.then, thenGateId),
+      greenWire(node.cond, elseGateId),
+      greenWire(node.else, elseGateId),
+      greenWire(thenGateId, node.id),
+      greenWire(elseGateId, node.id),
+    ],
+  };
+}
+
+/** 1-tick delay register: passes `store.value` onto the memory signal (role: latch). */
+function lowerMemory(
+  node: Extract<IRNode, { kind: "memory" }>,
+  storeValueId: string,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const entity: CircuitEntity = {
+    id: node.id,
+    kind: "arithmetic",
+    name: "arithmetic-combinator",
+    outputSignal: node.id,
+    role: "latch",
+    control_behavior: {
+      arithmetic_conditions: {
+        first_signal: signalRef(storeValueId),
+        second_constant: 0,
+        operation: "+",
+        output_signal: signalRef(node.id),
+      },
+    },
+  };
+
+  return {
+    entities: [entity],
+    wires: [greenWire(node.init, node.id), greenWire(storeValueId, node.id)],
+  };
+}
+
 function lowerOutput(output: IRModule["outputs"][number], index: number): CircuitEntity {
   return {
     id: `__o${index + 1}`,
     kind: "constant",
     name: "constant-combinator",
     outputSignal: output.signal,
-    control_behavior: {
-      sections: { sections: [] },
-    },
+    control_behavior: { sections: { sections: [] } },
   };
 }
 
 /**
- * Lowers an `IRModule` to an unpositioned circuit graph: one `CircuitEntity` per IR node
- * (plus one boundary marker per `output()`), and a `WireEdge` for every IR edge (child ->
- * parent) and every output's value edge (producer -> output marker). No coordinates are
- * assigned yet (#9); wires don't carry connector info yet either (#10).
+ * Lowers an `IRModule` to an unpositioned circuit graph. Most IR nodes become one entity;
+ * `select` expands to three (then-gate, else-gate, merge); `store` has no entity of its own
+ * (it only contributes the value→memory wire via the paired `memory` lowering).
  */
 export function lowerToCombinators(module: IRModule): CircuitGraph {
-  const entities = module.nodes.map(lowerNode);
+  const storeValueByCell = new Map<string, string>();
+  for (const node of module.nodes) {
+    if (node.kind === "store") {
+      storeValueByCell.set(node.cell, node.value);
+    }
+  }
+
+  const entities: CircuitEntity[] = [];
   const wires: WireEdge[] = [];
 
-  for (const node of module.nodes) {
+  function wireChildren(node: IRNode): void {
     for (const childId of childIds(node)) {
-      wires.push({ from: childId, to: node.id, color: "green" });
+      wires.push(greenWire(childId, node.id));
+    }
+  }
+
+  for (const node of module.nodes) {
+    switch (node.kind) {
+      case "literal":
+        entities.push(lowerLiteral(node));
+        break;
+      case "input":
+        entities.push(lowerInput(node));
+        break;
+      case "binop":
+        entities.push(lowerBinop(node));
+        wireChildren(node);
+        break;
+      case "cmp":
+        entities.push(lowerCmp(node));
+        wireChildren(node);
+        break;
+      case "select": {
+        const expanded = lowerSelect(node);
+        entities.push(...expanded.entities);
+        wires.push(...expanded.wires);
+        break;
+      }
+      case "memory": {
+        const storeValue = storeValueByCell.get(node.cell);
+        if (storeValue === undefined) {
+          throw new Error(`internal error: memory cell '${node.cell}' has no store`);
+        }
+        const expanded = lowerMemory(node, storeValue);
+        entities.push(...expanded.entities);
+        wires.push(...expanded.wires);
+        break;
+      }
+      case "store":
+        break;
+      default: {
+        const unreachable: never = node;
+        throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
+      }
     }
   }
 
   const outputs = module.outputs.map((output, index) => {
     const entity = lowerOutput(output, index);
     entities.push(entity);
-    wires.push({ from: output.nodeId, to: entity.id, color: "green" });
+    wires.push(greenWire(output.nodeId, entity.id));
     return { signal: output.signal, entityId: entity.id };
   });
 
   const inputs = module.inputs.map((input) => ({
     signal: input.signal,
-    // Input nodes are their own boundary placeholder entity (see `lowerNode`), so the entity
-    // id is just the node id — no separate marker needed, unlike outputs.
     entityId: input.nodeId,
   }));
 
-  return { entities, wires, outputs, inputs };
+  const known = new Set(entities.map((entity) => entity.id));
+  const filteredWires = wires.filter((wire) => known.has(wire.from) && known.has(wire.to));
+
+  return { entities, wires: filteredWires, outputs, inputs };
 }

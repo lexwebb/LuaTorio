@@ -69,7 +69,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 
 ## Examples
 
-[`examples/`](examples) contains working v1 programs, each compiled and decoded in
+[`examples/`](examples) contains working programs, each compiled and decoded in
 `packages/core/src/golden.test.ts`:
 
 | File | Demonstrates |
@@ -78,18 +78,21 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`clamp.lua`](examples/clamp.lua) | Clamping a value into a range via `and`/`or` |
 | [`mux.lua`](examples/mux.lua) | 2-to-1 multiplexer (`select`) via `and`/`or` |
 | [`comparison-chain.lua`](examples/comparison-chain.lua) | Comparisons (`<`) chained with `and` |
+| [`counter.lua`](examples/counter.lua) | v2 memory: free-running counter (`x = x + 1`) |
+| [`accumulator.lua`](examples/accumulator.lua) | v2 memory: accumulate `signal-A` each tick |
 
-## v1 Language Reference
+## Language Reference
 
-v1 programs are a flat sequence of statements — no user-defined functions, loops, or
-reassignment yet (see the [design spec](docs/superpowers/specs/2026-07-22-luatorio-design.md#roadmap)
-for the v2+ roadmap).
+Programs are a flat sequence of statements. See the
+[design spec](docs/superpowers/specs/2026-07-22-luatorio-design.md) and
+[v2 sequential design](docs/superpowers/specs/2026-07-23-v2-sequential-design.md) for the roadmap.
 
 ### Allowed constructs
 
 | Construct | Notes |
 |---|---|
-| `local x = <expr>` | Single assignment; every local must be initialized |
+| `local x = <expr>` | Every local must be initialized |
+| `x = <expr>` | Next-state assignment (at most one per variable); promotes `x` to a memory cell |
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | Arithmetic: `+ - * / %` | Lowers to arithmetic combinators |
@@ -97,9 +100,14 @@ for the v2+ roadmap).
 | `a and b or c` | Standard Lua ternary idiom; desugars to a `select` (mux) |
 | Integer literals | Lowers to constant combinators; floats are rejected |
 
-Not yet supported (with their planned version): reassignment and `while`/`for`/`repeat` (v2),
-`function` (v3), tables and multi-signal bundles (v4), entity placement (v5). Unsupported
-constructs raise a `SemanticError` naming the construct and its planned version.
+**Memory (v2 phase 1):** A variable that is assigned after `local` becomes a latch. RHS reads
+see the previous game-tick value; the assignment is the next-state function evaluated every
+tick. Unreassigned locals stay combinational (v1 SSA).
+
+Not yet supported: `while` / `for` / `repeat` and `tick()` (v2 phases 2–3), `if` statements
+(v2 phase 2; use `and`/`or` for values), `function` (v3), tables and multi-signal bundles (v4),
+entity placement (v5). Unsupported constructs raise a `SemanticError` naming the construct and
+its planned version.
 
 ### `input()` / `output()` API
 

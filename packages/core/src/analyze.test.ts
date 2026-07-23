@@ -86,14 +86,53 @@ describe("analyze", () => {
     }
   });
 
-  it("rejects reassignment of an existing variable as planned for v2", () => {
+  it("accepts a single next-state reassignment (v2 phase 1 memory)", () => {
     const ast = parse(`
-      local x = 1
-      x = 2
+      local x = 0
+      x = x + 1
       output("signal-A", x)
     `);
 
-    expect(() => analyze(ast)).toThrow(/x/);
+    const program = analyze(ast);
+
+    expect(program.statements).toEqual([
+      expect.objectContaining({ kind: "local", name: "x" }),
+      expect.objectContaining({ kind: "assign", name: "x" }),
+    ]);
+    expect(program.outputs[0]).toMatchObject({
+      signal: "signal-A",
+      expr: { kind: "ref", name: "x" },
+    });
+  });
+
+  it("rejects a second next-state assignment to the same variable", () => {
+    const ast = parse(`
+      local x = 0
+      x = x + 1
+      x = x + 1
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/next-state assignment/i);
+  });
+
+  it("rejects reassignment of an undefined variable", () => {
+    const ast = parse(`
+      x = 1
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/undefined variable 'x'/i);
+  });
+
+  it("rejects tick() as planned for v2 phase 3", () => {
+    const ast = parse(`
+      local x = 1
+      tick()
+      output("signal-A", x)
+    `);
+
+    expect(() => analyze(ast)).toThrow(/tick/i);
     try {
       analyze(ast);
     } catch (error) {

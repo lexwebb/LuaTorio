@@ -101,7 +101,7 @@ describe("layout", () => {
     expect(xs).toEqual([0, 2, 4, 6, 8]);
   });
 
-  it("throws on a cyclic graph", () => {
+  it("throws on a non-latch cyclic graph", () => {
     const graph: CircuitGraph = {
       entities: [entity("a"), entity("b")],
       wires: [
@@ -113,6 +113,32 @@ describe("layout", () => {
     };
 
     expect(() => layout(graph)).toThrow(/cycle/);
+  });
+
+  it("lays out a latch feedback cycle by breaking at the latch entity", () => {
+    const latch: CircuitEntity = {
+      id: "mem",
+      kind: "arithmetic",
+      name: "arithmetic-combinator",
+      outputSignal: "mem",
+      control_behavior: {},
+      role: "latch",
+    };
+    const graph: CircuitGraph = {
+      entities: [latch, entity("next", "arithmetic"), entity("__o1", "constant")],
+      wires: [
+        { from: "mem", to: "next", color: "green" },
+        { from: "next", to: "mem", color: "green" },
+        { from: "mem", to: "__o1", color: "green" },
+      ],
+      outputs: [{ signal: "signal-A", entityId: "__o1" }],
+      inputs: [],
+    };
+
+    const laid = layout(graph);
+
+    expect(laid.entities.map((e) => e.id)).toEqual(["mem", "next", "__o1"]);
+    expect(laid.wires).toHaveLength(3);
   });
 
   it("lays out a real lowered program end to end", async () => {

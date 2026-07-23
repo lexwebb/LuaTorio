@@ -156,4 +156,24 @@ describe("lower", () => {
       ],
     });
   });
+
+  it("lowers a reassigned local to memory + store", () => {
+    const module = lowerSource(`
+      local x = 0
+      x = x + 1
+      output("signal-A", x)
+    `);
+
+    expect(module).toEqual({
+      nodes: [
+        { kind: "literal", id: "__t1", value: 0 },
+        { kind: "memory", id: "__t2", cell: "x", init: "__t1" },
+        { kind: "literal", id: "__t3", value: 1 },
+        { kind: "binop", id: "__t4", op: "+", left: "__t2", right: "__t3" },
+        { kind: "store", id: "__t5", cell: "x", value: "__t4" },
+      ],
+      outputs: [{ signal: "signal-A", nodeId: "__t2" }],
+      inputs: [],
+    });
+  });
 });

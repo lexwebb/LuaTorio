@@ -115,6 +115,13 @@ function constantFold(module: IRModule): IRModule {
         }
         break;
       }
+      case "memory":
+        // Opaque: do not fold across latches; only rewrite child refs.
+        nodes.push({ ...node, init: resolve(node.init, alias) });
+        break;
+      case "store":
+        nodes.push({ ...node, value: resolve(node.value, alias) });
+        break;
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -142,6 +149,11 @@ function structuralKey(node: IRNode): string {
       return `cmp:${node.op}:${node.left}:${node.right}`;
     case "select":
       return `select:${node.cond}:${node.then}:${node.else}`;
+    case "memory":
+      // Cell identity must not CSE-merge distinct latches even with the same init.
+      return `memory:${node.cell}:${node.init}`;
+    case "store":
+      return `store:${node.cell}:${node.value}`;
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -165,6 +177,10 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
         then: resolve(node.then, alias),
         else: resolve(node.else, alias),
       };
+    case "memory":
+      return { ...node, init: resolve(node.init, alias) };
+    case "store":
+      return { ...node, value: resolve(node.value, alias) };
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -211,6 +227,10 @@ function childIds(node: IRNode): string[] {
       return [node.left, node.right];
     case "select":
       return [node.cond, node.then, node.else];
+    case "memory":
+      return [node.init];
+    case "store":
+      return [node.value];
     default: {
       const unreachable: never = node;
       throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -221,10 +241,17 @@ function childIds(node: IRNode): string[] {
 /**
  * Dead code elimination: keeps only nodes reachable from `module.outputs`, plus any node
  * directly listed in `module.inputs` (external inputs are preserved even if unused, so
- * later passes/tooling can still see them).
+ * later passes/tooling can still see them). Memory cells also keep their paired `store`
+ * (and that store's value cone), since the store is not an IR child of `memory`.
  */
 function dce(module: IRModule): IRModule {
   const nodeById = new Map(module.nodes.map((node) => [node.id, node]));
+  const storeIdByCell = new Map<string, string>();
+  for (const node of module.nodes) {
+    if (node.kind === "store") {
+      storeIdByCell.set(node.cell, node.id);
+    }
+  }
   const keep = new Set<string>();
   const stack = [
     ...module.outputs.map((output) => output.nodeId),
@@ -238,8 +265,15 @@ function dce(module: IRModule): IRModule {
     }
     keep.add(id);
     const node = nodeById.get(id);
-    if (node !== undefined) {
-      stack.push(...childIds(node));
+    if (node === undefined) {
+      continue;
+    }
+    stack.push(...childIds(node));
+    if (node.kind === "memory") {
+      const storeId = storeIdByCell.get(node.cell);
+      if (storeId !== undefined) {
+        stack.push(storeId);
+      }
     }
   }
 

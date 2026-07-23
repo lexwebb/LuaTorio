@@ -1,4 +1,4 @@
-import type { AnalyzedExpr, AnalyzedProgram } from "./analyze.js";
+import type { AnalyzedExpr, AnalyzedProgram, AnalyzedStatement } from "./analyze.js";
 import type { IRModule, IRNode } from "./ir.js";
 
 interface LowerContext {
@@ -97,21 +97,51 @@ function lowerExpr(
   }
 }
 
+function reassignedNames(statements: AnalyzedStatement[]): Set<string> {
+  const names = new Set<string>();
+  for (const statement of statements) {
+    if (statement.kind === "assign") {
+      names.add(statement.name);
+    }
+  }
+  return names;
+}
+
 /**
- * Lowers an analyzed v1 program into the v1 IR DAG: a flat, shared node list plus
- * input/output edges. Locals are resolved by binding their initializer's node id in an
- * environment map — referencing a local never allocates a new node, it just reuses the
- * binding's id. Fresh nodes get temp signal names `__t1`, `__t2`, … in creation order.
- *
- * Lua's `and`/`or` have no IR equivalent and are desugared into `select` nodes (see
- * `lowerLogical`). Optimization (#7) and combinator emission (#8) are out of scope here.
+ * Lowers an analyzed program into the IR DAG. Locals that are later reassigned become
+ * `memory` cells (env binds the memory id); the assignment becomes a `store`. Unreassigned
+ * locals stay combinational SSA (env binds the initializer node id).
  */
 export function lower(program: AnalyzedProgram): IRModule {
   const ctx: LowerContext = { nodes: [], inputs: [], nextTempId: 1, zeroNodeId: undefined };
   const env = new Map<string, string>();
+  const memoryCells = reassignedNames(program.statements);
+  /** cell name → memory node id (filled when the local is lowered). */
+  const memoryIdByCell = new Map<string, string>();
 
   for (const statement of program.statements) {
-    env.set(statement.name, lowerExpr(statement.expr, env, ctx));
+    switch (statement.kind) {
+      case "local": {
+        const initId = lowerExpr(statement.expr, env, ctx);
+        if (memoryCells.has(statement.name)) {
+          const memId = nextId(ctx);
+          pushNode(ctx, { kind: "memory", id: memId, cell: statement.name, init: initId });
+          memoryIdByCell.set(statement.name, memId);
+          env.set(statement.name, memId);
+        } else {
+          env.set(statement.name, initId);
+        }
+        break;
+      }
+      case "assign": {
+        if (!memoryIdByCell.has(statement.name)) {
+          throw new Error(`internal error: assign to '${statement.name}' without memory cell`);
+        }
+        const valueId = lowerExpr(statement.expr, env, ctx);
+        pushNode(ctx, { kind: "store", id: nextId(ctx), cell: statement.name, value: valueId });
+        break;
+      }
+    }
   }
 
   const outputs: IRModule["outputs"] = program.outputs.map((output) => ({

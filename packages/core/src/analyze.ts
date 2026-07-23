@@ -70,16 +70,16 @@ export type AnalyzedExpr =
       column: number;
     };
 
-export interface AnalyzedStatement {
-  kind: "local";
+export type AnalyzedStatement = {
+  kind: "local" | "assign";
   name: string;
   expr: AnalyzedExpr;
   line: number;
   column: number;
-}
+};
 
 export interface AnalyzedProgram {
-  /** Ordered locals and expression bindings — enough for IR lowering (#6) */
+  /** Ordered locals and assignments — enough for IR lowering */
   statements: AnalyzedStatement[];
   outputs: Array<{ signal: string; expr: AnalyzedExpr; line: number; column: number }>;
   inputs: Array<{ signal: string; line: number; column: number }>;
@@ -105,19 +105,32 @@ function describeAssignmentTarget(target: Identifier | MemberExpression | IndexE
   return target.type === "Identifier" ? target.name : "<expression>";
 }
 
+function rejectTick(calleeName: string | undefined, line: number, column: number): void {
+  if (calleeName === "tick") {
+    throw new SemanticError(
+      "unsupported construct: tick(); planned for v2 phase 3 (tick scheduler)",
+      line,
+      column,
+      "v2",
+    );
+  }
+}
+
 /**
- * Walks a luaparse `Chunk` and enforces the v1 language subset, returning a validated,
- * minimally-typed program model. Throws `SemanticError` (with line/column and, where the
- * construct is on the roadmap, a `plannedVersion`) for anything outside v1.
+ * Walks a luaparse `Chunk` and enforces the language subset (v1 + v2 phase 1 reassignment),
+ * returning a validated, minimally-typed program model. Throws `SemanticError` (with
+ * line/column and, where the construct is on the roadmap, a `plannedVersion`) for anything
+ * outside the supported subset.
  */
 export function analyze(ast: Chunk): AnalyzedProgram {
   const declared = new Set<string>();
+  const reassigned = new Set<string>();
   const statements: AnalyzedStatement[] = [];
   const outputs: AnalyzedProgram["outputs"] = [];
   const inputs: AnalyzedProgram["inputs"] = [];
 
   for (const statement of ast.body) {
-    analyzeStatement(statement, declared, statements, outputs, inputs);
+    analyzeStatement(statement, declared, reassigned, statements, outputs, inputs);
   }
 
   if (outputs.length === 0) {
@@ -131,6 +144,7 @@ export function analyze(ast: Chunk): AnalyzedProgram {
 function analyzeStatement(
   statement: Statement,
   declared: Set<string>,
+  reassigned: Set<string>,
   statements: AnalyzedStatement[],
   outputs: AnalyzedProgram["outputs"],
   inputs: AnalyzedProgram["inputs"],
@@ -144,28 +158,36 @@ function analyzeStatement(
     case "CallStatement":
       analyzeCallStatement(statement, declared, outputs, inputs);
       return;
-    case "AssignmentStatement": {
-      const target = statement.variables[0];
-      const name = target ? describeAssignmentTarget(target) : "<expression>";
+    case "AssignmentStatement":
+      analyzeAssignmentStatement(statement, declared, reassigned, statements, inputs);
+      return;
+    case "WhileStatement":
       throw new SemanticError(
-        `variable '${name}' is already defined; reassignment is not supported in v1`,
+        "unsupported construct: while loop; planned for v2 phase 3 (tick scheduler)",
         line,
         column,
         "v2",
       );
-    }
-    case "WhileStatement":
-      throw new SemanticError("unsupported construct: while loop", line, column, "v2");
     case "RepeatStatement":
-      throw new SemanticError("unsupported construct: repeat loop", line, column, "v2");
+      throw new SemanticError(
+        "unsupported construct: repeat loop; planned for v2 phase 3 (tick scheduler)",
+        line,
+        column,
+        "v2",
+      );
     case "ForNumericStatement":
     case "ForGenericStatement":
-      throw new SemanticError("unsupported construct: for loop", line, column, "v2");
+      throw new SemanticError(
+        "unsupported construct: for loop; planned for v2 phase 3 (tick scheduler)",
+        line,
+        column,
+        "v2",
+      );
     case "FunctionDeclaration":
       throw new SemanticError("unsupported construct: function declaration", line, column, "v3");
     case "IfStatement":
       throw new SemanticError(
-        "unsupported construct: if/else statement; use the `a and b or c` and/or idiom for conditional values in v1",
+        "unsupported construct: if/else statement; use the `a and b or c` and/or idiom for conditional values, or wait for v2 phase 2",
         line,
         column,
         "v2",
@@ -173,6 +195,50 @@ function analyzeStatement(
     default:
       throw new SemanticError(`unsupported construct: ${statement.type}`, line, column);
   }
+}
+
+function analyzeAssignmentStatement(
+  statement: Extract<Statement, { type: "AssignmentStatement" }>,
+  declared: Set<string>,
+  reassigned: Set<string>,
+  statements: AnalyzedStatement[],
+  inputs: AnalyzedProgram["inputs"],
+): void {
+  const { line, column } = locOf(statement);
+
+  const target = statement.variables.length === 1 ? statement.variables[0] : undefined;
+  const initExpr = statement.init.length === 1 ? statement.init[0] : undefined;
+  if (!target || !initExpr) {
+    throw new SemanticError(
+      "assignments may assign exactly one variable from one expression",
+      line,
+      column,
+    );
+  }
+
+  if (target.type !== "Identifier") {
+    throw new SemanticError(
+      `unsupported assignment target '${describeAssignmentTarget(target)}'`,
+      line,
+      column,
+    );
+  }
+
+  const { name } = target;
+  if (!declared.has(name)) {
+    throw new SemanticError(`undefined variable '${name}'`, line, column);
+  }
+  if (reassigned.has(name)) {
+    throw new SemanticError(
+      `variable '${name}' already has a next-state assignment; only one reassignment per variable is supported in v2 phase 1`,
+      line,
+      column,
+    );
+  }
+
+  const expr = analyzeExpr(initExpr, declared, inputs);
+  reassigned.add(name);
+  statements.push({ kind: "assign", name, expr, line, column });
 }
 
 function analyzeLocalStatement(
@@ -230,10 +296,11 @@ function analyzeCallStatement(
   }
 
   const calleeName = describeCallee(call.base);
+  rejectTick(calleeName, line, column);
   if (calleeName !== "output") {
     const found = calleeName ? ` (found '${calleeName}()')` : "";
     throw new SemanticError(
-      `only output() calls are supported as statements in v1${found}`,
+      `only output() calls are supported as statements${found}`,
       line,
       column,
     );
@@ -339,6 +406,8 @@ function analyzeCallExpr(expr: CallExpression, inputs: AnalyzedProgram["inputs"]
       column,
     );
   }
+
+  rejectTick(calleeName, line, column);
 
   if (calleeName !== "input") {
     const found = calleeName ? ` to '${calleeName}'` : "";

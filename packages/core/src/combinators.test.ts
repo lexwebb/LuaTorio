@@ -113,7 +113,7 @@ describe("lowerToCombinators", () => {
     });
   });
 
-  it("lowers a select (mux) node to a decider combinator gated on cond > 0", () => {
+  it("lowers a select (mux) into then-gate, else-gate, and merge arithmetic", () => {
     const module: IRModule = {
       nodes: [
         { kind: "input", id: "__t1", signal: "signal-A" },
@@ -129,30 +129,84 @@ describe("lowerToCombinators", () => {
     };
 
     const graph = lowerToCombinators(module);
-    const mux = graph.entities.find((entity) => entity.id === "__t4");
+    const thenGate = graph.entities.find((entity) => entity.id === "__t4__then");
+    const elseGate = graph.entities.find((entity) => entity.id === "__t4__else");
+    const merge = graph.entities.find((entity) => entity.id === "__t4");
 
-    expect(mux).toEqual({
-      id: "__t4",
+    expect(thenGate).toMatchObject({
       kind: "decider",
-      name: "decider-combinator",
-      outputSignal: "__t4",
+      role: "mux-side",
       control_behavior: {
         decider_conditions: {
           conditions: [
-            { first_signal: { type: "virtual", name: "__t1" }, comparator: ">", constant: 0 },
+            { first_signal: { type: "virtual", name: "__t1" }, comparator: "!=", constant: 0 },
           ],
-          outputs: [{ signal: { type: "virtual", name: "__t4" }, copy_count_from_input: true }],
         },
       },
     });
-    // Every IR edge (cond, then, else) produces a wire into the mux entity, even though the
-    // `else` branch isn't representable in this node's control_behavior yet (see NOTE in
-    // combinators.ts) — the wiring itself is still faithful to the IR.
-    expect(graph.wires.filter((wire) => wire.to === "__t4")).toEqual([
-      { from: "__t1", to: "__t4", color: "green" },
-      { from: "__t2", to: "__t4", color: "green" },
-      { from: "__t3", to: "__t4", color: "green" },
+    expect(elseGate).toMatchObject({
+      kind: "decider",
+      role: "mux-side",
+      control_behavior: {
+        decider_conditions: {
+          conditions: [
+            { first_signal: { type: "virtual", name: "__t1" }, comparator: "=", constant: 0 },
+          ],
+        },
+      },
+    });
+    expect(merge).toMatchObject({
+      kind: "arithmetic",
+      outputSignal: "__t4",
+    });
+    expect(graph.wires.filter((wire) => wire.to === "__t4__then")).toEqual([
+      { from: "__t1", to: "__t4__then", color: "green" },
+      { from: "__t2", to: "__t4__then", color: "green" },
     ]);
+    expect(graph.wires.filter((wire) => wire.to === "__t4__else")).toEqual([
+      { from: "__t1", to: "__t4__else", color: "green" },
+      { from: "__t3", to: "__t4__else", color: "green" },
+    ]);
+  });
+
+  it("lowers memory+store to a latch arithmetic with feedback from the store value", () => {
+    const module: IRModule = {
+      nodes: [
+        { kind: "literal", id: "__t1", value: 0 },
+        { kind: "memory", id: "__t2", cell: "x", init: "__t1" },
+        { kind: "literal", id: "__t3", value: 1 },
+        { kind: "binop", id: "__t4", op: "+", left: "__t2", right: "__t3" },
+        { kind: "store", id: "__t5", cell: "x", value: "__t4" },
+      ],
+      outputs: [{ signal: "signal-A", nodeId: "__t2" }],
+      inputs: [],
+    };
+
+    const graph = lowerToCombinators(module);
+    const latch = graph.entities.find((entity) => entity.id === "__t2");
+
+    expect(latch).toMatchObject({
+      kind: "arithmetic",
+      role: "latch",
+      outputSignal: "__t2",
+      control_behavior: {
+        arithmetic_conditions: {
+          first_signal: { type: "virtual", name: "__t4" },
+          second_constant: 0,
+          operation: "+",
+          output_signal: { type: "virtual", name: "__t2" },
+        },
+      },
+    });
+    expect(graph.entities.some((entity) => entity.id === "__t5")).toBe(false);
+    expect(graph.wires).toEqual(
+      expect.arrayContaining([
+        { from: "__t1", to: "__t2", color: "green" },
+        { from: "__t4", to: "__t2", color: "green" },
+        { from: "__t2", to: "__t4", color: "green" },
+        { from: "__t3", to: "__t4", color: "green" },
+      ]),
+    );
   });
 
   it("wires every IR edge from producer to consumer", () => {
@@ -247,8 +301,8 @@ describe("lowerToCombinators", () => {
 
     const graph = lowerToCombinators(module);
 
-    // One entity per surviving IR node, plus exactly one output boundary marker.
-    expect(graph.entities).toHaveLength(module.nodes.length + 1);
+    // select expands to 3 entities; other nodes are 1:1; plus one output marker.
+    expect(graph.entities.length).toBeGreaterThan(module.nodes.length);
     expect(graph.outputs).toEqual([{ signal: "signal-B", entityId: "__o1" }]);
     // Every wire endpoint resolves to a known entity id (no dangling references).
     const knownIds = new Set(graph.entities.map((entity) => entity.id));
