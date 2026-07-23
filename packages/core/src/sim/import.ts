@@ -42,7 +42,20 @@ const SUPPORTED_NAMES = new Set([
   "constant-combinator",
   "arithmetic-combinator",
   "decider-combinator",
+  "selector-combinator",
 ]);
+
+const SELECTOR_SUPPORTED_OPS = new Set(["count", "select"]);
+
+function assertSupportedSelector(controlBehavior: Record<string, unknown>): void {
+  const operation =
+    typeof controlBehavior.operation === "string" ? controlBehavior.operation : "select";
+  if (!SELECTOR_SUPPORTED_OPS.has(operation)) {
+    throw new BlueprintImportError(
+      `unsupported selector operation '${operation}' (only count/select; see #39)`,
+    );
+  }
+}
 
 function connectorColor(connector: number): WireColor {
   switch (connector) {
@@ -83,6 +96,8 @@ function kindFromName(name: string): CombinatorKind {
       return "arithmetic";
     case "decider-combinator":
       return "decider";
+    case "selector-combinator":
+      return "selector";
     default:
       throw new BlueprintImportError(`unsupported entity '${name}'`);
   }
@@ -115,6 +130,10 @@ function inferOutputSignal(
         | { sections?: Array<{ filters?: Array<{ name?: unknown }> }> }
         | undefined;
       return asSignalName(sections?.sections?.[0]?.filters?.[0]?.name) ?? fallbackId;
+    }
+    case "selector": {
+      const countSignal = controlBehavior.count_signal as { name?: unknown } | undefined;
+      return asSignalName(countSignal?.name) ?? fallbackId;
     }
   }
 }
@@ -241,7 +260,7 @@ interface BlueprintPlanJson {
 
 /**
  * Import a Factorio blueprint plan (decoded JSON) into an undirected-net circuit.
- * Supports constant / arithmetic / decider only.
+ * Supports constant / arithmetic / decider / selector (count|select only).
  */
 export function fromBlueprint(
   plan: unknown,
@@ -268,12 +287,15 @@ export function fromBlueprint(
     }
     if (!SUPPORTED_NAMES.has(name)) {
       throw new BlueprintImportError(
-        `unsupported entity '${name}' (selector/logistic — see #39 / gaps)`,
+        `unsupported entity '${name}' (logistic/other — see gaps)`,
       );
     }
     const kind = kindFromName(name);
     const id = String(entityNumber);
     const control_behavior = raw.control_behavior ?? {};
+    if (kind === "selector") {
+      assertSupportedSelector(control_behavior);
+    }
     const entity: CircuitEntity = {
       id,
       kind,

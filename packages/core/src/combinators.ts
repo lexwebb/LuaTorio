@@ -2,8 +2,8 @@ import type { IRModule, IRNode } from "./ir.js";
 
 type CmpOp = Extract<IRNode, { kind: "cmp" }>["op"];
 
-/** The three Factorio combinator families a v1/v2 IR node can lower to. */
-export type CombinatorKind = "constant" | "arithmetic" | "decider";
+/** The Factorio combinator families a v1/v2 IR node can lower to. */
+export type CombinatorKind = "constant" | "arithmetic" | "decider" | "selector";
 
 /**
  * Optional role for layout / expansion:
@@ -114,7 +114,8 @@ function lowerInput(node: Extract<IRNode, { kind: "input" }>): CircuitEntity {
     id: node.id,
     kind: "constant",
     name: "constant-combinator",
-    outputSignal: node.signal,
+    // Channel id (not user signal): sim injects by entity.id; dual-inject would inflate counts.
+    outputSignal: node.id,
     control_behavior: { sections: { sections: [] } },
   };
 }
@@ -1318,6 +1319,26 @@ function lowerSrLatch(
   };
 }
 
+/** One selector combinator counting nonzero unique arg signals onto `node.id`. */
+function lowerSignalCount(node: Extract<IRNode, { kind: "signal_count" }>): {
+  entity: CircuitEntity;
+  wires: WireEdge[];
+} {
+  return {
+    entity: {
+      id: node.id,
+      kind: "selector",
+      name: "selector-combinator",
+      outputSignal: node.id,
+      control_behavior: {
+        operation: "count",
+        count_signal: signalRef(node.id),
+      },
+    },
+    wires: uniqueGreenWires(node.args, node.id),
+  };
+}
+
 /**
  * Fuse `store(mem, select(en, next, mem))` into an enable/hold latch.
  *
@@ -1687,6 +1708,12 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
           throw new Error(`internal error: sr node '${node.id}' was not fused into a latch`);
         }
         break;
+      case "signal_count": {
+        const { entity, wires: countWires } = lowerSignalCount(node);
+        entities.push(entity);
+        wires.push(...countWires);
+        break;
+      }
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -1761,6 +1788,11 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
+      case "signal_count":
+        if (node.args.includes(id)) {
+          users.push(node);
+        }
+        break;
       default: {
         const unreachable: never = node;
         throw new Error(`internal error: unhandled node kind '${JSON.stringify(unreachable)}'`);
@@ -1804,6 +1836,11 @@ function countNodeUses(module: IRModule): Map<string, number> {
         add(node.state);
         add(node.set);
         add(node.reset);
+        break;
+      case "signal_count":
+        for (const arg of node.args) {
+          add(arg);
+        }
         break;
       default: {
         const unreachable: never = node;

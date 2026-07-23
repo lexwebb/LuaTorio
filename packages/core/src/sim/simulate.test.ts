@@ -61,6 +61,16 @@ describe("simulate", () => {
     expect(result.ticks[1]?.outputs["signal-C"]).toBe(10);
   });
 
+  it("signal_count: counts nonzero inputs onto signal-N", () => {
+    const graph = graphOf(loadExample("signal_count.lua"));
+    const result = simulate(graph, {
+      ticks: 2,
+      inputs: { "signal-A": 1, "signal-B": 0, "signal-C": 4 },
+    });
+    expect(result.ticks[0]?.outputs["signal-N"]).toBe(2);
+    expect(result.ticks[1]?.outputs["signal-N"]).toBe(2);
+  });
+
   it("for_sum 1..10 settles at signal-A === 55", () => {
     const graph = graphOf(loadExample("for_sum.lua"));
     const result = simulate(graph, { ticks: 16 });

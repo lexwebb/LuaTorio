@@ -782,6 +782,34 @@ exports[`golden examples > or_flags > compiles to a blueprint JSON plan matching
 }
 `;
 
+exports[`golden examples > signal_count > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "count_signal": {
+            "name": "__t4",
+            "type": "virtual",
+          },
+          "operation": "count",
+        },
+        "entity_number": 1,
+        "name": "selector-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "signal_count",
+    "wires": [],
+  },
+}
+`;
+
 exports[`golden examples > sr_latch > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {

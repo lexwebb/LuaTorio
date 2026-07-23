@@ -101,6 +101,10 @@ function lowerExpr(
     }
     case "sr":
       throw new Error("internal error: sr() must be lowered via assignment, not as a bare expression");
+    case "signal_count": {
+      const args = expr.args.map((arg) => lowerExpr(arg, env, ctx));
+      return pushNode(ctx, { kind: "signal_count", id: nextId(ctx), args });
+    }
     default: {
       const unreachable: never = expr;
       throw new Error(`internal error: unhandled expression kind '${JSON.stringify(unreachable)}'`);

@@ -76,6 +76,12 @@ export type AnalyzedExpr =
       reset: AnalyzedExpr;
       line: number;
       column: number;
+    }
+  | {
+      kind: "signal_count";
+      args: AnalyzedExpr[];
+      line: number;
+      column: number;
     };
 
 export type AnalyzedAssign = {
@@ -792,6 +798,18 @@ function analyzeCallExpr(
     const set = analyzeExpr(expr.arguments[1]!, declared, inputs);
     const reset = analyzeExpr(expr.arguments[2]!, declared, inputs);
     return { kind: "sr", state, set, reset, line, column };
+  }
+
+  if (calleeName === "signal_count") {
+    if (expr.arguments.length === 0) {
+      throw new SemanticError("signal_count(...) requires at least 1 argument", line, column);
+    }
+    return {
+      kind: "signal_count",
+      args: expr.arguments.map((arg) => analyzeExpr(arg, declared, inputs)),
+      line,
+      column,
+    };
   }
 
   if (calleeName !== "input") {

@@ -17,7 +17,9 @@ export type IRNode =
   | { kind: "memory"; id: string; cell: string; init: string }
   | { kind: "store"; id: string; cell: string; value: string }
   /** Cookbook SR: Q' = (Q ∨ set) ∧ ¬reset → 0/1. */
-  | { kind: "sr"; id: string; state: string; set: string; reset: string };
+  | { kind: "sr"; id: string; state: string; set: string; reset: string }
+  /** Count nonzero unique arg signals → one selector combinator (`operation: "count"`). */
+  | { kind: "signal_count"; id: string; args: string[] };
 
 export interface IRModule {
   /** Flat node list; `id === temp signal name`. */

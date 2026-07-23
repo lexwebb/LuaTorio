@@ -31,12 +31,79 @@ describe("fromBlueprint", () => {
   it("rejects unsupported entities with a clear error", () => {
     const plan = {
       blueprint: {
-        entities: [{ entity_number: 1, name: "selector-combinator", control_behavior: {} }],
+        entities: [{ entity_number: 1, name: "logistic-chest-buffer", control_behavior: {} }],
         wires: [],
       },
     };
     expect(() => fromBlueprint(plan)).toThrow(BlueprintImportError);
-    expect(() => fromBlueprint(plan)).toThrow(/selector/);
+    expect(() => fromBlueprint(plan)).toThrow(/logistic/);
+  });
+
+  it("imports a minimal selector count blueprint", () => {
+    const plan = {
+      blueprint: {
+        entities: [
+          {
+            entity_number: 1,
+            name: "constant-combinator",
+            control_behavior: {
+              sections: {
+                sections: [
+                  {
+                    index: 1,
+                    filters: [
+                      { index: 1, count: 5, type: "virtual", name: "signal-A" },
+                      { index: 2, count: 3, type: "virtual", name: "signal-B" },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          {
+            entity_number: 2,
+            name: "selector-combinator",
+            control_behavior: {
+              operation: "count",
+              count_signal: { type: "virtual", name: "signal-N" },
+            },
+          },
+          {
+            entity_number: 3,
+            name: "constant-combinator",
+            control_behavior: { sections: { sections: [] } },
+          },
+        ],
+        wires: [
+          [1, 2, 2, 2],
+          [2, 4, 3, 2],
+        ],
+      },
+    };
+    const circuit = fromBlueprint(plan, {
+      outputs: [{ signal: "signal-N", entityId: "3" }],
+    });
+    expect(circuit.entities.find((e) => e.id === "2")?.kind).toBe("selector");
+    expect(circuit.entities.find((e) => e.id === "2")?.outputSignal).toBe("signal-N");
+    const result = simulateImported(circuit, { ticks: 2 });
+    expect(result.ticks[0]?.outputs["signal-N"]).toBe(2);
+  });
+
+  it("rejects unsupported selector operations", () => {
+    const plan = {
+      blueprint: {
+        entities: [
+          {
+            entity_number: 1,
+            name: "selector-combinator",
+            control_behavior: { operation: "random" },
+          },
+        ],
+        wires: [],
+      },
+    };
+    expect(() => fromBlueprint(plan)).toThrow(BlueprintImportError);
+    expect(() => fromBlueprint(plan)).toThrow(/random/);
   });
 
   it("marks self-feedback arithmetic as a latch", () => {

@@ -1,0 +1,6 @@
+-- Counts how many of A/B/C are nonzero → signal-N (selector combinator)
+local a = input("signal-A")
+local b = input("signal-B")
+local c = input("signal-C")
+local n = signal_count(a, b, c)
+output("signal-N", n)

@@ -84,6 +84,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`while_count.lua`](examples/while_count.lua) | v2 clocked while: count up to `signal-L` (`tick()` barrier) |
 | [`sr_latch.lua`](examples/sr_latch.lua) | Cookbook SR via `sr(q, set, reset)` — one decider latch |
 | [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
+| [`signal_count.lua`](examples/signal_count.lua) | Count nonzero inputs via `signal_count` → selector combinator |
 
 ## Language Reference
 
@@ -104,6 +105,7 @@ Programs are a flat sequence of statements. See the
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
+| `signal_count(a, b, …)` | Count nonzero args; emits one selector combinator (`operation: "count"`) |
 | Arithmetic: `+ - * / %` | Lowers to arithmetic combinators |
 | Comparisons: `< > <= >= == ~=` | Lowers to a decider combinator (1/0 output) |
 | `a and b or c` | Standard Lua ternary idiom; desugars to a `select` (mux) |

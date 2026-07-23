@@ -27,7 +27,7 @@ describe("lowerToCombinators", () => {
     });
   });
 
-  it("lowers an input node to a constant-combinator placeholder using the real signal name", () => {
+  it("lowers an input node to a constant-combinator placeholder on the IR channel id", () => {
     const module: IRModule = {
       nodes: [{ kind: "input", id: "__t1", signal: "signal-A" }],
       outputs: [{ signal: "signal-B", nodeId: "__t1" }],
@@ -40,7 +40,7 @@ describe("lowerToCombinators", () => {
       id: "__t1",
       kind: "constant",
       name: "constant-combinator",
-      outputSignal: "signal-A",
+      outputSignal: "__t1",
       control_behavior: { sections: { sections: [] } },
     });
     expect(graph.inputs).toEqual([{ signal: "signal-A", entityId: "__t1" }]);

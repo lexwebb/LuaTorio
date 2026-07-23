@@ -104,6 +104,8 @@ function evalExpr(
       }
       return truthy(state) || truthy(set) ? 1 : 0;
     }
+    case "signal_count":
+      return expr.args.filter((arg) => evalExpr(arg, env, inputs) !== 0).length;
     default: {
       const unreachable: never = expr;
       throw new Error(`reference: bad expr '${JSON.stringify(unreachable)}'`);

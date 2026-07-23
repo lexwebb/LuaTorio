@@ -392,6 +392,73 @@ export function evalDecider(entity: CircuitEntity, net: EvalNet): SignalBag {
   return out;
 }
 
+/**
+ * Selector `select` mode: sort present signals by value, pick by index.
+ * `select_max` true/undefined = descending; a lone candidate always passes (wiki).
+ */
+function evalSelectorSelect(
+  cb: Record<string, unknown>,
+  inputs: ColoredInputs,
+  bag: SignalBag,
+  out: SignalBag,
+): void {
+  const indexSignal = signalName(cb.index_signal);
+  const index =
+    indexSignal !== undefined
+      ? bagGet(selectNetworks(inputs, cb.index_signal_networks ?? cb.networks), indexSignal)
+      : (asNumber(cb.index_constant) ?? 0);
+  const selectMax = cb.select_max !== false;
+  const candidates = presentSignals(bag).filter(
+    (name) => indexSignal === undefined || name !== indexSignal,
+  );
+
+  let picked: string | undefined;
+  if (candidates.length === 1) {
+    picked = candidates[0];
+  } else if (candidates.length > 1) {
+    candidates.sort((a, b) => {
+      const va = bagGet(bag, a);
+      const vb = bagGet(bag, b);
+      if (va !== vb) {
+        return selectMax ? vb - va : va - vb;
+      }
+      return a.localeCompare(b);
+    });
+    if (index >= 0 && index < candidates.length) {
+      picked = candidates[index];
+    }
+  }
+
+  if (picked !== undefined) {
+    bagSet(out, picked, bagGet(bag, picked));
+  }
+}
+
+/** Selector combinator: `count` (present → count_signal) or `select` (rank/index pick). */
+export function evalSelector(entity: CircuitEntity, net: EvalNet): SignalBag {
+  const out = emptyBag();
+  const cb = entity.control_behavior as Record<string, unknown>;
+  const inputs = toColored(net);
+  const bag = selectNetworks(
+    inputs,
+    cb.networks ?? cb.signal_networks ?? cb.first_signal_networks,
+  );
+  const operation = typeof cb.operation === "string" ? cb.operation : "select";
+
+  switch (operation) {
+    case "count": {
+      const countSignal = signalName(cb.count_signal) ?? entity.outputSignal;
+      bagSet(out, countSignal, presentSignals(bag).length);
+      return out;
+    }
+    case "select":
+      evalSelectorSelect(cb, inputs, bag, out);
+      return out;
+    default:
+      throw new Error(`simulate: unsupported selector operation '${operation}'`);
+  }
+}
+
 /** Evaluate any non-latch entity given its current input network(s). */
 export function evalEntity(entity: CircuitEntity, net: EvalNet): SignalBag {
   switch (entity.kind) {
@@ -401,6 +468,8 @@ export function evalEntity(entity: CircuitEntity, net: EvalNet): SignalBag {
       return evalArithmetic(entity, net);
     case "decider":
       return evalDecider(entity, net);
+    case "selector":
+      return evalSelector(entity, net);
     default: {
       const unreachable: never = entity.kind;
       throw new Error(`simulate: unhandled entity kind '${String(unreachable)}'`);
