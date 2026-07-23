@@ -33,7 +33,7 @@ export interface CircuitEntity {
   label?: string;
 }
 
-/** Factorio wire color. Most compiled Lua stays green; `catalog_latch` uses red (#46). */
+/** Factorio wire color. Most compiled Lua stays green; `each_latch` uses red (#46). */
 export type WireColor = "red" | "green";
 
 export interface WireEdge {
@@ -1344,23 +1344,48 @@ function lowerSignalCount(node: Extract<IRNode, { kind: "signal_count" }>): {
   };
 }
 
+/**
+ * Selector rank/index (#47): pick Nth nonzero arg by value.
+ * Pass-through keeps the winner's signal name; output-port rename yields the count.
+ */
+function lowerSignalAt(node: Extract<IRNode, { kind: "signal_at" }>): {
+  entity: CircuitEntity;
+  wires: WireEdge[];
+} {
+  return {
+    entity: {
+      id: node.id,
+      kind: "selector",
+      name: "selector-combinator",
+      outputSignal: node.id,
+      label: node.ascending ? "signal_at_asc" : "signal_at",
+      control_behavior: {
+        operation: "select",
+        index_constant: node.index,
+        select_max: !node.ascending,
+      },
+    },
+    wires: uniqueGreenWires(node.args, node.id),
+  };
+}
+
 const NET_GREEN = { red: false, green: true };
 const NET_RED = { red: true, green: false };
 
 /**
- * EACH-tag sticky catalog (#46): 1 constant (green tags) + 1 multi-OR decider latch.
- * Stock + feedback on red; catalog on green; output EACH = 1.
+ * EACH-tag sticky hysteresis (#46): 1 constant (green tags) + 1 multi-OR decider latch.
+ * Levels + feedback on red; tag table on green; output EACH = 1.
  */
-function lowerCatalogLatch(node: Extract<IRNode, { kind: "catalog_latch" }>): {
+function lowerEachLatch(node: Extract<IRNode, { kind: "each_latch" }>): {
   entities: CircuitEntity[];
   wires: WireEdge[];
 } {
-  const catalogId = `${node.id}__cat`;
+  const tagsId = `${node.id}__tags`;
   const conditions: Array<Record<string, unknown>> = [];
   for (const entry of node.entries) {
     const setGroup = [
       {
-        first_signal: signalRef(entry.stock),
+        first_signal: signalRef(entry.level),
         first_signal_networks: NET_RED,
         comparator: "=",
         constant: 0,
@@ -1371,21 +1396,21 @@ function lowerCatalogLatch(node: Extract<IRNode, { kind: "catalog_latch" }>): {
         first_signal: signalRef(SIGNAL_EACH),
         first_signal_networks: NET_GREEN,
         comparator: "=",
-        second_signal: signalRef(entry.recipe),
+        second_signal: signalRef(entry.signal),
         second_signal_networks: NET_GREEN,
       },
     ];
     const holdGroup = [
       {
         compare_type: "or",
-        first_signal: signalRef(entry.stock),
+        first_signal: signalRef(entry.level),
         first_signal_networks: NET_RED,
         comparator: "<",
         constant: entry.buffer,
       },
       {
         compare_type: "and",
-        first_signal: signalRef(entry.recipe),
+        first_signal: signalRef(entry.signal),
         first_signal_networks: NET_RED,
         comparator: ">",
         constant: 0,
@@ -1395,7 +1420,7 @@ function lowerCatalogLatch(node: Extract<IRNode, { kind: "catalog_latch" }>): {
         first_signal: signalRef(SIGNAL_EACH),
         first_signal_networks: NET_GREEN,
         comparator: "=",
-        second_signal: signalRef(entry.recipe),
+        second_signal: signalRef(entry.signal),
         second_signal_networks: NET_GREEN,
       },
     ];
@@ -1403,26 +1428,26 @@ function lowerCatalogLatch(node: Extract<IRNode, { kind: "catalog_latch" }>): {
   }
 
   const wires: WireEdge[] = [
-    greenWire(catalogId, node.id),
+    greenWire(tagsId, node.id),
     redWire(node.id, node.id),
   ];
-  const seenStock = new Set<string>();
+  const seenLevel = new Set<string>();
   for (const entry of node.entries) {
-    if (seenStock.has(entry.stock)) {
+    if (seenLevel.has(entry.level)) {
       continue;
     }
-    seenStock.add(entry.stock);
-    wires.push(redWire(entry.stock, node.id));
+    seenLevel.add(entry.level);
+    wires.push(redWire(entry.level, node.id));
   }
 
   return {
     entities: [
       {
-        id: catalogId,
+        id: tagsId,
         kind: "constant",
         name: "constant-combinator",
-        outputSignal: node.entries[0]!.recipe,
-        label: "catalog",
+        outputSignal: node.entries[0]!.signal,
+        label: "tags",
         control_behavior: {
           sections: {
             sections: [
@@ -1432,7 +1457,7 @@ function lowerCatalogLatch(node: Extract<IRNode, { kind: "catalog_latch" }>): {
                   index: index + 1,
                   count: entry.tag,
                   type: "virtual",
-                  name: entry.recipe,
+                  name: entry.signal,
                 })),
               },
             ],
@@ -1445,7 +1470,7 @@ function lowerCatalogLatch(node: Extract<IRNode, { kind: "catalog_latch" }>): {
         name: "decider-combinator",
         outputSignal: SIGNAL_EACH,
         role: "latch",
-        label: "catalog_latch",
+        label: "each_latch",
         control_behavior: {
           decider_conditions: {
             conditions,
@@ -1938,10 +1963,16 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         wires.push(...countWires);
         break;
       }
-      case "catalog_latch": {
-        const expanded = lowerCatalogLatch(node);
+      case "each_latch": {
+        const expanded = lowerEachLatch(node);
         entities.push(...expanded.entities);
         wires.push(...expanded.wires);
+        break;
+      }
+      case "signal_at": {
+        const { entity, wires: atWires } = lowerSignalAt(node);
+        entities.push(entity);
+        wires.push(...atWires);
         break;
       }
       default: {
@@ -2026,8 +2057,13 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
           users.push(node);
         }
         break;
-      case "catalog_latch":
-        if (node.entries.some((entry) => entry.stock === id)) {
+      case "each_latch":
+        if (node.entries.some((entry) => entry.level === id)) {
+          users.push(node);
+        }
+        break;
+      case "signal_at":
+        if (node.args.includes(id)) {
           users.push(node);
         }
         break;
@@ -2080,9 +2116,14 @@ function countNodeUses(module: IRModule): Map<string, number> {
           add(arg);
         }
         break;
-      case "catalog_latch":
+      case "each_latch":
         for (const entry of node.entries) {
-          add(entry.stock);
+          add(entry.level);
+        }
+        break;
+      case "signal_at":
+        for (const arg of node.args) {
+          add(arg);
         }
         break;
       default: {

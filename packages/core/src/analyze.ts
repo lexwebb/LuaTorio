@@ -84,13 +84,21 @@ export type AnalyzedExpr =
       column: number;
     }
   | {
-      kind: "catalog_latch";
+      kind: "each_latch";
       entries: Array<{
-        stock: AnalyzedExpr;
-        recipe: string;
+        level: AnalyzedExpr;
+        signal: string;
         buffer: number;
         tag: number;
       }>;
+      line: number;
+      column: number;
+    }
+  | {
+      kind: "signal_at";
+      index: number;
+      ascending: boolean;
+      args: AnalyzedExpr[];
       line: number;
       column: number;
     };
@@ -161,8 +169,8 @@ interface Loc {
 interface AnalyzeContext {
   declared: Set<string>;
   reassigned: Set<string>;
-  /** Locals initialized with `catalog_latch` — wire handles, not scalar memory. */
-  catalogLocals: Set<string>;
+  /** Locals initialized with `each_latch` — wire handles, not scalar memory. */
+  eachLatchLocals: Set<string>;
   statements: AnalyzedStatement[];
   outputs: AnalyzedProgram["outputs"];
   inputs: AnalyzedProgram["inputs"];
@@ -221,7 +229,7 @@ export function analyze(ast: Chunk): AnalyzedProgram {
   const ctx: AnalyzeContext = {
     declared: new Set<string>(),
     reassigned: new Set<string>(),
-    catalogLocals: new Set<string>(),
+    eachLatchLocals: new Set<string>(),
     statements: [],
     outputs: [],
     inputs: [],
@@ -317,8 +325,8 @@ function analyzeWhileStatement(
   const { line, column } = locOf(statement);
   requireClockedShape(ctx, line, column);
 
-  const cond = analyzeExpr(statement.condition, ctx.declared, ctx.inputs, ctx.catalogLocals);
-  forbidCatalogInScalar(cond, ctx.catalogLocals, line, column);
+  const cond = analyzeExpr(statement.condition, ctx.declared, ctx.inputs, ctx.eachLatchLocals);
+  forbidBagLocalInScalar(cond, ctx.eachLatchLocals, line, column);
   const body = analyzeLoopBody(statement.body, ctx, { line, column });
 
   ctx.seenLoop = true;
@@ -431,24 +439,24 @@ function markReassigned(name: string, reassigned: Set<string>, line: number, col
   reassigned.add(name);
 }
 
-/** Catalog bag locals / exprs are wire handles — not scalar arithmetic operands. */
-function forbidCatalogInScalar(
+/** Bag locals / exprs are wire handles — not scalar arithmetic operands. */
+function forbidBagLocalInScalar(
   expr: AnalyzedExpr,
-  catalogLocals: ReadonlySet<string>,
+  eachLatchLocals: ReadonlySet<string>,
   line: number,
   column: number,
 ): void {
   switch (expr.kind) {
-    case "catalog_latch":
+    case "each_latch":
       throw new SemanticError(
-        "catalog_latch(...) may only appear as a local initializer or output() value",
+        "each_latch(...) may only appear as a local initializer or output() value",
         line,
         column,
       );
     case "ref":
-      if (catalogLocals.has(expr.name)) {
+      if (eachLatchLocals.has(expr.name)) {
         throw new SemanticError(
-          `catalog local '${expr.name}' may only be passed to output()`,
+          `each_latch local '${expr.name}' may only be passed to output()`,
           line,
           column,
         );
@@ -460,22 +468,23 @@ function forbidCatalogInScalar(
     case "binop":
     case "cmp":
     case "logical":
-      forbidCatalogInScalar(expr.left, catalogLocals, line, column);
-      forbidCatalogInScalar(expr.right, catalogLocals, line, column);
+      forbidBagLocalInScalar(expr.left, eachLatchLocals, line, column);
+      forbidBagLocalInScalar(expr.right, eachLatchLocals, line, column);
       return;
     case "select":
-      forbidCatalogInScalar(expr.cond, catalogLocals, line, column);
-      forbidCatalogInScalar(expr.then, catalogLocals, line, column);
-      forbidCatalogInScalar(expr.else, catalogLocals, line, column);
+      forbidBagLocalInScalar(expr.cond, eachLatchLocals, line, column);
+      forbidBagLocalInScalar(expr.then, eachLatchLocals, line, column);
+      forbidBagLocalInScalar(expr.else, eachLatchLocals, line, column);
       return;
     case "sr":
-      forbidCatalogInScalar(expr.state, catalogLocals, line, column);
-      forbidCatalogInScalar(expr.set, catalogLocals, line, column);
-      forbidCatalogInScalar(expr.reset, catalogLocals, line, column);
+      forbidBagLocalInScalar(expr.state, eachLatchLocals, line, column);
+      forbidBagLocalInScalar(expr.set, eachLatchLocals, line, column);
+      forbidBagLocalInScalar(expr.reset, eachLatchLocals, line, column);
       return;
     case "signal_count":
+    case "signal_at":
       for (const arg of expr.args) {
-        forbidCatalogInScalar(arg, catalogLocals, line, column);
+        forbidBagLocalInScalar(arg, eachLatchLocals, line, column);
       }
       return;
     default: {
@@ -592,8 +601,8 @@ function analyzeIfClauses(
     throw new SemanticError("unexpected clause after if", line, column);
   }
 
-  const cond = analyzeExpr(first.condition, ctx.declared, ctx.inputs, ctx.catalogLocals);
-  forbidCatalogInScalar(cond, ctx.catalogLocals, locOf(first).line, locOf(first).column);
+  const cond = analyzeExpr(first.condition, ctx.declared, ctx.inputs, ctx.eachLatchLocals);
+  forbidBagLocalInScalar(cond, ctx.eachLatchLocals, locOf(first).line, locOf(first).column);
   const thenAssigns = first.body.map((bodyStmt) =>
     analyzeBranchAssign(bodyStmt, ctx.declared, ctx.inputs, inductionVar),
   );
@@ -682,9 +691,9 @@ function analyzeAssignmentStatement(
   if (!ctx.declared.has(name)) {
     throw new SemanticError(`undefined variable '${name}'`, line, column);
   }
-  if (ctx.catalogLocals.has(name)) {
+  if (ctx.eachLatchLocals.has(name)) {
     throw new SemanticError(
-      `catalog local '${name}' cannot be reassigned; sticky state is inside the combinator`,
+      `each_latch local '${name}' cannot be reassigned; sticky state is inside the combinator`,
       line,
       column,
     );
@@ -701,7 +710,7 @@ function analyzeAssignmentStatement(
       );
     }
   }
-  forbidCatalogInScalar(expr, ctx.catalogLocals, line, column);
+  forbidBagLocalInScalar(expr, ctx.eachLatchLocals, line, column);
   ctx.seenFreeRunningStore = true;
   ctx.statements.push({ kind: "assign", name, expr, line, column });
 }
@@ -734,10 +743,10 @@ function analyzeLocalStatement(statement: LocalStatement, ctx: AnalyzeContext): 
   }
 
   const expr = analyzeExpr(initExpr, ctx.declared, ctx.inputs);
-  if (expr.kind === "catalog_latch") {
-    ctx.catalogLocals.add(name);
+  if (expr.kind === "each_latch") {
+    ctx.eachLatchLocals.add(name);
   } else {
-    forbidCatalogInScalar(expr, ctx.catalogLocals, line, column);
+    forbidBagLocalInScalar(expr, ctx.eachLatchLocals, line, column);
   }
   ctx.declared.add(name);
   ctx.statements.push({ kind: "local", name, expr, line, column });
@@ -780,12 +789,12 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
   }
 
   const expr = analyzeExpr(valueArg, ctx.declared, ctx.inputs);
-  if (expr.kind === "catalog_latch") {
+  if (expr.kind === "each_latch") {
     // inline bag → output is fine
-  } else if (expr.kind === "ref" && ctx.catalogLocals.has(expr.name)) {
+  } else if (expr.kind === "ref" && ctx.eachLatchLocals.has(expr.name)) {
     // wire handle → output is fine
   } else {
-    forbidCatalogInScalar(expr, ctx.catalogLocals, line, column);
+    forbidBagLocalInScalar(expr, ctx.eachLatchLocals, line, column);
   }
   ctx.outputs.push({ signal: signalArg.value, expr, line, column });
 }
@@ -794,7 +803,7 @@ function analyzeExpr(
   expr: Expression,
   declared: Set<string>,
   inputs: AnalyzedProgram["inputs"],
-  catalogLocals: ReadonlySet<string> = new Set(),
+  eachLatchLocals: ReadonlySet<string> = new Set(),
 ): AnalyzedExpr {
   const { line, column } = locOf(expr);
 
@@ -816,18 +825,18 @@ function analyzeExpr(
       return { kind: "ref", name: expr.name, line, column };
     }
     case "BinaryExpression":
-      return analyzeBinaryExpr(expr, declared, inputs, catalogLocals);
+      return analyzeBinaryExpr(expr, declared, inputs, eachLatchLocals);
     case "LogicalExpression":
       return {
         kind: "logical",
         op: expr.operator,
-        left: analyzeExpr(expr.left, declared, inputs, catalogLocals),
-        right: analyzeExpr(expr.right, declared, inputs, catalogLocals),
+        left: analyzeExpr(expr.left, declared, inputs, eachLatchLocals),
+        right: analyzeExpr(expr.right, declared, inputs, eachLatchLocals),
         line,
         column,
       };
     case "CallExpression":
-      return analyzeCallExpr(expr, declared, inputs, catalogLocals);
+      return analyzeCallExpr(expr, declared, inputs, eachLatchLocals);
     case "StringLiteral":
       throw new SemanticError(
         "string literals are only allowed as input()/output() signal names in v1",
@@ -847,7 +856,7 @@ function analyzeBinaryExpr(
   expr: BinaryExpression,
   declared: Set<string>,
   inputs: AnalyzedProgram["inputs"],
-  catalogLocals: ReadonlySet<string> = new Set(),
+  eachLatchLocals: ReadonlySet<string> = new Set(),
 ): AnalyzedExpr {
   const { line, column } = locOf(expr);
 
@@ -855,8 +864,8 @@ function analyzeBinaryExpr(
     throw new SemanticError(`unsupported operator '${expr.operator}'`, line, column);
   }
 
-  const left = analyzeExpr(expr.left, declared, inputs, catalogLocals);
-  const right = analyzeExpr(expr.right, declared, inputs, catalogLocals);
+  const left = analyzeExpr(expr.left, declared, inputs, eachLatchLocals);
+  const right = analyzeExpr(expr.right, declared, inputs, eachLatchLocals);
 
   if (ARITH_OPS.has(expr.operator)) {
     return { kind: "binop", op: expr.operator as ArithOp, left, right, line, column };
@@ -868,7 +877,7 @@ function analyzeCallExpr(
   expr: CallExpression,
   declared: Set<string>,
   inputs: AnalyzedProgram["inputs"],
-  catalogLocals: ReadonlySet<string> = new Set(),
+  eachLatchLocals: ReadonlySet<string> = new Set(),
 ): AnalyzedExpr {
   const { line, column } = locOf(expr);
   const calleeName = describeCallee(expr.base);
@@ -887,9 +896,9 @@ function analyzeCallExpr(
     if (expr.arguments.length !== 3) {
       throw new SemanticError("sr(state, set, reset) requires exactly 3 arguments", line, column);
     }
-    const state = analyzeExpr(expr.arguments[0]!, declared, inputs, catalogLocals);
-    const set = analyzeExpr(expr.arguments[1]!, declared, inputs, catalogLocals);
-    const reset = analyzeExpr(expr.arguments[2]!, declared, inputs, catalogLocals);
+    const state = analyzeExpr(expr.arguments[0]!, declared, inputs, eachLatchLocals);
+    const set = analyzeExpr(expr.arguments[1]!, declared, inputs, eachLatchLocals);
+    const reset = analyzeExpr(expr.arguments[2]!, declared, inputs, eachLatchLocals);
     return { kind: "sr", state, set, reset, line, column };
   }
 
@@ -899,65 +908,100 @@ function analyzeCallExpr(
     }
     return {
       kind: "signal_count",
-      args: expr.arguments.map((arg) => analyzeExpr(arg, declared, inputs, catalogLocals)),
+      args: expr.arguments.map((arg) => analyzeExpr(arg, declared, inputs, eachLatchLocals)),
       line,
       column,
     };
   }
 
-  if (calleeName === "catalog_latch") {
-    if (expr.arguments.length < 3 || expr.arguments.length % 3 !== 0) {
+  if (calleeName === "signal_at" || calleeName === "signal_at_asc") {
+    if (expr.arguments.length < 2) {
       throw new SemanticError(
-        "catalog_latch(stock, recipe, buffer, ...) requires one or more triples",
+        `${calleeName}(index, signal, ...) requires an index and at least one signal`,
         line,
         column,
       );
     }
-    const entries: Extract<AnalyzedExpr, { kind: "catalog_latch" }>["entries"] = [];
-    const recipes = new Set<string>();
+    const indexArg = expr.arguments[0]!;
+    if (indexArg.type !== "NumericLiteral" || !Number.isInteger(indexArg.value)) {
+      throw new SemanticError(
+        `${calleeName} index must be a non-negative integer literal`,
+        locOf(indexArg).line,
+        locOf(indexArg).column,
+      );
+    }
+    if (indexArg.value < 0) {
+      throw new SemanticError(
+        `${calleeName} index must be >= 0`,
+        locOf(indexArg).line,
+        locOf(indexArg).column,
+      );
+    }
+    return {
+      kind: "signal_at",
+      index: indexArg.value,
+      ascending: calleeName === "signal_at_asc",
+      args: expr.arguments
+        .slice(1)
+        .map((arg) => analyzeExpr(arg, declared, inputs, eachLatchLocals)),
+      line,
+      column,
+    };
+  }
+
+  if (calleeName === "each_latch") {
+    if (expr.arguments.length < 3 || expr.arguments.length % 3 !== 0) {
+      throw new SemanticError(
+        "each_latch(level, signal, high, ...) requires one or more triples",
+        line,
+        column,
+      );
+    }
+    const entries: Extract<AnalyzedExpr, { kind: "each_latch" }>["entries"] = [];
+    const signals = new Set<string>();
     for (let i = 0; i < expr.arguments.length; i += 3) {
-      const stockArg = expr.arguments[i]!;
-      const recipeArg = expr.arguments[i + 1]!;
-      const bufferArg = expr.arguments[i + 2]!;
-      if (recipeArg.type !== "StringLiteral") {
+      const levelArg = expr.arguments[i]!;
+      const signalArg = expr.arguments[i + 1]!;
+      const highArg = expr.arguments[i + 2]!;
+      if (signalArg.type !== "StringLiteral") {
         throw new SemanticError(
-          "catalog_latch recipe must be a string literal signal name",
-          locOf(recipeArg).line,
-          locOf(recipeArg).column,
+          "each_latch signal must be a string literal signal name",
+          locOf(signalArg).line,
+          locOf(signalArg).column,
         );
       }
-      if (recipes.has(recipeArg.value)) {
+      if (signals.has(signalArg.value)) {
         throw new SemanticError(
-          `catalog_latch duplicate recipe signal '${recipeArg.value}'`,
-          locOf(recipeArg).line,
-          locOf(recipeArg).column,
+          `each_latch duplicate signal '${signalArg.value}'`,
+          locOf(signalArg).line,
+          locOf(signalArg).column,
         );
       }
-      recipes.add(recipeArg.value);
-      if (bufferArg.type !== "NumericLiteral" || !Number.isInteger(bufferArg.value)) {
+      signals.add(signalArg.value);
+      if (highArg.type !== "NumericLiteral" || !Number.isInteger(highArg.value)) {
         throw new SemanticError(
-          "catalog_latch buffer must be a positive integer literal",
-          locOf(bufferArg).line,
-          locOf(bufferArg).column,
+          "each_latch high must be a positive integer literal",
+          locOf(highArg).line,
+          locOf(highArg).column,
         );
       }
-      if (bufferArg.value <= 0) {
+      if (highArg.value <= 0) {
         throw new SemanticError(
-          "catalog_latch buffer must be > 0",
-          locOf(bufferArg).line,
-          locOf(bufferArg).column,
+          "each_latch high must be > 0",
+          locOf(highArg).line,
+          locOf(highArg).column,
         );
       }
-      const stock = analyzeExpr(stockArg, declared, inputs, catalogLocals);
-      forbidCatalogInScalar(stock, catalogLocals, locOf(stockArg).line, locOf(stockArg).column);
+      const level = analyzeExpr(levelArg, declared, inputs, eachLatchLocals);
+      forbidBagLocalInScalar(level, eachLatchLocals, locOf(levelArg).line, locOf(levelArg).column);
       entries.push({
-        stock,
-        recipe: recipeArg.value,
-        buffer: bufferArg.value,
+        level,
+        signal: signalArg.value,
+        buffer: highArg.value,
         tag: entries.length + 1,
       });
     }
-    return { kind: "catalog_latch", entries, line, column };
+    return { kind: "each_latch", entries, line, column };
   }
 
   if (calleeName !== "input") {

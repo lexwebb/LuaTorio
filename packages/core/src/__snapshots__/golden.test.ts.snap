@@ -83,244 +83,6 @@ exports[`golden examples > adder > compiles to a blueprint JSON plan matching it
 }
 `;
 
-exports[`golden examples > catalog_latch > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
-{
-  "blueprint": {
-    "entities": [
-      {
-        "control_behavior": {
-          "sections": {
-            "sections": [
-              {
-                "filters": [
-                  {
-                    "count": 1,
-                    "index": 1,
-                    "name": "recipe-A",
-                    "type": "virtual",
-                  },
-                  {
-                    "count": 2,
-                    "index": 2,
-                    "name": "recipe-B",
-                    "type": "virtual",
-                  },
-                ],
-                "index": 1,
-              },
-            ],
-          },
-        },
-        "entity_number": 1,
-        "name": "constant-combinator",
-        "position": {
-          "x": 0,
-          "y": 0,
-        },
-      },
-      {
-        "control_behavior": {
-          "decider_conditions": {
-            "conditions": [
-              {
-                "comparator": "=",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t1",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": false,
-                  "red": true,
-                },
-              },
-              {
-                "comparator": "=",
-                "compare_type": "and",
-                "first_signal": {
-                  "name": "signal-each",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-                "second_signal": {
-                  "name": "recipe-A",
-                  "type": "virtual",
-                },
-                "second_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-              },
-              {
-                "comparator": "<",
-                "compare_type": "or",
-                "constant": 10,
-                "first_signal": {
-                  "name": "__t1",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": false,
-                  "red": true,
-                },
-              },
-              {
-                "comparator": ">",
-                "compare_type": "and",
-                "constant": 0,
-                "first_signal": {
-                  "name": "recipe-A",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": false,
-                  "red": true,
-                },
-              },
-              {
-                "comparator": "=",
-                "compare_type": "and",
-                "first_signal": {
-                  "name": "signal-each",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-                "second_signal": {
-                  "name": "recipe-A",
-                  "type": "virtual",
-                },
-                "second_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-              },
-              {
-                "comparator": "=",
-                "compare_type": "or",
-                "constant": 0,
-                "first_signal": {
-                  "name": "__t2",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": false,
-                  "red": true,
-                },
-              },
-              {
-                "comparator": "=",
-                "compare_type": "and",
-                "first_signal": {
-                  "name": "signal-each",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-                "second_signal": {
-                  "name": "recipe-B",
-                  "type": "virtual",
-                },
-                "second_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-              },
-              {
-                "comparator": "<",
-                "compare_type": "or",
-                "constant": 10,
-                "first_signal": {
-                  "name": "__t2",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": false,
-                  "red": true,
-                },
-              },
-              {
-                "comparator": ">",
-                "compare_type": "and",
-                "constant": 0,
-                "first_signal": {
-                  "name": "recipe-B",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": false,
-                  "red": true,
-                },
-              },
-              {
-                "comparator": "=",
-                "compare_type": "and",
-                "first_signal": {
-                  "name": "signal-each",
-                  "type": "virtual",
-                },
-                "first_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-                "second_signal": {
-                  "name": "recipe-B",
-                  "type": "virtual",
-                },
-                "second_signal_networks": {
-                  "green": true,
-                  "red": false,
-                },
-              },
-            ],
-            "outputs": [
-              {
-                "constant": 1,
-                "copy_count_from_input": false,
-                "signal": {
-                  "name": "signal-each",
-                  "type": "virtual",
-                },
-              },
-            ],
-          },
-        },
-        "entity_number": 2,
-        "name": "decider-combinator",
-        "position": {
-          "x": 2,
-          "y": 0,
-        },
-      },
-    ],
-    "icons": [],
-    "item": "blueprint",
-    "label": "catalog_latch",
-    "wires": [
-      [
-        1,
-        2,
-        2,
-        2,
-      ],
-      [
-        2,
-        3,
-        2,
-        1,
-      ],
-    ],
-  },
-}
-`;
-
 exports[`golden examples > clamp > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {
@@ -589,6 +351,244 @@ exports[`golden examples > counter > compiles to a blueprint JSON plan matching 
         4,
         1,
         2,
+      ],
+    ],
+  },
+}
+`;
+
+exports[`golden examples > each_latch > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "sections": {
+            "sections": [
+              {
+                "filters": [
+                  {
+                    "count": 1,
+                    "index": 1,
+                    "name": "signal-A",
+                    "type": "virtual",
+                  },
+                  {
+                    "count": 2,
+                    "index": 2,
+                    "name": "signal-B",
+                    "type": "virtual",
+                  },
+                ],
+                "index": 1,
+              },
+            ],
+          },
+        },
+        "entity_number": 1,
+        "name": "constant-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": "=",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": false,
+                  "red": true,
+                },
+              },
+              {
+                "comparator": "=",
+                "compare_type": "and",
+                "first_signal": {
+                  "name": "signal-each",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+                "second_signal": {
+                  "name": "signal-A",
+                  "type": "virtual",
+                },
+                "second_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+              },
+              {
+                "comparator": "<",
+                "compare_type": "or",
+                "constant": 10,
+                "first_signal": {
+                  "name": "__t1",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": false,
+                  "red": true,
+                },
+              },
+              {
+                "comparator": ">",
+                "compare_type": "and",
+                "constant": 0,
+                "first_signal": {
+                  "name": "signal-A",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": false,
+                  "red": true,
+                },
+              },
+              {
+                "comparator": "=",
+                "compare_type": "and",
+                "first_signal": {
+                  "name": "signal-each",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+                "second_signal": {
+                  "name": "signal-A",
+                  "type": "virtual",
+                },
+                "second_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+              },
+              {
+                "comparator": "=",
+                "compare_type": "or",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t2",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": false,
+                  "red": true,
+                },
+              },
+              {
+                "comparator": "=",
+                "compare_type": "and",
+                "first_signal": {
+                  "name": "signal-each",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+                "second_signal": {
+                  "name": "signal-B",
+                  "type": "virtual",
+                },
+                "second_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+              },
+              {
+                "comparator": "<",
+                "compare_type": "or",
+                "constant": 10,
+                "first_signal": {
+                  "name": "__t2",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": false,
+                  "red": true,
+                },
+              },
+              {
+                "comparator": ">",
+                "compare_type": "and",
+                "constant": 0,
+                "first_signal": {
+                  "name": "signal-B",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": false,
+                  "red": true,
+                },
+              },
+              {
+                "comparator": "=",
+                "compare_type": "and",
+                "first_signal": {
+                  "name": "signal-each",
+                  "type": "virtual",
+                },
+                "first_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+                "second_signal": {
+                  "name": "signal-B",
+                  "type": "virtual",
+                },
+                "second_signal_networks": {
+                  "green": true,
+                  "red": false,
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 1,
+                "copy_count_from_input": false,
+                "signal": {
+                  "name": "signal-each",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 2,
+        "name": "decider-combinator",
+        "position": {
+          "x": 2,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "each_latch",
+    "wires": [
+      [
+        1,
+        2,
+        2,
+        2,
+      ],
+      [
+        2,
+        3,
+        2,
+        1,
       ],
     ],
   },
@@ -1015,6 +1015,58 @@ exports[`golden examples > or_flags > compiles to a blueprint JSON plan matching
     "icons": [],
     "item": "blueprint",
     "label": "or_flags",
+    "wires": [],
+  },
+}
+`;
+
+exports[`golden examples > signal_at > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "index_constant": 0,
+          "operation": "select",
+          "select_max": true,
+        },
+        "entity_number": 1,
+        "name": "selector-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "signal_at",
+    "wires": [],
+  },
+}
+`;
+
+exports[`golden examples > signal_at_asc > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "index_constant": 0,
+          "operation": "select",
+          "select_max": false,
+        },
+        "entity_number": 1,
+        "name": "selector-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "signal_at_asc",
     "wires": [],
   },
 }

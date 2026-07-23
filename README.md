@@ -83,7 +83,9 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`conditional-counter.lua`](examples/conditional-counter.lua) | v2 if/else: muxed next-state (`if c then x+1 else x-1`) |
 | [`while_count.lua`](examples/while_count.lua) | v2 clocked while: count up to `signal-L` (`tick()` barrier) |
 | [`sr_latch.lua`](examples/sr_latch.lua) | Cookbook SR via `sr(q, set, reset)` — one decider latch |
-| [`catalog_latch.lua`](examples/catalog_latch.lua) | EACH-tag sticky multi-recipe catalog — 1 constant + 1 decider |
+| [`each_latch.lua`](examples/each_latch.lua) | EACH-tag sticky hysteresis bag — 1 constant + 1 decider |
+| [`signal_at.lua`](examples/signal_at.lua) | Pick Nth-largest input via `signal_at` → selector `select` |
+| [`signal_at_asc.lua`](examples/signal_at_asc.lua) | Nth-smallest among present (`signal_at_asc`) — priority ranks |
 | [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
 | [`signal_count.lua`](examples/signal_count.lua) | Count nonzero inputs via `signal_count` → selector combinator |
 
@@ -92,6 +94,9 @@ console.log(stats); // { combinators: 3, wires: 2 }
 Programs are a flat sequence of statements. See the
 [design spec](docs/superpowers/specs/2026-07-22-luatorio-design.md) and
 [v2 sequential design](docs/superpowers/specs/2026-07-23-v2-sequential-design.md) for the roadmap.
+
+Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain machines
+(foundries, assemblers, …) are examples that compose those primitives — not new language APIs.
 
 ### Allowed constructs
 
@@ -106,7 +111,9 @@ Programs are a flat sequence of statements. See the
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
-| `catalog_latch(stock, recipe, buffer, …)` | Sticky multi-recipe bag (EACH-tag catalog); triples; output via `output(recipe, bag)` |
+| `each_latch(level, signal, high, …)` | Sticky multi-signal hysteresis bag (EACH tags); `output(signal, bag)` |
+| `signal_at(index, a, b, …)` | Value of Nth-largest nonzero arg; selector `select` (`select_max`) |
+| `signal_at_asc(index, a, b, …)` | Value of Nth-smallest nonzero arg; selector `select` ascending |
 | `signal_count(a, b, …)` | Count nonzero args; emits one selector combinator (`operation: "count"`) |
 | Arithmetic: `+ - * / %` | Lowers to arithmetic combinators |
 | Comparisons: `< > <= >= == ~=` | Lowers to a decider combinator (1/0 output) |

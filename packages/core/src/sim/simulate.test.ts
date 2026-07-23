@@ -79,31 +79,51 @@ describe("simulate", () => {
     expect(result.ticks[15]?.outputs["signal-A"]).toBe(55);
   });
 
-  it("catalog_latch sets, holds below buffer, clears at buffer", async () => {
+  it("signal_at: largest among A/B/C onto signal-N", () => {
+    const graph = graphOf(loadExample("signal_at.lua"));
+    const result = simulate(graph, {
+      ticks: 2,
+      inputs: { "signal-A": 3, "signal-B": 7, "signal-C": 1 },
+    });
+    expect(result.ticks[0]?.outputs["signal-N"]).toBe(7);
+    expect(result.ticks[1]?.outputs["signal-N"]).toBe(7);
+  });
+
+  it("signal_at_asc: minimum present priority onto signal-N", () => {
+    const graph = graphOf(loadExample("signal_at_asc.lua"));
+    const result = simulate(graph, {
+      ticks: 2,
+      inputs: { "priority-1": 0, "priority-2": 2, "priority-3": 3 },
+    });
+    // 0 absent; among 2 and 3, ascending index 0 → 2
+    expect(result.ticks[0]?.outputs["signal-N"]).toBe(2);
+  });
+
+  it("each_latch sets, holds below high, clears at high", async () => {
     const { compile } = await import("../index.js");
-    const compiled = compile(loadExample("catalog_latch.lua"));
+    const compiled = compile(loadExample("each_latch.lua"));
     expect(compiled.stats.combinators).toBe(2);
 
-    const graph = graphOf(loadExample("catalog_latch.lua"));
+    const graph = graphOf(loadExample("each_latch.lua"));
     const set = simulate(graph, {
       ticks: 2,
-      inputs: { "item-A": 0, "item-B": 20 },
+      inputs: { "level-A": 0, "level-B": 20 },
     });
-    expect(set.ticks[1]?.outputs["recipe-A"]).toBe(1);
-    expect(set.ticks[1]?.outputs["recipe-B"] ?? 0).toBe(0);
+    expect(set.ticks[1]?.outputs["signal-A"]).toBe(1);
+    expect(set.ticks[1]?.outputs["signal-B"] ?? 0).toBe(0);
 
     const hold = simulate(graph, {
       ticks: 4,
       inputs: (tick) =>
-        tick < 2 ? { "item-A": 0, "item-B": 20 } : { "item-A": 5, "item-B": 20 },
+        tick < 2 ? { "level-A": 0, "level-B": 20 } : { "level-A": 5, "level-B": 20 },
     });
-    expect(hold.ticks[3]?.outputs["recipe-A"]).toBe(1);
+    expect(hold.ticks[3]?.outputs["signal-A"]).toBe(1);
 
     const clear = simulate(graph, {
       ticks: 4,
       inputs: (tick) =>
-        tick < 2 ? { "item-A": 0, "item-B": 20 } : { "item-A": 10, "item-B": 20 },
+        tick < 2 ? { "level-A": 0, "level-B": 20 } : { "level-A": 10, "level-B": 20 },
     });
-    expect(clear.ticks[3]?.outputs["recipe-A"] ?? 0).toBe(0);
+    expect(clear.ticks[3]?.outputs["signal-A"] ?? 0).toBe(0);
   });
 });
