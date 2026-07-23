@@ -32,7 +32,9 @@ Operate on `CircuitGraph` (pre-layout): entities + directed green `WireEdge`s (`
 | `arithmetic` | `first (±const/signal) op second (±const/signal) → output_signal` |
 | `decider` | AND of conditions; on success emit constant or `copy_count_from_input` |
 
-Out of scope for MVP: red wire, logistic, selector combinator, each/any/everything wildcards (add when emitter uses them).
+Out of scope for MVP: red wire, logistic, selector combinator, each/any/everything wildcards,
+decider `else_outputs` / OR joins (add when emitter uses them — see
+`2026-07-23-factorio-circuit-capabilities.md`).
 
 ### API sketch
 
@@ -67,13 +69,14 @@ Optional later: fitness = combinator count under equivalence (search for rewrite
 
 ## Factorio tricks backlog (#32)
 
-Candidates once VM+fuzz gate them:
+Re-grounded from wiki/runtime research (`2026-07-23-factorio-circuit-capabilities.md`):
 
-- Selector combinator for mux/index
-- Tighter SR / EACH latches
-- Multi-condition deciders replacing gate+rename
-- Drop empty I/O placeholders from blueprints (or stats)
-- Channel packing (v4 wires)
+1. **Decider `else_outputs`** for mux / enable-hold (before selector)
+2. Multi-condition **OR** + multi-output
+3. Tighter SR / EACH latches (cookbook one-decider SR)
+4. Drop empty I/O placeholders from blueprints (or stats)
+5. **Selector** only for index/sort/count/channel work — not primary if/else mux
+6. Channel packing (v4 wires)
 
 ## Layout in repo
 
