@@ -64,7 +64,7 @@ function sumInputNets(
 
 /**
  * Seed latch Q from non-empty constants that share an input net with the latch.
- * Same semantics as directed `seedLatchOutputs`.
+ * Same semantics as directed `seedLatchOutputs` (incl. multi-signal `latchSeeds`).
  */
 function seedLatchOutputs(
   circuit: ImportedCircuit,
@@ -73,6 +73,14 @@ function seedLatchOutputs(
 ): void {
   for (const entity of circuit.entities) {
     if (entity.role !== "latch") {
+      continue;
+    }
+    const bag = emptyBag();
+    if (entity.latchSeeds !== undefined) {
+      for (const [signal, count] of Object.entries(entity.latchSeeds)) {
+        bagSet(bag, signal, count);
+      }
+      outputs.set(entity.id, bag);
       continue;
     }
     let seed = 0;
@@ -87,7 +95,6 @@ function seedLatchOutputs(
         found = true;
       }
     });
-    const bag = emptyBag();
     if (found) {
       bagSet(bag, entity.outputSignal, seed);
     }
@@ -147,6 +154,17 @@ function readOutputPort(
   });
   if (fromEachBag) {
     return 0;
+  }
+  // Prefer the producer's declared output signal (fused clocks also emit `__run`, etc.).
+  const preferred: number[] = [];
+  forEachProducerOnInputNets(port.entityId, circuit, (producerId) => {
+    const sig = entityById.get(producerId)?.outputSignal;
+    if (sig !== undefined && net.has(sig)) {
+      preferred.push(bagGet(net, sig));
+    }
+  });
+  if (preferred.length > 0) {
+    return preferred[0] ?? 0;
   }
   let sum = 0;
   for (const count of net.values()) {
