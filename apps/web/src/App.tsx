@@ -44,12 +44,18 @@ export function App() {
 
   return (
     <div className="playground">
-      <header className="playground-header">
-        <h1>LuaTorio Playground</h1>
-        <p>Write LuaTorio v1 source and compile it to a Factorio blueprint, entirely in your browser.</p>
+      <header className="playground-titlebar">
+        <span className="playground-brand-icon" aria-hidden="true">
+          ⚙
+        </span>
+        <div>
+          <h1>LuaTorio</h1>
+          <p>Write LuaTorio v1 source and compile it to a Factorio blueprint, entirely in your browser.</p>
+          <span className="playground-disclaimer">Fan-made playground — not affiliated with Wube Software.</span>
+        </div>
       </header>
 
-      <div className="playground-toolbar-row">
+      <div className="playground-subheader">
         <ExamplePicker examples={examples} onSelect={handleSelectExample} />
         <Toolbar
           viewMode={viewMode}
@@ -62,8 +68,18 @@ export function App() {
       </div>
 
       <div className="playground-panes">
-        <Editor value={source} onChange={setSource} />
-        <Output outcome={outcome} viewMode={viewMode} />
+        <section className="pane">
+          <div className="pane-titlebar">Lua Source</div>
+          <div className="pane-body">
+            <Editor value={source} onChange={setSource} />
+          </div>
+        </section>
+        <section className="pane">
+          <div className="pane-titlebar">Result</div>
+          <div className="pane-body">
+            <Output outcome={outcome} viewMode={viewMode} />
+          </div>
+        </section>
       </div>
     </div>
   );
