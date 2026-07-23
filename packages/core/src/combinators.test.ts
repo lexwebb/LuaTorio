@@ -113,7 +113,7 @@ describe("lowerToCombinators", () => {
     });
   });
 
-  it("specializes select(c, x, 0) to gate + rename (2 entities)", () => {
+  it("specializes output-only select(c, x, 0) to one gate (no rename)", () => {
     const module: IRModule = {
       nodes: [
         { kind: "input", id: "__t1", signal: "signal-A" },
@@ -129,9 +129,8 @@ describe("lowerToCombinators", () => {
     };
 
     const graph = lowerToCombinators(module);
-    const gate = graph.entities.find((entity) => entity.id === "__t4__gate");
-    const rename = graph.entities.find((entity) => entity.id === "__t4");
-    expect(gate).toMatchObject({
+    expect(graph.entities.find((entity) => entity.id === "__t4__gate")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t4")).toMatchObject({
       kind: "decider",
       role: "mux-side",
       outputSignal: "__t2",
@@ -143,23 +142,37 @@ describe("lowerToCombinators", () => {
         },
       },
     });
-    expect(rename).toMatchObject({
+    expect(graph.wires.filter((wire) => wire.to === "__t4")).toEqual([
+      { from: "__t1", to: "__t4", color: "green" },
+      { from: "__t2", to: "__t4", color: "green" },
+    ]);
+  });
+
+  it("keeps gate + rename when select(c, x, 0) feeds another IR node", () => {
+    const module: IRModule = {
+      nodes: [
+        { kind: "input", id: "__t1", signal: "signal-A" },
+        { kind: "input", id: "__t2", signal: "signal-B" },
+        { kind: "literal", id: "__t3", value: 0 },
+        { kind: "select", id: "__t4", cond: "__t1", then: "__t2", else: "__t3" },
+        { kind: "binop", id: "__t5", op: "+", left: "__t4", right: "__t3" },
+      ],
+      outputs: [{ signal: "signal-C", nodeId: "__t5" }],
+      inputs: [
+        { signal: "signal-A", nodeId: "__t1" },
+        { signal: "signal-B", nodeId: "__t2" },
+      ],
+    };
+
+    const graph = lowerToCombinators(module);
+    expect(graph.entities.find((entity) => entity.id === "__t4__gate")).toMatchObject({
+      kind: "decider",
+      role: "mux-side",
+    });
+    expect(graph.entities.find((entity) => entity.id === "__t4")).toMatchObject({
       kind: "arithmetic",
       outputSignal: "__t4",
-      control_behavior: {
-        arithmetic_conditions: {
-          first_signal: { type: "virtual", name: "__t2" },
-          second_constant: 0,
-          operation: "+",
-          output_signal: { type: "virtual", name: "__t4" },
-        },
-      },
     });
-    expect(graph.entities.some((entity) => entity.id === "__t4__else")).toBe(false);
-    expect(graph.wires.filter((wire) => wire.to === "__t4__gate")).toEqual([
-      { from: "__t1", to: "__t4__gate", color: "green" },
-      { from: "__t2", to: "__t4__gate", color: "green" },
-    ]);
   });
 
   it("specializes select(c, 1, 0) to one decider outputting constant 1", () => {
@@ -233,7 +246,7 @@ describe("lowerToCombinators", () => {
     ]);
   });
 
-  it("fuses sole-use cmp into select(cmp, x, 0) gate (no separate cmp entity)", () => {
+  it("fuses sole-use cmp into output-only select(cmp, x, 0) as one gate", () => {
     const module: IRModule = {
       nodes: [
         { kind: "input", id: "__t1", signal: "signal-A" },
@@ -251,7 +264,8 @@ describe("lowerToCombinators", () => {
 
     const graph = lowerToCombinators(module);
     expect(graph.entities.find((entity) => entity.id === "__t3")).toBeUndefined();
-    expect(graph.entities.find((entity) => entity.id === "__t5__gate")).toMatchObject({
+    expect(graph.entities.find((entity) => entity.id === "__t5__gate")).toBeUndefined();
+    expect(graph.entities.find((entity) => entity.id === "__t5")).toMatchObject({
       kind: "decider",
       role: "mux-side",
       control_behavior: {
@@ -337,6 +351,14 @@ describe("lowerToCombinators", () => {
     expect(graph.entities.find((entity) => entity.id === "__t4")).toMatchObject({
       kind: "arithmetic",
       outputSignal: "__t4",
+      control_behavior: {
+        arithmetic_conditions: {
+          first_signal: { type: "virtual", name: "signal-each" },
+          second_constant: 0,
+          operation: "+",
+          output_signal: { type: "virtual", name: "__t4" },
+        },
+      },
     });
     expect(graph.entities.find((entity) => entity.id === "__t4__then")).toBeUndefined();
     expect(graph.entities.find((entity) => entity.id === "__t4__else")).toBeUndefined();

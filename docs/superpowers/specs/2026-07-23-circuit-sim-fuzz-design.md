@@ -36,8 +36,8 @@ Default `simulate(..., { mode: "factorio" })`:
 | `arithmetic` | `first (±const/signal) op second (±const/signal) → output_signal` |
 | `decider` | Conditions with AND-before-OR; `outputs` / `else_outputs`; constant or `copy_count_from_input` |
 
-Out of scope for now: red wire, logistic, selector combinator, each/any/everything wildcards
-(see #33 and `2026-07-23-factorio-circuit-capabilities.md`).
+Wildcards: `signal-each` / `signal-everything` / `signal-anything` in arithmetic + decider (#33).
+Still out of scope: red wire, logistic, selector combinator.
 
 ### API sketch
 
@@ -76,7 +76,7 @@ Re-grounded from wiki/runtime research (`2026-07-23-factorio-circuit-capabilitie
 
 1. **Decider `else_outputs`** for mux / enable-hold (before selector)
 2. Multi-condition **OR** + multi-output
-3. Tighter SR / EACH latches (cookbook one-decider SR)
+3. Tighter SR / EACH latches — EACH merge + wildcards landed (#33); full cookbook SR remains cookbook-only
 4. Drop empty I/O placeholders from blueprints (or stats)
 5. **Selector** only for index/sort/count/channel work — not primary if/else mux
 6. Channel packing (v4 wires)

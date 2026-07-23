@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T13:28:20.322Z",
+  "generatedAt": "2026-07-23T13:40:05.684Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -46,13 +46,13 @@
       "buckets": {
         "latch": 0,
         "mux_side": 1,
-        "mux_merge": 1,
+        "mux_merge": 0,
         "decider_other": 1,
-        "arithmetic_other": 0,
+        "arithmetic_other": 1,
         "constant_value": 0,
         "placeholder_io": 2
       },
-      "muxShare": 0.6666666666666666
+      "muxShare": 0.3333333333333333
     },
     {
       "name": "comparison-chain",
@@ -80,13 +80,13 @@
       "buckets": {
         "latch": 1,
         "mux_side": 1,
-        "mux_merge": 1,
+        "mux_merge": 0,
         "decider_other": 0,
-        "arithmetic_other": 2,
+        "arithmetic_other": 3,
         "constant_value": 0,
         "placeholder_io": 2
       },
-      "muxShare": 0.4
+      "muxShare": 0.2
     },
     {
       "name": "counter",
@@ -131,13 +131,13 @@
       "buckets": {
         "latch": 0,
         "mux_side": 2,
-        "mux_merge": 1,
+        "mux_merge": 0,
         "decider_other": 0,
-        "arithmetic_other": 1,
+        "arithmetic_other": 2,
         "constant_value": 0,
         "placeholder_io": 4
       },
-      "muxShare": 0.75
+      "muxShare": 0.5
     },
     {
       "name": "or_flags",
@@ -3582,13 +3582,13 @@
     "buckets": {
       "latch": 300,
       "mux_side": 150,
-      "mux_merge": 3,
+      "mux_merge": 0,
       "decider_other": 204,
-      "arithmetic_other": 55,
+      "arithmetic_other": 58,
       "constant_value": 100,
       "placeholder_io": 379
     },
-    "muxShareMean": 0.10626984126984132
+    "muxShareMean": 0.10253968253968257
   },
   "opportunities": [
     {
@@ -3606,7 +3606,7 @@
     {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=55, other deciders=204.",
+      "evidence": "Non-mux arith=58, other deciders=204.",
       "estimatedImpact": "medium"
     },
     {

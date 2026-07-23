@@ -78,17 +78,18 @@ It is **not** a general if/else mux for two arbitrary values. It is for ranking/
 |------------|--------|
 | Single-condition decider | Yes (cmp, gates, const-when) |
 | Two-condition **AND** | Rare (`select(c, bool, 0)`) |
-| **OR** conditions | No (VM rejects) |
-| **Multiple outputs** | No (always one) |
-| **`else_outputs`** | **No — biggest miss** |
+| **OR** conditions | Yes (boolean `select(a,a,b)`) |
+| **Multiple outputs** | Yes (shared-cond multi-output mux) |
+| **`else_outputs`** | Yes (general select / enable-hold) |
 | Red/green per operand | No (single green bag) |
-| EACH / ANY / EVERYTHING | No |
-| Arith EACH | No |
+| EACH / ANY / EVERYTHING | Yes in VM; emit uses **EACH+0** mux merge (#33) |
+| Arith EACH | Yes (VM + emit merge) |
 | Bitwise / shifts / pow | No (IR ops are Lua arith/cmp subset) |
 | Selector | No |
 | Incremental enable-hold (`mem+δ`) | Yes (landed) |
-| Full mux | Then-gate + else-gate + arith merge (3) |
-| Gate + rename | Decider + arith `+0` (2) |
+| Full mux | One decider (`else_outputs`) + EACH+0 merge (2) |
+| Gate + rename | Decider + arith `+0` (2); **output-only** gate skips rename (1) |
+| Full cookbook SR (independent set/reset) | **Cookbook-only** — no Lua IR shape yet; sticky `Q ∧ cond` latch covers current loops |
 
 ## Re-grounded #32 priority
 
@@ -159,5 +160,5 @@ Update `docs/superpowers/specs/2026-07-23-circuit-sim-fuzz-design.md` backlog me
 - [x] Emit: fuse sole-use `cmp` into select/const-when/gate/mux deciders (blueprint: clamp 4→3, mux 5→4)
 - [x] P1: VM OR + AND-before-OR; boolean `select(a,a,b)` → one OR-decider; shared-cond multi-output mux
 - [x] P2: sticky `select(mem, bool, 0)` → one decider latch (when select is sole-use)
-- [ ] Follow-up: EACH / ANY / EVERYTHING packing (needs wildcard VM) — not required to close #32
-- [ ] Follow-up: full cookbook SR with independent set/reset (no Lua IR shape yet)
+- [x] Follow-up #33: EACH / ANY / EVERYTHING in VM; emit EACH+0 mux merge + output-only gate
+- [x] Follow-up #33: full cookbook SR deferred — cookbook-only until IR has independent set/reset

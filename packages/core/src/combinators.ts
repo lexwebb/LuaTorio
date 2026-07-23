@@ -44,6 +44,9 @@ export interface CircuitGraph {
   inputs: Array<{ signal: string; entityId: string }>;
 }
 
+/** Factorio logic signal used for per-signal arithmetic (wiki EACH). */
+const SIGNAL_EACH = "signal-each";
+
 function signalRef(name: string): { type: "virtual"; name: string } {
   return { type: "virtual", name };
 }
@@ -345,13 +348,25 @@ function lowerTruthAndToOne(
   };
 }
 
-/** Gate `branchId` under `cond`, then rename onto `nodeId` (2 entities). */
+/**
+ * Gate `branchId` under `cond`. When the select is only an output (no IR consumers),
+ * emit one gate whose entity id is `nodeId` (output port sums the branch signal).
+ * Otherwise gate + rename (2).
+ */
 function lowerGateAndRename(
   nodeId: string,
   condId: string,
   branchId: string,
   comparator: "=" | "!=",
+  outputOnly: boolean,
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  if (outputOnly) {
+    const gate = lowerSelectGate(nodeId, condId, branchId, comparator, 0);
+    return {
+      entities: [gate],
+      wires: [greenWire(condId, nodeId), greenWire(branchId, nodeId)],
+    };
+  }
   const gateId = `${nodeId}__gate`;
   const gate = lowerSelectGate(gateId, condId, branchId, comparator, 0);
   return {
@@ -361,8 +376,9 @@ function lowerGateAndRename(
 }
 
 /**
- * Gate `branchId` with an inlined sole-use cmp, then rename onto `nodeId`.
+ * Gate `branchId` with an inlined sole-use cmp.
  * `whenCmpPasses`: `select(cmp, x, 0)`; else `select(cmp, 0, x)` via `else_outputs`.
+ * `outputOnly`: single gate (no rename) when the select is only an output.
  */
 function lowerGateByCmpAndRename(
   nodeId: string,
@@ -370,24 +386,41 @@ function lowerGateByCmpAndRename(
   branchId: string,
   nodeById: ReadonlyMap<string, IRNode>,
   whenCmpPasses: boolean,
+  outputOnly: boolean,
 ): { entities: CircuitEntity[]; wires: WireEdge[] } {
-  const gateId = `${nodeId}__gate`;
   const { condition, wireFrom } = cmpCondition(cmp, nodeById);
   const copy = { signal: signalRef(branchId), copy_count_from_input: true };
-  const gate: CircuitEntity = {
-    id: gateId,
-    kind: "decider",
-    name: "decider-combinator",
-    outputSignal: branchId,
-    role: "mux-side",
-    control_behavior: {
-      decider_conditions: whenCmpPasses
-        ? { conditions: [condition], outputs: [copy] }
-        : { conditions: [condition], outputs: [], else_outputs: [copy] },
-    },
-  };
+  const decider_conditions = whenCmpPasses
+    ? { conditions: [condition], outputs: [copy] }
+    : { conditions: [condition], outputs: [], else_outputs: [copy] };
+  if (outputOnly) {
+    return {
+      entities: [
+        {
+          id: nodeId,
+          kind: "decider",
+          name: "decider-combinator",
+          outputSignal: branchId,
+          role: "mux-side",
+          control_behavior: { decider_conditions },
+        },
+      ],
+      wires: [...wireFrom.map((from) => greenWire(from, nodeId)), greenWire(branchId, nodeId)],
+    };
+  }
+  const gateId = `${nodeId}__gate`;
   return {
-    entities: [gate, lowerRename(nodeId, branchId)],
+    entities: [
+      {
+        id: gateId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: branchId,
+        role: "mux-side",
+        control_behavior: { decider_conditions },
+      },
+      lowerRename(nodeId, branchId),
+    ],
     wires: [
       ...wireFrom.map((from) => greenWire(from, gateId)),
       greenWire(branchId, gateId),
@@ -555,7 +588,12 @@ function lowerSharedElseOutputsMux(
   };
 }
 
-function lowerSelectMerge(id: string, thenSignal: string, elseSignal: string): CircuitEntity {
+/**
+ * Merge mux branch signals onto `id`. Uses EACH+0 → `id` so any present branch
+ * count (then or else) is summed onto the result — Factorio-accurate and drops the
+ * need to name both operands (wiki: EACH input + specific output = sum).
+ */
+function lowerSelectMerge(id: string): CircuitEntity {
   return {
     id,
     kind: "arithmetic",
@@ -563,8 +601,8 @@ function lowerSelectMerge(id: string, thenSignal: string, elseSignal: string): C
     outputSignal: id,
     control_behavior: {
       arithmetic_conditions: {
-        first_signal: signalRef(thenSignal),
-        second_signal: signalRef(elseSignal),
+        first_signal: signalRef(SIGNAL_EACH),
+        second_constant: 0,
         operation: "+",
         output_signal: signalRef(id),
       },
@@ -584,7 +622,7 @@ function lowerSelectFullMux(node: Extract<IRNode, { kind: "select" }>): {
   return {
     entities: [
       lowerElseOutputsMux(muxId, node.cond, node.then, node.else),
-      lowerSelectMerge(node.id, node.then, node.else),
+      lowerSelectMerge(node.id),
     ],
     wires: [
       greenWire(node.cond, muxId),
@@ -618,7 +656,7 @@ function lowerSelectFullMuxFromCmp(
     },
   };
   return {
-    entities: [mux, lowerSelectMerge(node.id, node.then, node.else)],
+    entities: [mux, lowerSelectMerge(node.id)],
     wires: [
       ...wireFrom.map((from) => greenWire(from, muxId)),
       greenWire(node.then, muxId),
@@ -699,6 +737,7 @@ function lowerSelect(
   node: Extract<IRNode, { kind: "select" }>,
   nodeById: ReadonlyMap<string, IRNode>,
   useCount: ReadonlyMap<string, number>,
+  outputOnly: boolean,
 ): {
   entities: CircuitEntity[];
   wires: WireEdge[];
@@ -738,13 +777,13 @@ function lowerSelect(
 
   if (elseLit === 0) {
     return fusedCmp
-      ? lowerGateByCmpAndRename(node.id, fusedCmp, node.then, nodeById, true)
-      : lowerGateAndRename(node.id, node.cond, node.then, "!=");
+      ? lowerGateByCmpAndRename(node.id, fusedCmp, node.then, nodeById, true, outputOnly)
+      : lowerGateAndRename(node.id, node.cond, node.then, "!=", outputOnly);
   }
   if (thenLit === 0) {
     return fusedCmp
-      ? lowerGateByCmpAndRename(node.id, fusedCmp, node.else, nodeById, false)
-      : lowerGateAndRename(node.id, node.cond, node.else, "=");
+      ? lowerGateByCmpAndRename(node.id, fusedCmp, node.else, nodeById, false, outputOnly)
+      : lowerGateAndRename(node.id, node.cond, node.else, "=", outputOnly);
   }
 
   // `a or b` → select(a, a, b); when both are 0/1, one OR-decider (no mux tax).
@@ -1205,11 +1244,13 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
               wires.push(greenWire(select.then, sharedMuxId), greenWire(select.else, sharedMuxId));
             }
           }
-          entities.push(lowerSelectMerge(node.id, node.then, node.else));
+          entities.push(lowerSelectMerge(node.id));
           wires.push(greenWire(sharedMuxId, node.id));
           break;
         }
-        const expanded = lowerSelect(node, nodeById, useCount);
+        const outputUses = module.outputs.filter((output) => output.nodeId === node.id).length;
+        const outputOnly = outputUses > 0 && (useCount.get(node.id) ?? 0) === outputUses;
+        const expanded = lowerSelect(node, nodeById, useCount, outputOnly);
         entities.push(...expanded.entities);
         wires.push(...expanded.wires);
         break;

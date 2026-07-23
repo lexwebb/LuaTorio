@@ -162,7 +162,7 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
         "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
-              "name": "__t10",
+              "name": "signal-each",
               "type": "virtual",
             },
             "operation": "+",
@@ -170,10 +170,7 @@ exports[`golden examples > clamp > compiles to a blueprint JSON plan matching it
               "name": "__t11",
               "type": "virtual",
             },
-            "second_signal": {
-              "name": "__t1",
-              "type": "virtual",
-            },
+            "second_constant": 0,
           },
         },
         "entity_number": 3,
@@ -422,7 +419,7 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
         "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
-              "name": "__t5",
+              "name": "signal-each",
               "type": "virtual",
             },
             "operation": "+",
@@ -430,10 +427,7 @@ exports[`golden examples > conditional-counter > compiles to a blueprint JSON pl
               "name": "__t8",
               "type": "virtual",
             },
-            "second_signal": {
-              "name": "__t7",
-              "type": "virtual",
-            },
+            "second_constant": 0,
           },
         },
         "entity_number": 5,
@@ -954,7 +948,7 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
         "control_behavior": {
           "arithmetic_conditions": {
             "first_signal": {
-              "name": "__t7",
+              "name": "signal-each",
               "type": "virtual",
             },
             "operation": "+",
@@ -962,10 +956,7 @@ exports[`golden examples > mux > compiles to a blueprint JSON plan matching its 
               "name": "__t8",
               "type": "virtual",
             },
-            "second_signal": {
-              "name": "__t3",
-              "type": "virtual",
-            },
+            "second_constant": 0,
           },
         },
         "entity_number": 4,
