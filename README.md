@@ -6,11 +6,25 @@ describing combinational logic; LuaTorio parses them with a real Lua parser, low
 signal-value IR, optimizes and lays out the resulting circuit, and emits a pasteable blueprint
 string (or the raw blueprint JSON, for debugging).
 
-It ships as an npm library, [`@luatorio/core`](packages/core), and a CLI, `luatorio`
-([`packages/cli`](packages/cli)).
+It ships as an npm library, [`@luatorio/core`](packages/core), a CLI, `luatorio`
+([`packages/cli`](packages/cli)), and a browser playground ([`apps/web`](apps/web)).
 
 See [`docs/superpowers/specs/2026-07-22-luatorio-design.md`](docs/superpowers/specs/2026-07-22-luatorio-design.md)
 for the full design spec, IR, combinator lowering, and roadmap.
+
+## Playground
+
+Local:
+
+```bash
+pnpm build
+pnpm dev:web
+```
+
+Deployed (GitHub Pages): [https://lexwebb.github.io/LuaTorio/](https://lexwebb.github.io/LuaTorio/)
+
+One-time repo setting if Pages is not live yet: **Settings → Pages → Source: GitHub Actions**.
+Deploys run from [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push to `main`.
 
 ## Install
 
