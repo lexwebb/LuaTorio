@@ -1995,11 +1995,7 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
    */
   const fusedRunClockByMemory = new Map<
     string,
-    {
-      select: Extract<IRNode, { kind: "select" }>;
-      sticky: { runId: string; thenId: string };
-      deltaLit: number;
-    }
+    { sticky: { runId: string; thenId: string }; deltaLit: number }
   >();
   /** `__run` memory ids emitted on a fused host (no separate sticky entity). */
   const absorbedRunMemoryIds = new Set<string>();
@@ -2036,7 +2032,7 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
     if (absorbedRunMemoryIds.has(sticky.runId)) {
       continue;
     }
-    fusedRunClockByMemory.set(node.id, { select: storeValue, sticky, deltaLit });
+    fusedRunClockByMemory.set(node.id, { sticky, deltaLit });
     absorbedRunMemoryIds.add(sticky.runId);
     wireHostById.set(sticky.runId, node.id);
   }
