@@ -85,9 +85,13 @@ Plus Q feedback wire; nonzero init via existing latch seed.
 
 Sketch only: multi-signal values on one wire (EACH packing), IR `bundle` or signal-list memory. Unlocks denser loops and natural red/green allocation (#40).
 
+**Emit-size target once bundles exist:** the Factorio 2.0 **EACH-tag catalog** pattern (1 constant + 1 multi-OR sticky decider for N recipes). Research: `docs/superpowers/specs/2026-07-23-each-tag-catalog-research.md`. Needs compile-path red/green coloring (today #40 is sim/import only).
+
 ## P2 — Rank / index (feeds #39)
 
 Sketch only: e.g. `select_by_index(bag, n)` or “Nth largest signal”. Then selector combinator is the honest emit.
+
+Cookbook precursor in the wild: WarDaft’s deficit → priority → **selector index 0** → recipe-table map (same research note). Prefer that over inventing selector-as-mux.
 
 ## Tracking
 
