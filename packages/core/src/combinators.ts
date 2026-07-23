@@ -55,6 +55,30 @@ function greenWire(from: string, to: string): WireEdge {
   return { from, to, color: "green" };
 }
 
+/** Lua/circuit truthiness: signal ≠ 0. */
+function truthyCond(signalId: string): Record<string, unknown> {
+  return { first_signal: signalRef(signalId), comparator: "!=", constant: 0 };
+}
+
+/** Same as `truthyCond`, for AND-chained decider conditions. */
+function andTruthy(signalId: string): Record<string, unknown> {
+  return { ...truthyCond(signalId), compare_type: "and" };
+}
+
+/** Green wires to `to`, skipping duplicate `from` ids. */
+function uniqueGreenWires(fromIds: Iterable<string>, to: string): WireEdge[] {
+  const seen = new Set<string>();
+  const wires: WireEdge[] = [];
+  for (const from of fromIds) {
+    if (seen.has(from)) {
+      continue;
+    }
+    seen.add(from);
+    wires.push(greenWire(from, to));
+  }
+  return wires;
+}
+
 const COMPARATOR: Record<CmpOp, string> = {
   "<": "<",
   ">": ">",
@@ -555,12 +579,97 @@ function isBooleanOrSelect(
   );
 }
 
+/**
+ * Lua `c and x or y` → nested `select(select(c,x,0), g, y)`.
+ * Gate `g` must be used only as this outer's cond+then (useCount === 2).
+ */
+function matchAndOrMux(
+  node: Extract<IRNode, { kind: "select" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+  useCount: ReadonlyMap<string, number>,
+):
+  | {
+      inner: Extract<IRNode, { kind: "select" }>;
+      x: string;
+      y: string;
+    }
+  | undefined {
+  if (node.cond !== node.then) {
+    return undefined;
+  }
+  if ((useCount.get(node.cond) ?? 0) !== 2) {
+    return undefined;
+  }
+  const inner = nodeById.get(node.cond);
+  if (inner?.kind !== "select") {
+    return undefined;
+  }
+  if (literalValueOf(nodeById.get(inner.else)) !== 0) {
+    return undefined;
+  }
+  return { inner, x: inner.then, y: node.else };
+}
+
+/**
+ * Emit `c and x or y` as one else_outputs decider + EACH merge.
+ * Preserves circuit truthiness: yield x only when c≠0 and x≠0; else y.
+ * When x is a nonzero literal, the x≠0 check is implied.
+ */
+function lowerAndOrMux(
+  outer: Extract<IRNode, { kind: "select" }>,
+  inner: Extract<IRNode, { kind: "select" }>,
+  nodeById: ReadonlyMap<string, IRNode>,
+  useCount: ReadonlyMap<string, number>,
+): { entities: CircuitEntity[]; wires: WireEdge[] } {
+  const x = inner.then;
+  const y = outer.else;
+  const xLit = literalValueOf(nodeById.get(x));
+  const muxId = `${outer.id}__mux`;
+  const xIsNonzeroLit = xLit !== undefined && xLit !== 0;
+
+  const { conditions: baseConds, wireFrom: baseFrom } = condFromSoleUseCmpOrSignal(
+    inner.cond,
+    nodeById,
+    useCount,
+  );
+  const conditions = xIsNonzeroLit ? baseConds : [...baseConds, andTruthy(x)];
+  const wireFrom = xIsNonzeroLit ? baseFrom : [...baseFrom, x];
+  const thenOutputs = xIsNonzeroLit
+    ? [{ signal: signalRef(x), constant: xLit }]
+    : [{ signal: signalRef(x), copy_count_from_input: true }];
+
+  return {
+    entities: [
+      {
+        id: muxId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: x,
+        role: "mux-side",
+        control_behavior: {
+          decider_conditions: {
+            conditions,
+            outputs: thenOutputs,
+            else_outputs: [{ signal: signalRef(y), copy_count_from_input: true }],
+          },
+        },
+      },
+      lowerSelectMerge(outer.id),
+    ],
+    wires: [...uniqueGreenWires([...wireFrom, y], muxId), greenWire(muxId, outer.id)],
+  };
+}
+
 /** True when lowerSelect would emit else_outputs mux + merge (not a cheaper specialization). */
 function selectUsesFullMux(
   node: Extract<IRNode, { kind: "select" }>,
   nodeById: ReadonlyMap<string, IRNode>,
+  useCount?: ReadonlyMap<string, number>,
 ): boolean {
   if (node.then === node.else) {
+    return false;
+  }
+  if (useCount !== undefined && matchAndOrMux(node, nodeById, useCount) !== undefined) {
     return false;
   }
   const thenLit = literalValueOf(nodeById.get(node.then));
@@ -711,6 +820,27 @@ function soleUseCmp(
 }
 
 /**
+ * Decider condition from a sole-use cmp (inlined), else `condId ≠ 0`.
+ * Returns the cmp when absorbed so callers can track `absorbedCmpIds`.
+ */
+function condFromSoleUseCmpOrSignal(
+  condId: string,
+  nodeById: ReadonlyMap<string, IRNode>,
+  useCount: ReadonlyMap<string, number>,
+): {
+  conditions: Record<string, unknown>[];
+  wireFrom: string[];
+  cmp?: Extract<IRNode, { kind: "cmp" }>;
+} {
+  const cmp = soleUseCmp(condId, nodeById, useCount);
+  if (cmp !== undefined) {
+    const { condition, wireFrom } = cmpCondition(cmp, nodeById);
+    return { conditions: [condition], wireFrom, cmp };
+  }
+  return { conditions: [truthyCond(condId)], wireFrom: [condId] };
+}
+
+/**
  * Cmp that `lowerSelect` will inline (sole-use; not unused; not inverted truth-and).
  * Absorption of cmp entities must use this same predicate.
  */
@@ -768,6 +898,11 @@ function lowerSelect(
     };
   }
 
+  const andOr = matchAndOrMux(node, nodeById, useCount);
+  if (andOr !== undefined) {
+    return lowerAndOrMux(node, andOr.inner, nodeById, useCount);
+  }
+
   if (elseLit === 0 && thenLit !== undefined) {
     return fusedCmp
       ? lowerConstWhenFromCmp(node.id, fusedCmp, thenLit, nodeById, true)
@@ -782,11 +917,10 @@ function lowerSelect(
   if (elseLit === 0 && isBooleanValued(thenNode)) {
     // Inline sole-use then-cmp: select(c, cmp, 0) → one AND (c ≠ 0 ∧ cmp).
     const thenCmp = soleUseCmp(node.then, nodeById, useCount);
-    if (thenCmp !== undefined && fusedCmp !== undefined) {
-      return lowerTruthAndTwoCmps(node.id, fusedCmp, thenCmp, nodeById);
-    }
     if (thenCmp !== undefined) {
-      return lowerTruthAndFromCmp(node.id, thenCmp, node.cond, nodeById);
+      return fusedCmp
+        ? lowerTruthAndTwoCmps(node.id, fusedCmp, thenCmp, nodeById)
+        : lowerTruthAndFromCmp(node.id, thenCmp, node.cond, nodeById);
     }
     return fusedCmp
       ? lowerTruthAndFromCmp(node.id, fusedCmp, node.then, nodeById)
@@ -949,7 +1083,7 @@ function lowerIncrementalHoldLatch(
   const { conditions, wireFrom } = stickyEnable
     ? stickyEnableGateConditions(stickyEnable.runId, stickyEnable.thenId, nodeById)
     : {
-        conditions: [{ first_signal: signalRef(select.cond), comparator: "!=", constant: 0 }],
+        conditions: [truthyCond(select.cond)],
         wireFrom: [select.cond],
       };
 
@@ -969,18 +1103,8 @@ function lowerIncrementalHoldLatch(
     },
   };
 
-  const wires: WireEdge[] = [];
-  const wiredFrom = new Set<string>();
-  for (const from of wireFrom) {
-    if (wiredFrom.has(from)) {
-      continue;
-    }
-    wiredFrom.add(from);
-    wires.push(greenWire(from, deltaGateId));
-  }
-  if (deltaLit === undefined && !wiredFrom.has(deltaId)) {
-    wires.push(greenWire(deltaId, deltaGateId));
-  }
+  const gateInputs = deltaLit === undefined ? [...wireFrom, deltaId] : wireFrom;
+  const wires = uniqueGreenWires(gateInputs, deltaGateId);
   wires.push(
     greenWire(deltaGateId, memory.id),
     // Q feedback: latch still sees `mem` when enable is off (gate silent).
@@ -1006,23 +1130,12 @@ function stickyEnableGateConditions(
   if (thenNode?.kind === "cmp") {
     const { condition, wireFrom } = cmpCondition(thenNode, nodeById);
     return {
-      conditions: [
-        { first_signal: signalRef(runId), comparator: "!=", constant: 0 },
-        { ...condition, compare_type: "and" },
-      ],
+      conditions: [truthyCond(runId), { ...condition, compare_type: "and" }],
       wireFrom: [runId, ...wireFrom],
     };
   }
   return {
-    conditions: [
-      { first_signal: signalRef(runId), comparator: "!=", constant: 0 },
-      {
-        first_signal: signalRef(thenId),
-        comparator: "!=",
-        constant: 0,
-        compare_type: "and",
-      },
-    ],
+    conditions: [truthyCond(runId), andTruthy(thenId)],
     wireFrom: [runId, thenId],
   };
 }
@@ -1059,12 +1172,7 @@ function lowerStickyAndLatch(
     thenCond = { ...condition, compare_type: "and" };
     wires.push(...wireFrom.map((from) => greenWire(from, memory.id)));
   } else {
-    thenCond = {
-      first_signal: signalRef(select.then),
-      comparator: "!=",
-      constant: 0,
-      compare_type: "and",
-    };
+    thenCond = andTruthy(select.then);
     wires.push(greenWire(select.then, memory.id));
   }
   if (!initIsZero) {
@@ -1080,14 +1188,82 @@ function lowerStickyAndLatch(
         role: "latch",
         control_behavior: {
           decider_conditions: {
-            conditions: [
-              { first_signal: signalRef(memory.id), comparator: "!=", constant: 0 },
-              thenCond,
-            ],
+            conditions: [truthyCond(memory.id), thenCond],
             outputs: [{ signal: signalRef(memory.id), constant: 1 }],
           },
         },
       },
+    ],
+    wires,
+    absorbedCmpIds,
+  };
+}
+
+/** If `expr` is `memory ± lit`, return the signed delta. */
+function memDeltaLiteral(
+  exprId: string,
+  memoryId: string,
+  nodeById: ReadonlyMap<string, IRNode>,
+): number | undefined {
+  const expr = nodeById.get(exprId);
+  if (expr?.kind !== "binop") {
+    return undefined;
+  }
+  if (expr.op === "+") {
+    const deltaId = memPlusDelta(exprId, memoryId, nodeById);
+    return deltaId !== undefined ? literalValueOf(nodeById.get(deltaId)) : undefined;
+  }
+  if (expr.op === "-" && expr.left === memoryId) {
+    const lit = literalValueOf(nodeById.get(expr.right));
+    return lit !== undefined ? -lit : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * `store(mem, select(c, mem+δ₁, mem+δ₂))` with literal deltas → one decider emitting
+ * ±δ + latch `Q + gated_δ` (no separate binops / mux / merge).
+ */
+function lowerDeltaChooseLatch(
+  memory: Extract<IRNode, { kind: "memory" }>,
+  select: Extract<IRNode, { kind: "select" }>,
+  thenDelta: number,
+  elseDelta: number,
+  initIsZero: boolean,
+  nodeById: ReadonlyMap<string, IRNode>,
+  useCount: ReadonlyMap<string, number>,
+): { entities: CircuitEntity[]; wires: WireEdge[]; absorbedCmpIds: string[] } {
+  const deltaId = `${select.id}__d`;
+  const { conditions, wireFrom, cmp } = condFromSoleUseCmpOrSignal(
+    select.cond,
+    nodeById,
+    useCount,
+  );
+  const absorbedCmpIds: string[] = cmp !== undefined ? [cmp.id] : [];
+
+  const wires: WireEdge[] = wireFrom.map((from) => greenWire(from, deltaId));
+  wires.push(greenWire(deltaId, memory.id), greenWire(memory.id, memory.id));
+  if (!initIsZero) {
+    wires.push(greenWire(memory.init, memory.id));
+  }
+
+  return {
+    entities: [
+      {
+        id: deltaId,
+        kind: "decider",
+        name: "decider-combinator",
+        outputSignal: deltaId,
+        role: "mux-side",
+        control_behavior: {
+          decider_conditions: {
+            conditions,
+            outputs: [{ signal: signalRef(deltaId), constant: thenDelta }],
+            else_outputs: [{ signal: signalRef(deltaId), constant: elseDelta }],
+          },
+        },
+      },
+      lowerLatch(memory.id, memory.id, deltaId),
     ],
     wires,
     absorbedCmpIds,
@@ -1182,6 +1358,15 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const stickyEnableBySelectId = new Map<string, { runId: string; thenId: string }>();
   /** Free-running `mem+δ` stores folded into the latch (memory id → δ id). */
   const freeRunningDeltaByMemory = new Map<string, string>();
+  /** `select(c, mem±δ₁, mem±δ₂)` folded into delta decider + latch. */
+  const deltaChooseByMemory = new Map<
+    string,
+    {
+      select: Extract<IRNode, { kind: "select" }>;
+      thenDelta: number;
+      elseDelta: number;
+    }
+  >();
   for (const node of module.nodes) {
     if (node.kind !== "memory") {
       continue;
@@ -1229,15 +1414,10 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       if (onlyStoreAndHolds) {
         absorbedSelectIds.add(storeValue.id);
         stickyClearSelectIds.add(storeValue.id);
-        const thenCmp = soleUseCmp(storeValue.then, nodeById, useCount);
-        if (thenCmp !== undefined) {
-          absorbedCmpIds.add(thenCmp.id);
-        } else {
-          // Hold gates also inline this then-cmp; absorb even if useCount>1 after expansion.
-          const thenNode = nodeById.get(storeValue.then);
-          if (thenNode?.kind === "cmp") {
-            absorbedCmpIds.add(thenNode.id);
-          }
+        // Hold gates also inline this then-cmp; absorb even if useCount>1.
+        const thenNode = nodeById.get(storeValue.then);
+        if (thenNode?.kind === "cmp") {
+          absorbedCmpIds.add(thenNode.id);
         }
         if ((useCount.get(storeValue.id) ?? 0) > 1) {
           stickyEnableBySelectId.set(storeValue.id, {
@@ -1246,10 +1426,39 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
           });
         }
       }
+      continue;
+    }
+    // `select(c, mem±δ₁, mem±δ₂)` with sole-use literal deltas.
+    const thenDelta = memDeltaLiteral(storeValue.then, node.id, nodeById);
+    const elseDelta = memDeltaLiteral(storeValue.else, node.id, nodeById);
+    if (
+      thenDelta !== undefined &&
+      elseDelta !== undefined &&
+      (useCount.get(storeValue.id) ?? 0) <= 1 &&
+      (useCount.get(storeValue.then) ?? 0) <= 1 &&
+      (useCount.get(storeValue.else) ?? 0) <= 1
+    ) {
+      absorbedSelectIds.add(storeValue.id);
+      absorbedBinopIds.add(storeValue.then);
+      absorbedBinopIds.add(storeValue.else);
+      deltaChooseByMemory.set(node.id, { select: storeValue, thenDelta, elseDelta });
+      const condCmp = soleUseCmp(storeValue.cond, nodeById, useCount);
+      if (condCmp !== undefined) {
+        absorbedCmpIds.add(condCmp.id);
+      }
     }
   }
   for (const node of module.nodes) {
     if (node.kind !== "select" || absorbedSelectIds.has(node.id)) {
+      continue;
+    }
+    const andOr = matchAndOrMux(node, nodeById, useCount);
+    if (andOr !== undefined) {
+      absorbedSelectIds.add(andOr.inner.id);
+      const innerCmp = soleUseCmp(andOr.inner.cond, nodeById, useCount);
+      if (innerCmp !== undefined) {
+        absorbedCmpIds.add(innerCmp.id);
+      }
       continue;
     }
     if (isBooleanOrSelect(node, nodeById)) {
@@ -1287,7 +1496,7 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
     if (node.kind !== "select" || absorbedSelectIds.has(node.id)) {
       continue;
     }
-    if (!selectUsesFullMux(node, nodeById)) {
+    if (!selectUsesFullMux(node, nodeById, useCount)) {
       continue;
     }
     const group = fullMuxByCond.get(node.cond) ?? [];
@@ -1376,6 +1585,21 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         const initIsZero = literalValueOf(nodeById.get(node.init)) === 0;
         if (storeValue?.kind === "select" && stickyClearSelectIds.has(storeValue.id)) {
           const expanded = lowerStickyAndLatch(node, storeValue, initIsZero, nodeById, useCount);
+          entities.push(...expanded.entities);
+          wires.push(...expanded.wires);
+          break;
+        }
+        const deltaChoose = deltaChooseByMemory.get(node.id);
+        if (deltaChoose !== undefined) {
+          const expanded = lowerDeltaChooseLatch(
+            node,
+            deltaChoose.select,
+            deltaChoose.thenDelta,
+            deltaChoose.elseDelta,
+            initIsZero,
+            nodeById,
+            useCount,
+          );
           entities.push(...expanded.entities);
           wires.push(...expanded.wires);
           break;
