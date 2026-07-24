@@ -1,0 +1,23 @@
+---
+description: Always run Biome lint before creating a git commit
+alwaysApply: true
+---
+
+# Lint before commit
+
+Before any `git commit` in this repo:
+
+1. Run `pnpm lint` (`biome check .`).
+2. If it fails, run `pnpm format` (`biome check --write .`) and fix any remaining **errors** (warnings alone are OK if `pnpm lint` exits 0).
+3. Re-run `pnpm lint` and confirm exit code 0.
+4. Only then stage the lint/format fixes (if any) and commit.
+
+Do not commit when `pnpm lint` is red. CI runs `pnpm lint` on every push to `main`.
+
+Optional local enforcement (once per clone):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+That runs `pnpm lint` on every commit via [`.githooks/pre-commit`](.githooks/pre-commit).
