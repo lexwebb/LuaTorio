@@ -458,10 +458,9 @@ function rejectRecursiveFunctions(functions: ReadonlyMap<string, FunctionInfo>):
       const path = [...visiting.slice(cycleAt), name];
       const declaration = functions.get(name)!;
       throw new SemanticError(
-        `recursive function call cycle: ${path.join(" -> ")}`,
+        `recursive function call cycle: ${path.join(" -> ")}; use while/for with memory instead of recursion`,
         declaration.line,
         declaration.column,
-        "v4",
       );
     }
     if (visited.has(name)) return;

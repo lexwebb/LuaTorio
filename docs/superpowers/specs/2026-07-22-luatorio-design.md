@@ -232,7 +232,7 @@ Tests run with Vitest. Golden snapshots are reviewed on intentional output chang
 | **v1** | Expressions, `input()` / `output()` | Signal DAG | Done |
 | **v2** | `while`, reassignment, `tick()`; leftover: `elseif` / nested if | Memory cells, tick scheduler | Done; [#65](https://github.com/lexwebb/LuaTorio/issues/65) |
 | **v3** | Functions (no recursion) | `call` nodes, inlining | [#67](https://github.com/lexwebb/LuaTorio/issues/67), [#68](https://github.com/lexwebb/LuaTorio/issues/68) |
-| **v4** | Recursion, tables, `each` bundles | Stack simulation, multi-signal wires | Bags [#66](https://github.com/lexwebb/LuaTorio/issues/66); tables [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70); recursion [#71](https://github.com/lexwebb/LuaTorio/issues/71) |
+| **v4** | Tables as bags, multi-signal channels (no recursion) | Bag IR / table→`bag_const` | Bags [#66](https://github.com/lexwebb/LuaTorio/issues/66); tables [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70); recursion permanently rejected [#71](https://github.com/lexwebb/LuaTorio/issues/71) |
 | **v5** | Entity placement (`place()`) | Spatial IR, entity nodes | [#72](https://github.com/lexwebb/LuaTorio/issues/72), [#73](https://github.com/lexwebb/LuaTorio/issues/73) |
 | **Web** | Browser playground | WASM or pure TS bundle of `@luatorio/core` | #14–#17, #42–#43 done |
 

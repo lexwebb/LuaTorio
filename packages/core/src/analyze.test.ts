@@ -267,8 +267,8 @@ describe("analyze", () => {
     expect(() => analyze(ast)).toThrow(/local declarations followed by return/);
   });
 
-  // v4 stack/tick decision: docs/superpowers/specs/2026-07-23-v4-recursion-design.md
-  it("rejects recursive function cycles as planned for v4", () => {
+  // Permanent reject: docs/superpowers/specs/2026-07-23-v4-recursion-design.md (Option B)
+  it("rejects recursive function cycles without a planned-version promise", () => {
     const ast = parse(`
       local function a(x)
         return b(x)
@@ -279,11 +279,13 @@ describe("analyze", () => {
       output("signal-A", a(1))
     `);
 
-    expect(() => analyze(ast)).toThrow(/recursive function call cycle: a -> b -> a/);
+    expect(() => analyze(ast)).toThrow(
+      /recursive function call cycle: a -> b -> a; use while\/for with memory/,
+    );
     try {
       analyze(ast);
     } catch (error) {
-      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: "v4" });
+      expect(error).toMatchObject({ name: "SemanticError", plannedVersion: undefined });
     }
   });
 

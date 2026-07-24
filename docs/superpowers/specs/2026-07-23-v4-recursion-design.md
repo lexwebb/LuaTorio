@@ -1,120 +1,70 @@
-# v4 recursive functions: stack and tick design (#71)
+# Recursive functions: permanent reject (#71)
 
-**Date:** 2026-07-23  
-**Status:** Deferred for morning design decision  
+**Date:** 2026-07-23 (design) / 2026-07-24 (decision)  
+**Status:** Accepted — **Option B** (no stack VM)  
 **Issue:** [#71](https://github.com/lexwebb/LuaTorio/issues/71)  
 **Depends on:** [#68](https://github.com/lexwebb/LuaTorio/issues/68) (closed)
 
-## Context
+## Decision
 
-v3 functions are compile-time, non-recursive expansions. #68 therefore detects every direct or
-mutual call cycle during analysis and rejects it with `plannedVersion: "v4"`. That diagnostic
-remains the current behavior while this issue is open.
+**Do not implement recursive functions or a combinator stack VM.**
 
-Recursion cannot be added by relaxing that check: the existing lowering has no runtime call,
-activation record, return address, or stack storage. A recursive call needs a sequential
-machine, so it must specify both finite resources and Factorio tick behavior before an emitter
-can be truthful.
+v3 functions stay compile-time, fully inlined, and acyclic. Direct and mutual recursion remain
+analyzer errors. Recursive algorithms belong in explicit `while` / `for` + memory cells.
 
-## Stack model options
+### Why B
 
-### Option A: explicit bounded stack IR
+- A truthful stack emit is a sequential machine: visible tick latency, depth × frame-width
+  combinator cost (often ~5–20× an equivalent loop), overflow/depth surface, and a separate
+  simulator contract.
+- That complexity buys source ergonomics, not denser blueprints. For Factorio circuits, loops
+  win on size and ticks.
 
-Add an explicit `recursive_call`/stack-machine IR family whose state includes, per active frame:
+Option A (bounded stack IR) and compile-time unroll-with-magic-depth are documented below as
+**rejected alternatives**, not a future roadmap promise.
 
-- callee/program counter or continuation;
-- parameter and function-local values;
-- a return-value slot;
-- stack pointer, overflow flag, and completion state.
+## Current behavior (normative)
 
-Lowering would turn a recursive function into a bounded interpreter/data path. Emit would
-allocate memory cells and combinators for every frame up to a configured depth; return would
-unwind one frame at a time. The simulator must execute the same state transitions rather than
-pretending calls are combinational.
+- `#68` inlines non-recursive `local function` declarations.
+- Call-graph cycle detection rejects every recursive cycle.
+- Diagnostics do **not** advertise recursion as “planned for v4”; they point authors at
+  clocked loops / memory instead.
 
-This is the only option that supports recursive source functions in this compiler. It has
-visible, bounded resource cost proportional to maximum depth and frame width, and requires
-dedicated layout, optimization, simulation, and diagnostic work.
+## Rejected alternatives
 
-### Option B: reject unbounded recursion
+### Option A: explicit bounded stack IR (not pursuing)
 
-Keep v3 inlining and permanently reject every call-graph cycle. Recursive algorithms can be
-written as explicit clocked loops and memory cells in the supported subset. This is simple,
-honest, and has no hidden resource limit, but it does not deliver the #71 language feature.
+Would have added frame state (PC/continuation, params/locals, return, SP, overflow/done),
+allocated stack storage up to a literal max depth, and required either a microstep VM or a
+fixed-depth pipeline with observable latency. Estimated cost scales as
+\(C_{\mathrm{ctrl}} + C_{\mathrm{body}} + D \cdot W\) combinators — typically tens to hundreds
+for modest depths, vs ~5–15 for an honest loop.
 
 ### Not an option: unroll a cycle
 
-Compile-time unrolling is valid only when a statically provable finite bound makes the call
-graph acyclic after expansion. General recursion has no such bound. Arbitrarily choosing an
-unroll count is an implicit stack limit with worse diagnostics and no defined tick semantics.
+Compile-time unrolling only works with a statically proven finite acyclic expansion. Picking an
+arbitrary unroll count is an implicit stack with worse diagnostics and no defined tick
+semantics.
 
-## Tick interaction
+## Author guidance
 
-An explicit stack VM is sequential. A call, frame initialization, expression evaluation,
-branch, return, and unwind cannot all be assumed to complete in one Factorio tick unless an
-emit design proves the required combinator propagation and feedback timing.
+Prefer:
 
-The morning decision must choose one contract:
+```lua
+local n = input("signal-N")
+local acc = 1
+local i = 1
+while i <= n do
+  acc = acc * i
+  i = i + 1
+  tick()
+end
+output("signal-A", acc)
+```
 
-1. **Microstep VM:** each machine transition consumes one or more ticks. Invocation latency is
-   observable; callers must receive a `done`/result protocol, and recursion cannot appear in
-   ordinary combinational expression positions.
-2. **Statically scheduled frames:** compile a fixed-depth recursive shape into a staged
-   pipeline. Latency is fixed but still observable, and supported function bodies would be much
-   narrower than v3 expressions.
+over a recursive `fact(n)` that would need a stack machine in circuits.
 
-Neither contract is compatible with silently treating recursive calls like current inlined
-expressions. Memory cells and clocked loops must also be defined as VM-owned state or rejected
-inside recursive bodies; sharing their feedback paths with frames without an ownership model
-would create ambiguous next-state behavior.
+## Implementation
 
-## Limits and diagnostics
-
-If Option A is accepted, recursion must require a compile-time literal maximum depth, either on
-the function declaration or at each recursive call. The design must specify:
-
-- a conservative maximum frame count and what counts as a frame;
-- a source-level depth cap and compiler hard cap;
-- overflow behavior: compile-time rejection when the bound cannot be established, or a
-  deterministic runtime overflow signal that suppresses further calls;
-- a combinator-cost estimate based on frame locals, parameters, continuation states, and
-  result width;
-- simulator limits identical to emitted limits.
-
-The first implementation should prefer compile-time bounded depth and reject missing,
-non-literal, negative, or excessive limits. It must never rely on an unbounded Factorio feedback
-loop as a hidden call stack.
-
-## Rejected source forms
-
-Until an explicit-stack contract is accepted and implemented, analyzer rejection remains for:
-
-- direct recursion and all mutual-recursion cycles;
-- recursive functions that capture mutable state;
-- recursion through a value (already outside the v3 callable model);
-- unbounded or dynamically bounded recursive calls;
-- recursive bodies containing `tick()`, `while`, `for`, mutable assignments, `input()`, or
-  `output()`.
-
-After a stack design is chosen, the last group must be reconsidered only with explicit state and
-tick ownership rules; accepting it merely because a stack exists would be unsound.
-
-## Why emit is deferred overnight
-
-Full combinator-stack emission is a major language/runtime decision, not a local lowering task.
-It determines visible tick latency, stack resource bounds, frame storage layout, overflow
-semantics, and interactions with existing memory cells and clocks. Shipping an assumed model
-overnight could lock the project into incorrect or surprising runtime behavior.
-
-The design note is intentionally the only completed acceptance item for #71. Morning review must
-select Option A or Option B and, if Option A, choose the tick contract and bounded-stack surface
-before analyzer changes beyond the existing v4 diagnostic, IR, simulator, or emit work begins.
-
-## Implementation gate after review
-
-1. Record the selected stack and tick contract in this document.
-2. Define bounded recursive syntax and precise rejected forms.
-3. Change analyzer cycle handling only for source that satisfies that contract.
-4. Add stack IR plus simulator transition tests before emitter work.
-5. Emit one bounded example, compare stack cost with an explicit loop/inlining alternative, and
-   document latency and resource limits in the README.
+No further emit/IR/sim work for #71. Analyzer rejection stays; README and roadmap treat
+recursion as **out of scope**, not deferred.

@@ -154,8 +154,9 @@ latch and enable-gated stores (no CFG/phi). `repeat` and generic `for` are rejec
 **Functions (v3):** `local function` declarations must be a program prefix. Their bodies contain
 only immutable `local` declarations followed by one `return` expression. They cannot use I/O,
 assignments, control flow, `tick()`, `sr()`, or capture mutable locals. Functions may call other
-declared helpers, but recursion is rejected (planned for v4); every call is expanded into the
-existing scalar/bag expression graph.
+declared helpers, but recursion is **not supported** (use `while`/`for` + memory); every call is
+expanded into the existing scalar/bag expression graph. See
+[recursion decision](docs/superpowers/specs/2026-07-23-v4-recursion-design.md).
 
 **Table bags (v4):** A table literal is only a constant bag when it is non-empty and every entry
 uses a bracketed string-literal signal name with an integer literal count, such as
@@ -163,9 +164,8 @@ uses a bracketed string-literal signal name with an integer literal count, such 
 dot access, computed keys, nested values, duplicates, and field writes are rejected.
 `bag["signal-name"]` samples one scalar channel and returns `0` when that channel is absent.
 
-Not yet supported: general Lua tables and recursion
-([#71](https://github.com/lexwebb/LuaTorio/issues/71)).
-Unsupported constructs raise a `SemanticError` naming the construct and its planned version.
+Not yet supported: general Lua tables (beyond constant bags). Unsupported constructs raise a
+`SemanticError` naming the construct and, where relevant, its planned version.
 
 ### `input()` / `output()` API
 

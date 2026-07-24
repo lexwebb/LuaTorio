@@ -26,9 +26,7 @@
 | #63 hysteresis | **Not planned** — `sr` composition already honest |
 | #70 table bags | **Done** `9bd646c` / `d8c3264` |
 | #73 place() | **Done** `9bd646c` |
-| #71 recursion emit | **Open / Todo** — design `4b1b718`; emit needs morning call |
-
-**Only open tracked issue:** [#71](https://github.com/lexwebb/LuaTorio/issues/71)
+| #71 recursion emit | **Not planned (Option B)** — permanent reject; loops instead |
 
 **Not pushed** to `origin/main` (8 local commits). Push when ready.
 
@@ -106,8 +104,10 @@ place("wooden-chest", 4, 0)
 ### T7/#T8 — #70 + #73 (DONE)
 - Commits `9bd646c`, `d8c3264` — table bags + `bag_sample`; `place()`.
 
-### T9 — #71 (DEFERRED)
-- Commit `4b1b718` — recursion design note; issue left open/Todo.
+### T9 — #71 (DEFERRED → DECIDED Option B)
+- Commit `4b1b718` — recursion design note (options).
+- **2026-07-24 morning:** chose **Option B** — permanent reject; no stack VM.
+  Analyzer no longer says “planned for v4”; docs/README updated; issue closed not planned.
 
 ## Morning checklist
 

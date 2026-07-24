@@ -103,7 +103,7 @@ Suggested order (emit density first, then Lua surface growth):
 #66 first-class bags ─┬─► #58/#59/#60 bag ops
                       └─► #69/#70 v4 tables
 #65 elseif / nested if          (independent ergonomics)
-#67 → #68 v3 functions ──► #71 v4 recursion
+#67 → #68 v3 functions   (#71 recursion = permanent reject / Option B)
 #72 → #73 v5 place()            (after circuit surface stabilizes)
 ```
 
@@ -115,13 +115,13 @@ Suggested order (emit density first, then Lua surface growth):
 | [#68](https://github.com/lexwebb/LuaTorio/issues/68) | v3 implement functions |
 | [#69](https://github.com/lexwebb/LuaTorio/issues/69) | v4 design — tables as bags |
 | [#70](https://github.com/lexwebb/LuaTorio/issues/70) | v4 table constructors + field access |
-| [#71](https://github.com/lexwebb/LuaTorio/issues/71) | v4 recursive functions |
+| [#71](https://github.com/lexwebb/LuaTorio/issues/71) | recursion — **Option B: permanent reject** |
 | [#72](https://github.com/lexwebb/LuaTorio/issues/72) | v5 design — `place()` |
 | [#73](https://github.com/lexwebb/LuaTorio/issues/73) | v5 implement `place()` |
 
 Cookbook emit backlog (not language surface): [#57](https://github.com/lexwebb/LuaTorio/issues/57)–[#63](https://github.com/lexwebb/LuaTorio/issues/63).
 
-Design notes: [v3 functions](2026-07-23-v3-functions-design.md), [v4 tables as bags](2026-07-23-v4-tables-as-bags-design.md), and [v5 `place()`](2026-07-23-v5-place-design.md).
+Design notes: [v3 functions](2026-07-23-v3-functions-design.md), [v4 tables as bags](2026-07-23-v4-tables-as-bags-design.md), [v5 `place()`](2026-07-23-v5-place-design.md), [recursion Option B](2026-07-23-v4-recursion-design.md).
 
 ## Tracking
 
