@@ -323,10 +323,50 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5 L2.5 0 L5 2.5' fill='none' stroke='%23e85d5d' stroke-width='1'/%3E%3C/svg%3E");
 }
 
-.playground-editor .cm-tooltip.cm-tooltip-lint {
-  background: var(--ft-panel);
+/* Lint tooltips use the light Factorio panel — dark text for contrast (not warm-on-cream). */
+.playground-editor .cm-tooltip.cm-tooltip-lint,
+.playground-editor .cm-tooltip:has(.cm-diagnostic) {
+  background: var(--ft-panel) !important;
   border: 1px solid var(--ft-border);
-  color: var(--ft-text-warm);
+  color: var(--ft-text-dark) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  max-width: min(480px, 90vw);
+}
+
+.playground-editor .cm-tooltip.cm-tooltip-lint *,
+.playground-editor .cm-tooltip:has(.cm-diagnostic) * {
+  color: var(--ft-text-dark) !important;
+}
+
+.playground-editor .cm-tooltip .cm-diagnostic {
+  color: var(--ft-text-dark) !important;
+  padding: 6px 10px 6px 12px;
+}
+
+.playground-editor .cm-tooltip .cm-diagnostic-error {
+  border-left: 3px solid #c43c3c;
+  background: rgba(196, 60, 60, 0.12);
+}
+
+.playground-editor .cm-tooltip.cm-tooltip-lint ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.playground-editor .cm-panel.cm-panel-lint {
+  background: var(--ft-panel);
+  color: var(--ft-text-dark);
+  border-top: 1px solid var(--ft-border);
+}
+
+.playground-editor .cm-panel.cm-panel-lint ul [role="option"],
+.playground-editor .cm-panel.cm-panel-lint .cm-diagnostic {
+  color: var(--ft-text-dark) !important;
+  background: var(--ft-panel);
 }
 
 .output-pane {
