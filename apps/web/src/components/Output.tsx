@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { CompileOutcome } from "../lib/compile.js";
 import type { ViewMode } from "../lib/share.js";
+import { ImportPanel } from "./ImportPanel.js";
 import { SimulatePanel } from "./SimulatePanel.js";
 
 export interface OutputProps {
@@ -41,12 +42,16 @@ function compileBody(outcome: CompileOutcome, viewMode: ViewMode): string {
   }
 }
 
-/** Renders compile result views or the live Simulate panel. */
+/** Renders compile result views, Simulate, or foreign blueprint Import. */
 export function Output({ outcome, viewMode, source, simRunToken }: OutputProps) {
   const body = useMemo(() => compileBody(outcome, viewMode), [outcome, viewMode]);
 
   if (viewMode === "simulate") {
     return <SimulatePanel source={source} runToken={simRunToken} />;
+  }
+
+  if (viewMode === "import") {
+    return <ImportPanel />;
   }
 
   return (

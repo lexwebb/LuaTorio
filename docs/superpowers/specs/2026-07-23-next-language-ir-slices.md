@@ -133,3 +133,16 @@ Design notes: [v3 functions](2026-07-23-v3-functions-design.md), [v4 tables as b
 | Red/green split | #40 | Done |
 | Selector VM | #39 | Done |
 | Language roadmap | **#65–#73** | Bags → tables; v3 functions; v5 place |
+
+## Post-v5 next (2026-07-24)
+
+Language phases v1–v5 and web/sim core tracks are **shipped**. Remaining product work is tracked
+on the project board (see README Roadmap → Next):
+
+| Track | Intent |
+|-------|--------|
+| Playground blueprint import | UI over `fromBlueprint` / `simulateImported` |
+| Typed recipe/item signals | Honest assembler `set_recipe` bags |
+| Expression bag values | `{ [sig] = expr }` for machine I/O |
+| More machine handles | Inserters / similar via `configure` |
+| In-game QA | [#78](https://github.com/lexwebb/LuaTorio/issues/78) |

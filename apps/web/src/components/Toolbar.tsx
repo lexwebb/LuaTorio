@@ -15,6 +15,7 @@ const VIEW_MODES: Array<{ id: ViewMode; label: string }> = [
   { id: "json", label: "JSON" },
   { id: "stats", label: "Stats" },
   { id: "simulate", label: "Simulate" },
+  { id: "import", label: "Import" },
 ];
 
 /** Compile / view-mode toggle / copy actions above the editor and output panes. */

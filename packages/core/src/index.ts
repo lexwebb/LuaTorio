@@ -100,6 +100,7 @@ export {
   BlueprintImportError,
   fromBlueprint,
   fromCircuitGraph,
+  importBlueprint,
   WIRE_CONNECTOR,
 } from "./sim/import.js";
 export type { ReferenceOptions, ReferenceResult } from "./sim/reference.js";

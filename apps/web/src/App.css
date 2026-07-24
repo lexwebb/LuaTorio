@@ -1256,3 +1256,42 @@ body {
   font-size: 0.9rem;
   line-height: 1.4;
 }
+
+
+.import-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.import-paste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.import-paste textarea {
+  width: 100%;
+  min-height: 12rem;
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 1px solid #5a4f42;
+  background: #0a0806;
+  color: #f5ecd8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.import-ports {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #5a4f42;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+}

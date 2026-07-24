@@ -1,3 +1,4 @@
+import { decodePlan } from "@jensforstmann/factorio-blueprint-tools";
 import type { CircuitEntity, CircuitGraph, CombinatorKind, WireColor } from "../combinators.js";
 
 export type { WireColor } from "../combinators.js";
@@ -355,4 +356,40 @@ export function fromCircuitGraph(graph: CircuitGraph): ImportedCircuit {
     inputs: graph.inputs.map((port) => ({ ...port })),
     outputs: graph.outputs.map((port) => ({ ...port })),
   };
+}
+
+/**
+ * Accept a Factorio blueprint import string or JSON plan text, then `fromBlueprint`.
+ * Prefer this from the playground so the web app need not depend on blueprint-tools directly.
+ */
+export function importBlueprint(
+  input: string,
+  opts?: {
+    inputs?: Array<{ signal: string; entityId: string }>;
+    outputs?: Array<{ signal: string; entityId: string }>;
+  },
+): ImportedCircuit {
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    throw new BlueprintImportError("empty blueprint input");
+  }
+  let plan: unknown;
+  if (trimmed.startsWith("{")) {
+    try {
+      plan = JSON.parse(trimmed) as unknown;
+    } catch (error) {
+      throw new BlueprintImportError(
+        `invalid blueprint JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  } else {
+    try {
+      plan = decodePlan(trimmed);
+    } catch (error) {
+      throw new BlueprintImportError(
+        `failed to decode blueprint string: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  return fromBlueprint(plan, opts);
 }

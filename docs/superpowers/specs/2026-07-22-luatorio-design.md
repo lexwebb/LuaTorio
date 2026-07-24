@@ -227,16 +227,18 @@ Tests run with Vitest. Golden snapshots are reviewed on intentional output chang
 
 ## Roadmap
 
-| Phase | Features | IR changes | Issues |
+| Phase | Features | IR changes | Status |
 |---|---|---|---|
 | **v1** | Expressions, `input()` / `output()` | Signal DAG | Done |
-| **v2** | `while`, reassignment, `tick()`; leftover: `elseif` / nested if | Memory cells, tick scheduler | Done; [#65](https://github.com/lexwebb/LuaTorio/issues/65) |
-| **v3** | Functions (no recursion) | `call` nodes, inlining | [#67](https://github.com/lexwebb/LuaTorio/issues/67), [#68](https://github.com/lexwebb/LuaTorio/issues/68) |
-| **v4** | Tables as bags, multi-signal channels (no recursion) | Bag IR / table→`bag_const` | Bags [#66](https://github.com/lexwebb/LuaTorio/issues/66); tables [#69](https://github.com/lexwebb/LuaTorio/issues/69)/[#70](https://github.com/lexwebb/LuaTorio/issues/70); recursion permanently rejected [#71](https://github.com/lexwebb/LuaTorio/issues/71) |
-| **v5** | Entity placement (`place()`) | Spatial IR, entity nodes | [#72](https://github.com/lexwebb/LuaTorio/issues/72), [#73](https://github.com/lexwebb/LuaTorio/issues/73) |
-| **Web** | Browser playground | WASM or pure TS bundle of `@luatorio/core` | #14–#17, #42–#43 done |
+| **v2** | `while`, reassignment, `tick()`, `elseif` / nested if | Memory cells, tick scheduler | Done |
+| **v3** | Functions (no recursion) | Inlining into expression graph | Done |
+| **v4** | Tables as bags, multi-signal channels | Bag IR / EACH / selector / colors | Done; recursion permanently rejected |
+| **v5** | Entity placement + machine I/O | Spatial places, entity_read | Done through v5.2 |
+| **Web** | Browser playground + simulate/canvas | Pure TS `@luatorio/core` | Done |
+| **Next** | Blueprint import UI, typed recipe signals, expression bags, more machines | See README Roadmap → Next | Open on project board |
 
-See also `2026-07-23-next-language-ir-slices.md` for ordering vs cookbook bag emit (#57–#63).
+Historical issue map for language phases: #65–#73 (closed). Cookbook / emit follow-ups: see
+`2026-07-23-next-language-ir-slices.md` and `2026-07-23-cookbook-followups-design.md`.
 
 ## Project Management
 

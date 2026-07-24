@@ -23,6 +23,9 @@ pnpm dev:web
 
 Deployed (GitHub Pages): [https://lexwebb.github.io/LuaTorio/](https://lexwebb.github.io/LuaTorio/)
 
+Use the **Import** tab to paste a Factorio blueprint (combinators only) into the circuit VM —
+fixtures under `packages/core/src/sim/fixtures/` are bundled for demos.
+
 The editor shows **live diagnostics** (parse/analyze errors under the cursor) and **autocomplete**
 for LuaTorio builtins plus common signal / `place()` entity **string** names inside quotes.
 Signal args remain string literals — completions fill them; they are not language constants.
@@ -126,14 +129,16 @@ Recursion is **not supported** — use `while` / `for` with memory instead
 ## Language Reference
 
 Programs are a flat sequence of statements. See the
-[design spec](docs/superpowers/specs/2026-07-22-luatorio-design.md) and
-[v2 sequential design](docs/superpowers/specs/2026-07-23-v2-sequential-design.md) for the roadmap.
-Later roadmap designs: [v3 functions](docs/superpowers/specs/2026-07-23-v3-functions-design.md),
-[v4 tables as bags](docs/superpowers/specs/2026-07-23-v4-tables-as-bags-design.md), and
-[v5 `place()`](docs/superpowers/specs/2026-07-23-v5-place-design.md).
+[design spec](docs/superpowers/specs/2026-07-22-luatorio-design.md) for the original v1
+architecture. Shipped phase designs: [v2 sequential](docs/superpowers/specs/2026-07-23-v2-sequential-design.md),
+[v3 functions](docs/superpowers/specs/2026-07-23-v3-functions-design.md),
+[v4 tables as bags](docs/superpowers/specs/2026-07-23-v4-tables-as-bags-design.md),
+[v5 `place()`](docs/superpowers/specs/2026-07-23-v5-place-design.md),
+[machine I/O v5.1](docs/superpowers/specs/2026-07-24-machine-io-logistics-design.md) /
+[v5.2](docs/superpowers/specs/2026-07-24-machine-io-v52-design.md).
 
-Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain machines
-(foundries, assemblers, …) are examples that compose those primitives — not new language APIs.
+Builtins include **circuit primitives** (latches, EACH bags, rank/count) and **machine handles**
+(`place` / `input_from` / `output_to` / `configure` for logistics chests, assemblers, roboports).
 
 ### Allowed constructs
 
@@ -149,9 +154,9 @@ Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain mac
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
 | `place("entity", x, y)` | Top-level statement or entity-handle local; place an allowed non-combinator |
-| `input_from(entity)` | Read a placed logistics chest as a bag; wires chest contents into its consumers |
-| `output_to(entity, bag)` | Drive requester/buffer logistics requests from a bag |
-| `configure(entity, { … })` | Set logistics read/request flags and optional literal request filters |
+| `input_from(entity)` | Read logistic chest / assembler inventory / roboport network as a bag |
+| `output_to(entity, bag)` | Drive requester/buffer requests **or** assembler/foundry `set_recipe` |
+| `configure(entity, { … })` | Logistics flags / `circuit_condition`, or assembler recipe/enable keys |
 | `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
 | `each_latch(level, signal, high, …)` | Sticky multi-signal hysteresis bag (EACH tags); `output(signal, bag)` |
 | `bag_const(signal, count, …)` | Constant multi-signal bag; signal/count pairs are literals |
@@ -230,6 +235,33 @@ Positions are absolute blueprint coordinates. `simulate({ entityInputs })` injec
 `parse()` throws `ParseError`; `analyze()` throws `SemanticError` — both carry `line`/`column`
 and, for constructs on the roadmap, a `plannedVersion`. `compile()` lets both propagate
 unchanged.
+
+## Roadmap
+
+### Shipped
+
+| Phase | Features | Status |
+|---|---|---|
+| **v1** | Expressions, `input()` / `output()`, emit + CLI | Done |
+| **v2** | Memory, `if`/`elseif`, `while`/`for` + `tick()` | Done |
+| **v3** | Prefix `local function` (inlined; no recursion) | Done |
+| **v4** | Bags, table constructors, EACH / selector / red-green | Done |
+| **v5** | `place()` + machine I/O (logistics, assemblers, roboport) | Done (v5.2) |
+| **Web** | Playground, Pages deploy, Simulate + canvas | Done |
+| **Sim** | Factorio-faithful VM, fuzz, foreign blueprint ingest (core) | Done |
+
+### Next
+
+Tracked on the [LuaTorio project board](https://github.com/users/lexwebb/projects/1):
+
+1. **Playground foreign blueprint import** — [#83](https://github.com/lexwebb/LuaTorio/issues/83)
+2. **Honest recipe/item signal types** — [#84](https://github.com/lexwebb/LuaTorio/issues/84)
+3. **Expression bag values** — [#85](https://github.com/lexwebb/LuaTorio/issues/85)
+4. **More machine handles (inserters)** — [#86](https://github.com/lexwebb/LuaTorio/issues/86)
+5. **In-game QA** — [#78](https://github.com/lexwebb/LuaTorio/issues/78)
+
+Recursion remains permanently out of scope
+([decision](docs/superpowers/specs/2026-07-23-v4-recursion-design.md)).
 
 ## Contributing
 

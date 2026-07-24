@@ -61,9 +61,9 @@ export function App() {
         <div>
           <h1>LuaTorio</h1>
           <p>
-            Write LuaTorio source — arithmetic, memory, inlined helpers, multi-signal bags, and
-            <code> place()</code> — then compile a Factorio blueprint and simulate the circuit in
-            your browser.
+            Write LuaTorio source — arithmetic, memory, bags, and <code>place()</code> machine I/O —
+            compile a Factorio blueprint, simulate Lua circuits, or <strong>Import</strong> a
+            foreign blueprint into the VM.
           </p>
           <span className="playground-disclaimer">
             Fan-made playground — not affiliated with Wube Software. Combinator icons © Wube (see
@@ -93,7 +93,13 @@ export function App() {
           </div>
         </section>
         <section className="pane">
-          <div className="pane-titlebar">{viewMode === "simulate" ? "Simulate" : "Result"}</div>
+          <div className="pane-titlebar">
+            {viewMode === "simulate"
+              ? "Simulate"
+              : viewMode === "import"
+                ? "Import blueprint"
+                : "Result"}
+          </div>
           <div className="pane-body pane-body-scroll">
             <Output
               outcome={outcome}

@@ -7,7 +7,12 @@ import { lowerToCombinators } from "../combinators.js";
 import { lower } from "../lower.js";
 import { optimize } from "../optimize.js";
 import { parse } from "../parse.js";
-import { BlueprintImportError, fromBlueprint, fromCircuitGraph } from "./import.js";
+import {
+  BlueprintImportError,
+  fromBlueprint,
+  fromCircuitGraph,
+  importBlueprint,
+} from "./import.js";
 import { simulate } from "./simulate.js";
 import { simulateImported } from "./simulate-imported.js";
 
@@ -216,5 +221,16 @@ describe("fromCircuitGraph bridge", () => {
     expect(imported.ticks.map((tick) => tick.outputs["signal-A"])).toEqual(
       directed.ticks.map((tick) => tick.outputs["signal-A"]),
     );
+  });
+});
+
+describe("importBlueprint", () => {
+  it("importBlueprint accepts fixture JSON text", () => {
+    const text = readFileSync(join(fixturesDir, "static-mul.json"), "utf8");
+    const circuit = importBlueprint(text, {
+      outputs: [{ signal: "signal-C", entityId: "3" }],
+    });
+    const result = simulateImported(circuit, { ticks: 2 });
+    expect(result.ticks[1]?.outputs["signal-C"]).toBe(42);
   });
 });
