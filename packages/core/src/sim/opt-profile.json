@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T09:17:13.451Z",
+  "generatedAt": "2026-07-24T11:02:37.580Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -245,8 +245,8 @@
       "name": "logistics_io",
       "source": "example",
       "kind": "example",
-      "combinators": 3,
-      "wires": 1,
+      "combinators": 4,
+      "wires": 2,
       "buckets": {
         "latch": 0,
         "mux_side": 0,
@@ -254,7 +254,7 @@
         "decider_other": 0,
         "arithmetic_other": 1,
         "constant_value": 1,
-        "placeholder_io": 1
+        "placeholder_io": 2
       },
       "muxShare": 0
     },
@@ -3833,7 +3833,7 @@
   ],
   "totals": {
     "programs": 225,
-    "combinators": 874,
+    "combinators": 875,
     "buckets": {
       "latch": 204,
       "mux_side": 54,
@@ -3841,7 +3841,7 @@
       "decider_other": 9,
       "arithmetic_other": 68,
       "constant_value": 114,
-      "placeholder_io": 424
+      "placeholder_io": 425
     },
     "muxShareMean": 0.06088888888888889
   },
@@ -3855,7 +3855,7 @@
     {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=68, other deciders=9 (graph; blueprints omit 424 I/O pads).",
+      "evidence": "Non-mux arith=68, other deciders=9 (graph; blueprints omit 425 I/O pads).",
       "estimatedImpact": "medium"
     },
     {

@@ -23,6 +23,7 @@ export interface LaidOutCircuit {
   wires: FactorioWire[];
   outputs: CircuitGraph["outputs"];
   inputs: CircuitGraph["inputs"];
+  entityReads?: CircuitGraph["entityReads"];
 }
 
 export type LayoutArrangement = "row" | "layered";
@@ -211,5 +212,11 @@ export function layout(graph: CircuitGraph, options?: LayoutOptions): LaidOutCir
     wireConnector(kindById.get(wire.to) as CombinatorKind, "to", wire.color),
   ]);
 
-  return { entities, wires, outputs: graph.outputs, inputs: graph.inputs };
+  return {
+    entities,
+    wires,
+    outputs: graph.outputs,
+    inputs: graph.inputs,
+    entityReads: graph.entityReads,
+  };
 }

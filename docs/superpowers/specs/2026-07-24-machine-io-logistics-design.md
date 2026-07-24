@@ -1,7 +1,7 @@
 # Machine-backed I/O: logistics chests (v5.1)
 
 **Date:** 2026-07-24  
-**Status:** Implementing  
+**Status:** Implemented (v5.1 + #81 entityInputs)  
 **Issues:** design + implement (filed with this slice)
 
 ## Decisions
@@ -61,7 +61,20 @@ and circuit attachments (combinator ids to wire).
 
 ## Simulation
 
-`simulate()` ignores non-combinator entities (unchanged). Drive tests via classic `input()`.
+Spatial chests are not combinators. For `input_from`, emit keeps a **sim-only phantom**
+constant (`CircuitGraph.entityReads`) wired to bag consumers; blueprint emit strips the
+phantom and wires the real chest (`readConsumerIds`, connector 5).
+
+```ts
+simulate(graph, {
+  ticks: 8,
+  entityInputs: { __e1: { "iron-plate": 42 } }, // keyed by place id
+});
+```
+
+Classic `input("sig")` pads still use `inputs`. Playground: one bag editor per `entity_read`
+place (signal → count rows). This is a stand-in for chest contents on the wire — not a
+logistics network / requester inventory model.
 
 ## Non-goals
 

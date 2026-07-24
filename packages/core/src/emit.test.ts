@@ -119,6 +119,20 @@ describe("emitBlueprint", () => {
     expect(plan.blueprint.wires.some((wire: number[]) => wire[1] === 5 || wire[3] === 5)).toBe(
       true,
     );
+    // Read path: storage chest connector 5 → combinator input (not only write wires).
+    const stockNumber = stock.entity_number as number;
+    expect(
+      plan.blueprint.wires.some(
+        (wire: number[]) => wire[0] === stockNumber && wire[1] === 5 && wire[3] === 1,
+      ),
+    ).toBe(true);
+    // Sim phantoms for input_from must not appear as empty constant pads in the blueprint.
+    const emptyConstants = plan.blueprint.entities.filter(
+      (entity: { name: string; control_behavior?: { sections?: { sections?: unknown[] } } }) =>
+        entity.name === "constant-combinator" &&
+        (entity.control_behavior?.sections?.sections?.length ?? 0) === 0,
+    );
+    expect(emptyConstants).toHaveLength(0);
     expect(stats.wires).toBe(plan.blueprint.wires.length);
   });
 });

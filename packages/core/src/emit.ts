@@ -4,7 +4,6 @@ import {
   createEmptyBlueprint,
   encodePlan,
 } from "@jensforstmann/factorio-blueprint-tools";
-import type { CircuitEntity } from "./combinators.js";
 import type { SpatialPlace } from "./ir.js";
 import type { FactorioWire, LaidOutCircuit, PlacedEntity } from "./layout.js";
 import { isEmptyConstant } from "./sim/eval.js";
@@ -138,23 +137,20 @@ function toLibraryPlace(place: SpatialPlace, entity_number: number): Entity {
   };
 }
 
-function isIoPlaceholder(entity: CircuitEntity, laidOut: LaidOutCircuit): boolean {
-  if (!isEmptyConstant(entity)) {
-    return false;
-  }
-  return (
-    laidOut.inputs.some((port) => port.entityId === entity.id) ||
-    laidOut.outputs.some((port) => port.entityId === entity.id)
-  );
-}
-
 /**
  * Drop empty I/O pad constants from the blueprint and re-pack entity numbers / positions.
  * Sim keeps the full graph (inject/read still need markers). If every entity is a pad
  * (identity `output(input(...))`), keep them so the blueprint stays placeable.
  */
 function withoutIoPlaceholders(laidOut: LaidOutCircuit): LaidOutCircuit {
-  const kept = laidOut.entities.filter((entity) => !isIoPlaceholder(entity, laidOut));
+  const placeholderIds = new Set([
+    ...laidOut.inputs.map((port) => port.entityId),
+    ...laidOut.outputs.map((port) => port.entityId),
+    ...(laidOut.entityReads ?? []).map((read) => read.entityId),
+  ]);
+  const kept = laidOut.entities.filter(
+    (entity) => !(placeholderIds.has(entity.id) && isEmptyConstant(entity)),
+  );
   if (kept.length === 0 || kept.length === laidOut.entities.length) {
     return laidOut;
   }
@@ -176,7 +172,13 @@ function withoutIoPlaceholders(laidOut: LaidOutCircuit): LaidOutCircuit {
     wires.push([from, wire[1], to, wire[3]]);
   }
 
-  return { entities, wires, inputs: laidOut.inputs, outputs: laidOut.outputs };
+  return {
+    entities,
+    wires,
+    inputs: laidOut.inputs,
+    outputs: laidOut.outputs,
+    entityReads: laidOut.entityReads,
+  };
 }
 
 /** Builds a Factorio `Blueprint` plan object from a `LaidOutCircuit` (no encoding yet). */

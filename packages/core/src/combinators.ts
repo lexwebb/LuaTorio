@@ -65,6 +65,11 @@ export interface CircuitGraph {
   wires: WireEdge[];
   outputs: Array<{ signal: string; entityId: string }>;
   inputs: Array<{ signal: string; entityId: string }>;
+  /**
+   * Sim-only phantoms for `input_from` / IR `entity_read`: inject bags by `placeId`.
+   * `entityId` is the empty constant kept in the graph for wires; stripped from blueprints.
+   */
+  entityReads?: Array<{ placeId: string; entityId: string }>;
 }
 
 /** Factorio logic signal used for per-signal arithmetic (wiki EACH). */
@@ -132,15 +137,26 @@ function lowerLiteral(node: Extract<IRNode, { kind: "literal" }>): CircuitEntity
   };
 }
 
-function lowerInput(node: Extract<IRNode, { kind: "input" }>): CircuitEntity {
+/** Empty constant used as a sim inject pad (input port or `input_from` phantom). */
+function emptyInjectPad(id: string, label?: string): CircuitEntity {
   return {
-    id: node.id,
+    id,
     kind: "constant",
     name: "constant-combinator",
     // Channel id (not user signal): sim injects by entity.id; dual-inject would inflate counts.
-    outputSignal: node.id,
+    outputSignal: id,
+    ...(label === undefined ? {} : { label }),
     control_behavior: { sections: { sections: [] } },
   };
+}
+
+function lowerInput(node: Extract<IRNode, { kind: "input" }>): CircuitEntity {
+  return emptyInjectPad(node.id);
+}
+
+/** Empty constant stand-in for a logistic chest bag; sim injects multi-signal contents. */
+function lowerEntityRead(node: Extract<IRNode, { kind: "entity_read" }>): CircuitEntity {
+  return emptyInjectPad(node.id, `input_from ${node.entityId}`);
 }
 
 function lowerBinop(
@@ -2115,7 +2131,8 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
         entities.push(lowerInput(node));
         break;
       case "entity_read":
-        // The placed chest is the source; circuit attachment is recorded after consumers emit.
+        // Sim/source phantom; blueprint emit strips it and wires the real chest instead.
+        entities.push(lowerEntityRead(node));
         break;
       case "binop": {
         if (absorbedBinopIds.has(node.id)) {
@@ -2339,20 +2356,19 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
     entityId: input.nodeId,
   }));
 
+  const entityReads = module.nodes
+    .filter((node): node is Extract<IRNode, { kind: "entity_read" }> => node.kind === "entity_read")
+    .map((node) => ({ placeId: node.entityId, entityId: node.id }));
+
   const known = new Set(entities.map((entity) => entity.id));
   const filteredWires = wires.filter((wire) => known.has(wire.from) && known.has(wire.to));
 
-  const entityReadByNodeId = new Map(
-    module.nodes
-      .filter(
-        (node): node is Extract<IRNode, { kind: "entity_read" }> => node.kind === "entity_read",
-      )
-      .map((node) => [node.id, node.entityId]),
-  );
+  const entityReadByNodeId = new Map(entityReads.map((read) => [read.entityId, read.placeId]));
+  const placeById = new Map((module.places ?? []).map((place) => [place.id, place]));
   for (const wire of filteredWires) {
-    const entityId = entityReadByNodeId.get(wire.from);
-    if (entityId === undefined) continue;
-    const place = module.places?.find((candidate) => candidate.id === entityId);
+    const placeId = entityReadByNodeId.get(wire.from);
+    if (placeId === undefined) continue;
+    const place = placeById.get(placeId);
     if (place === undefined) continue;
     place.circuit = {
       ...place.circuit,
@@ -2362,7 +2378,7 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
 
   annotateEntityLabels(module, entities, filteredWires);
 
-  return { entities, wires: filteredWires, outputs, inputs };
+  return { entities, wires: filteredWires, outputs, inputs, entityReads };
 }
 
 /** Nodes that reference `id` (as operands / store value / etc.). */

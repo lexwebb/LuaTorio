@@ -1968,6 +1968,12 @@ exports[`golden examples > logistics_io > compiles to a blueprint JSON plan matc
     "label": "logistics_io",
     "wires": [
       [
+        3,
+        5,
+        1,
+        1,
+      ],
+      [
         2,
         3,
         4,

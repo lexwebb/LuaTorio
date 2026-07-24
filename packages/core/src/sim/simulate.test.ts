@@ -284,4 +284,32 @@ describe("simulate", () => {
     const result = simulate(graph, { ticks: 3 });
     expect(result.ticks[2]?.outputs).toMatchObject({ "signal-A": 1, "signal-B": 1 });
   });
+
+  it("entityInputs injects input_from bags onto entity_read phantoms", () => {
+    const graph = graphOf(loadExample("logistics_io.lua"));
+    expect(graph.entityReads?.length).toBe(1);
+    const placeId = graph.entityReads?.[0]?.placeId;
+    expect(placeId).toBeDefined();
+
+    const result = simulate(graph, {
+      ticks: 3,
+      entityInputs: { [placeId as string]: { "iron-plate": 42 } },
+    });
+    expect(result.ticks[0]?.outputs["signal-A"]).toBe(42);
+    expect(result.ticks[2]?.outputs["signal-A"]).toBe(42);
+  });
+
+  it("entityInputs can vary per tick", () => {
+    const graph = graphOf(`
+      local stock = place("logistic-chest-storage", 0, 0)
+      local inv = input_from(stock)
+      output("signal-A", inv["iron-plate"])
+    `);
+    const placeId = graph.entityReads?.[0]?.placeId as string;
+    const result = simulate(graph, {
+      ticks: 3,
+      entityInputs: (tick) => ({ [placeId]: { "iron-plate": tick + 1 } }),
+    });
+    expect(result.ticks.map((t) => t.outputs["signal-A"])).toEqual([1, 2, 3]);
+  });
 });

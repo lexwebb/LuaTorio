@@ -12,8 +12,8 @@ import { bagGet, bagSet, emptyBag, type SignalBag, toInt32 } from "./signals.js"
 
 /**
  * Simulation timing model.
- * Spatial `place()` entities are not part of `CircuitGraph`; simulation intentionally ignores
- * them in v5.0 (they have no generated circuit wires or behavior).
+ * Spatial `place()` entities are not combinators; `input_from` uses sim-only phantoms
+ * (`CircuitGraph.entityReads`) so bags can be injected without modeling logistics.
  * - `"factorio"` (default): each non-latch combinator has 1-tick delay; within one API tick the
  *   combo cone settles (up to depth micro-steps), then `role: "latch"` clocks once. Matches
  *   Factorio per-combinator latency while preserving synchronous language `tick()` semantics.
@@ -27,6 +27,13 @@ export interface SimulateOptions {
   ticks: number;
   /** Injected onto input-port placeholder entities each tick (by user signal name). */
   inputs?: Record<string, number> | ((tick: number) => Record<string, number>);
+  /**
+   * Injected onto `input_from` / `entity_read` phantoms each tick (by place id → signal bag).
+   * Still not a logistics-network sim — stand-in for chest contents on the wire.
+   */
+  entityInputs?:
+    | Record<string, Record<string, number>>
+    | ((tick: number) => Record<string, Record<string, number>>);
   /** Timing model. Default `"factorio"`. */
   mode?: SimulateMode;
   /** When true, each tick includes every entity's output signal bag (playground inspector). */
@@ -44,11 +51,14 @@ export interface SimulateResult {
   ticks: SimulateTick[];
 }
 
-function resolveInputs(inputs: SimulateOptions["inputs"], tick: number): Record<string, number> {
-  if (inputs === undefined) {
-    return {};
+function resolveTickValue<T extends Record<string, unknown>>(
+  value: T | ((tick: number) => T) | undefined,
+  tick: number,
+): T {
+  if (value === undefined) {
+    return {} as T;
   }
-  return typeof inputs === "function" ? inputs(tick) : inputs;
+  return typeof value === "function" ? value(tick) : value;
 }
 
 function inputBags(
@@ -128,6 +138,31 @@ function applyInputInjection(
     if (value !== undefined) {
       bagSet(bag, entity.id, value);
       bagSet(bag, entity.outputSignal, value);
+    }
+    outputs.set(entity.id, bag);
+  }
+}
+
+/** Write multi-signal bags onto `entity_read` phantoms (keyed by place id). */
+function applyEntityInputInjection(
+  graph: CircuitGraph,
+  entityById: ReadonlyMap<string, CircuitEntity>,
+  outputs: Map<string, SignalBag>,
+  entityValues: Record<string, Record<string, number>>,
+): void {
+  for (const read of graph.entityReads ?? []) {
+    const entity = entityById.get(read.entityId);
+    if (entity === undefined) {
+      continue;
+    }
+    const bag = emptyBag();
+    const injected = entityValues[read.placeId];
+    if (injected !== undefined) {
+      for (const [signal, count] of Object.entries(injected)) {
+        if (count !== 0) {
+          bagSet(bag, signal, count);
+        }
+      }
     }
     outputs.set(entity.id, bag);
   }
@@ -271,7 +306,10 @@ function initSim(graph: CircuitGraph) {
   const entityById = new Map(graph.entities.map((entity) => [entity.id, entity]));
   const producers = producersByConsumer(graph.wires);
   const producersColor = producersByConsumerColor(graph.wires);
-  const inputEntityIds = new Set(graph.inputs.map((port) => port.entityId));
+  const inputEntityIds = new Set([
+    ...graph.inputs.map((port) => port.entityId),
+    ...(graph.entityReads ?? []).map((read) => read.entityId),
+  ]);
   const outputs = new Map<string, SignalBag>();
   for (const entity of graph.entities) {
     outputs.set(entity.id, emptyBag());
@@ -281,6 +319,17 @@ function initSim(graph: CircuitGraph) {
   return { entityById, producers, producersColor, inputEntityIds, outputs };
 }
 
+function injectTickInputs(
+  graph: CircuitGraph,
+  entityById: ReadonlyMap<string, CircuitEntity>,
+  outputs: Map<string, SignalBag>,
+  opts: SimulateOptions,
+  tick: number,
+): void {
+  applyInputInjection(graph, entityById, outputs, resolveTickValue(opts.inputs, tick));
+  applyEntityInputInjection(graph, entityById, outputs, resolveTickValue(opts.entityInputs, tick));
+}
+
 function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): SimulateResult {
   const { entityById, producersColor, inputEntityIds, outputs } = initSim(graph);
   const comboOrder = combinationalOrder(graph);
@@ -288,7 +337,7 @@ function simulateLatchSync(graph: CircuitGraph, opts: SimulateOptions): Simulate
   const ticks: SimulateTick[] = [];
 
   for (let tick = 0; tick < opts.ticks; tick += 1) {
-    applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
+    injectTickInputs(graph, entityById, outputs, opts, tick);
     refreshConstants(graph, outputs, inputEntityIds);
 
     for (const entity of comboOrder) {
@@ -317,7 +366,7 @@ function simulateFactorioParallel(graph: CircuitGraph, opts: SimulateOptions): S
   const ticks: SimulateTick[] = [];
 
   for (let tick = 0; tick < opts.ticks; tick += 1) {
-    applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
+    injectTickInputs(graph, entityById, outputs, opts, tick);
     refreshConstants(graph, outputs, inputEntityIds);
     parallelUpdate(delayed, producersColor, outputs);
     pushTick(ticks, graph, producersColor, outputs, entityById, opts.entityOutputs);
@@ -337,7 +386,7 @@ function simulateFactorio(graph: CircuitGraph, opts: SimulateOptions): SimulateR
   const ticks: SimulateTick[] = [];
 
   for (let tick = 0; tick < opts.ticks; tick += 1) {
-    applyInputInjection(graph, entityById, outputs, resolveInputs(opts.inputs, tick));
+    injectTickInputs(graph, entityById, outputs, opts, tick);
     refreshConstants(graph, outputs, inputEntityIds);
 
     for (let step = 0; step < depth; step += 1) {

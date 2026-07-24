@@ -18,6 +18,13 @@ export interface SimIdle {
   status: "idle";
 }
 
+export interface SimEntityRead {
+  placeId: string;
+  entityId: string;
+  /** Factorio entity name, e.g. logistic-chest-storage. */
+  name: string;
+}
+
 export interface SimSuccess {
   status: "success";
   graph: CircuitGraph;
@@ -27,6 +34,7 @@ export interface SimSuccess {
   result: SimulateResult;
   inputSignals: string[];
   outputSignals: string[];
+  entityReads: SimEntityRead[];
 }
 
 export interface SimFailure {
@@ -41,9 +49,23 @@ export type SimOutcome = SimIdle | SimSuccess | SimFailure;
 export interface RunSimulateOptions {
   ticks: number;
   inputs: Record<string, number>;
+  /** Place id → signal bag for `input_from` phantoms. */
+  entityInputs?: Record<string, Record<string, number>>;
 }
 
-/** Lower source through optimize; machine I/O places are returned but intentionally not simulated. */
+function asSimFailure(error: unknown): SimFailure {
+  if (error instanceof ParseError || error instanceof SemanticError) {
+    return { status: "error", message: error.message, line: error.line, column: error.column };
+  }
+  return {
+    status: "error",
+    message: error instanceof Error ? error.message : String(error),
+    line: undefined,
+    column: undefined,
+  };
+}
+
+/** Lower source through optimize; machine I/O places are returned for canvas + bag inject. */
 export function buildGraphAndPlaces(source: string): {
   graph: CircuitGraph;
   places: SpatialPlace[];
@@ -60,21 +82,28 @@ export function buildGraph(source: string): CircuitGraph {
   return buildGraphAndPlaces(source).graph;
 }
 
-/** Input signal names for the Simulate panel, or a failure if source does not lower. */
-export function probeSimInputs(source: string): { status: "ok"; signals: string[] } | SimFailure {
+function entityReadsFor(graph: CircuitGraph, places: SpatialPlace[]): SimEntityRead[] {
+  const placeById = new Map(places.map((place) => [place.id, place]));
+  return (graph.entityReads ?? []).map((read) => ({
+    placeId: read.placeId,
+    entityId: read.entityId,
+    name: placeById.get(read.placeId)?.name ?? read.placeId,
+  }));
+}
+
+/** Probe input ports and `input_from` bag editors without running the simulator. */
+export function probeSim(
+  source: string,
+): { status: "ok"; signals: string[]; reads: SimEntityRead[] } | SimFailure {
   try {
-    const graph = buildGraph(source);
-    return { status: "ok", signals: graph.inputs.map((port) => port.signal) };
-  } catch (error) {
-    if (error instanceof ParseError || error instanceof SemanticError) {
-      return { status: "error", message: error.message, line: error.line, column: error.column };
-    }
+    const { graph, places } = buildGraphAndPlaces(source);
     return {
-      status: "error",
-      message: error instanceof Error ? error.message : String(error),
-      line: undefined,
-      column: undefined,
+      status: "ok",
+      signals: graph.inputs.map((port) => port.signal),
+      reads: entityReadsFor(graph, places),
     };
+  } catch (error) {
+    return asSimFailure(error);
   }
 }
 
@@ -85,9 +114,11 @@ export function runSimulate(source: string, opts: RunSimulateOptions): SimOutcom
   try {
     const { graph, places } = buildGraphAndPlaces(source);
     const laidOut = layout(graph, { arrangement: "layered" });
+    const entityReads = entityReadsFor(graph, places);
     const result = simulate(graph, {
       ticks: Math.max(1, Math.min(opts.ticks, 256)),
       inputs: opts.inputs,
+      entityInputs: opts.entityInputs,
       entityOutputs: true,
     });
     return {
@@ -98,16 +129,9 @@ export function runSimulate(source: string, opts: RunSimulateOptions): SimOutcom
       result,
       inputSignals: graph.inputs.map((port) => port.signal),
       outputSignals: graph.outputs.map((port) => port.signal),
+      entityReads,
     };
   } catch (error) {
-    if (error instanceof ParseError || error instanceof SemanticError) {
-      return { status: "error", message: error.message, line: error.line, column: error.column };
-    }
-    return {
-      status: "error",
-      message: error instanceof Error ? error.message : String(error),
-      line: undefined,
-      column: undefined,
-    };
+    return asSimFailure(error);
   }
 }

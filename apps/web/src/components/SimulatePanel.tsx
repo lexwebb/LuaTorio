@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { probeSimInputs, runSimulate, type SimOutcome } from "../lib/simulate.js";
+import { probeSim, runSimulate, type SimEntityRead, type SimOutcome } from "../lib/simulate.js";
 import { CircuitCanvas } from "./CircuitCanvas.js";
 
 export interface SimulatePanelProps {
@@ -15,6 +15,16 @@ const SPEEDS_MS = [
   { id: "norm", label: "1×", ms: 400 },
   { id: "fast", label: "2×", ms: 200 },
 ] as const;
+
+/** placeId → list of editable signal rows for an `input_from` bag. */
+type EntityBagRow = { id: string; signal: string; count: number };
+type EntityBagRows = Record<string, EntityBagRow[]>;
+
+let bagRowSeq = 0;
+function nextBagRowId(): string {
+  bagRowSeq += 1;
+  return `bag-row-${bagRowSeq}`;
+}
 
 function tickRowKey(tickIndex: number, outputs: Record<string, number>): string {
   return `${tickIndex}:${JSON.stringify(outputs)}`;
@@ -33,6 +43,44 @@ function defaultInputValue(signal: string): number {
     return 7;
   }
   return 0;
+}
+
+function defaultEntityBagRows(reads: SimEntityRead[]): EntityBagRows {
+  const next: EntityBagRows = {};
+  for (const read of reads) {
+    next[read.placeId] = [{ id: nextBagRowId(), signal: "iron-plate", count: 42 }];
+  }
+  return next;
+}
+
+function rowsToEntityInputs(rows: EntityBagRows): Record<string, Record<string, number>> {
+  const bags: Record<string, Record<string, number>> = {};
+  for (const [placeId, entries] of Object.entries(rows)) {
+    const bag: Record<string, number> = {};
+    for (const entry of entries) {
+      const signal = entry.signal.trim();
+      if (signal.length === 0) {
+        continue;
+      }
+      bag[signal] = (bag[signal] ?? 0) + entry.count;
+    }
+    bags[placeId] = bag;
+  }
+  return bags;
+}
+
+function patchBagRow(
+  prev: EntityBagRows,
+  placeId: string,
+  rowId: string,
+  patch: Partial<Pick<EntityBagRow, "signal" | "count">>,
+): EntityBagRows {
+  return {
+    ...prev,
+    [placeId]: (prev[placeId] ?? []).map((entry) =>
+      entry.id === rowId ? { ...entry, ...patch } : entry,
+    ),
+  };
 }
 
 function bagsEqual(
@@ -54,15 +102,22 @@ function bagsEqual(
 export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
   const [ticks, setTicks] = useState(DEFAULT_TICKS);
   const [inputValues, setInputValues] = useState<Record<string, number>>({});
+  const [entityBagRows, setEntityBagRows] = useState<EntityBagRows>({});
   const [outcome, setOutcome] = useState<SimOutcome>({ status: "idle" });
   const [currentTick, setCurrentTick] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speedId, setSpeedId] = useState<(typeof SPEEDS_MS)[number]["id"]>("norm");
   const [selectedId, setSelectedId] = useState<string | undefined>();
 
-  const discoveredInputs = useMemo(() => {
-    const probed = probeSimInputs(source);
-    return probed.status === "ok" ? probed.signals : [];
+  const { discoveredInputs, discoveredEntityReads } = useMemo(() => {
+    const probed = probeSim(source);
+    if (probed.status !== "ok") {
+      return { discoveredInputs: [] as string[], discoveredEntityReads: [] as SimEntityRead[] };
+    }
+    return {
+      discoveredInputs: probed.signals,
+      discoveredEntityReads: probed.reads,
+    };
   }, [source]);
 
   useEffect(() => {
@@ -71,7 +126,8 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
       next[signal] = defaultInputValue(signal);
     }
     setInputValues(next);
-  }, [discoveredInputs]);
+    setEntityBagRows(defaultEntityBagRows(discoveredEntityReads));
+  }, [discoveredInputs, discoveredEntityReads]);
 
   useEffect(() => {
     void runToken;
@@ -81,8 +137,14 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
     }
     setPlaying(false);
     setCurrentTick(0);
-    setOutcome(runSimulate(source, { ticks, inputs }));
-  }, [source, ticks, inputValues, discoveredInputs, runToken]);
+    setOutcome(
+      runSimulate(source, {
+        ticks,
+        inputs,
+        entityInputs: rowsToEntityInputs(entityBagRows),
+      }),
+    );
+  }, [source, ticks, inputValues, entityBagRows, discoveredInputs, runToken]);
 
   // Only drop selection when the program identity changes (not on tick/input tweaks).
   useEffect(() => {
@@ -164,6 +226,7 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
   const allInputsZero =
     discoveredInputs.length > 0 &&
     discoveredInputs.every((signal) => (inputValues[signal] ?? 0) === 0);
+  const hasEntityReads = discoveredEntityReads.length > 0;
 
   return (
     <div className="sim-panel">
@@ -194,6 +257,66 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
           </label>
         ))}
       </div>
+
+      {hasEntityReads ? (
+        <div className="sim-entity-bags">
+          <p className="sim-muted">
+            Chest bags for <code>input_from</code> (injected each tick — not a logistics network
+            sim):
+          </p>
+          {discoveredEntityReads.map((read) => {
+            const rows = entityBagRows[read.placeId] ?? [];
+            return (
+              <div key={read.placeId} className="sim-entity-bag">
+                <div className="sim-entity-bag-title">
+                  {read.name} <span className="sim-muted">({read.placeId})</span>
+                </div>
+                {rows.map((row) => (
+                  <div key={row.id} className="sim-entity-bag-row">
+                    <input
+                      type="text"
+                      className="sim-entity-signal"
+                      value={row.signal}
+                      placeholder="iron-plate"
+                      onChange={(event) => {
+                        const signal = event.target.value;
+                        setEntityBagRows((prev) =>
+                          patchBagRow(prev, read.placeId, row.id, { signal }),
+                        );
+                      }}
+                    />
+                    <input
+                      type="number"
+                      value={row.count}
+                      onChange={(event) => {
+                        const count = Number(event.target.value) || 0;
+                        setEntityBagRows((prev) =>
+                          patchBagRow(prev, read.placeId, row.id, { count }),
+                        );
+                      }}
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="toolbar-button"
+                  onClick={() =>
+                    setEntityBagRows((prev) => ({
+                      ...prev,
+                      [read.placeId]: [
+                        ...(prev[read.placeId] ?? []),
+                        { id: nextBagRowId(), signal: "", count: 0 },
+                      ],
+                    }))
+                  }
+                >
+                  + signal
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="sim-playback">
         <button
@@ -265,7 +388,7 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
         </label>
       </div>
 
-      {allInputsZero && allOutputsZero ? (
+      {allInputsZero && allOutputsZero && !hasEntityReads ? (
         <p className="sim-hint">
           Outputs are all 0 because every input is 0. For <code>while_count</code>, set{" "}
           <strong>signal-L</strong> to something like <strong>5</strong>.

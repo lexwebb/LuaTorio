@@ -213,8 +213,9 @@ valid as a statement. In `local chest = place(...)`, it instead returns an immut
 `output_to(requester_or_buffer, bag)` enables `set_requests` and wires the bag producer to that
 chest. `configure(entity, { read_contents = bool, set_requests = bool,
 request_from_buffers = bool, requests = { ["iron-plate"] = 200 } })` overrides flags or supplies
-static request filters. Positions remain authoritative absolute blueprint coordinates and
-`simulate()` intentionally does not model machine/logistics I/O.
+static request filters. Positions remain authoritative absolute blueprint coordinates.
+`simulate({ entityInputs })` can inject multi-signal bags onto `input_from` places (by place
+id) so playground/tests exercise chest reads — still not a logistics-network sim.
 
 ### Errors
 
