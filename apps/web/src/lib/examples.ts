@@ -48,6 +48,7 @@ const EXAMPLE_META: Record<string, ExampleMeta> = {
   signal_count: { label: "signal_count", group: "Selectors" },
   place: { label: "place() entities", group: "Placement" },
   logistics_io: { label: "Logistics chest I/O", group: "Placement" },
+  logistics_restock: { label: "Logistics restock (target − stock)", group: "Placement" },
 };
 
 const GROUP_ORDER: ExampleGroup[] = [

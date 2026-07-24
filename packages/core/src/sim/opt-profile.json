@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T11:02:37.580Z",
+  "generatedAt": "2026-07-24T11:06:07.760Z",
   "seed": 202884375,
   "fuzzIterations": 200,
   "examples": [
@@ -255,6 +255,23 @@
         "arithmetic_other": 1,
         "constant_value": 1,
         "placeholder_io": 2
+      },
+      "muxShare": 0
+    },
+    {
+      "name": "logistics_restock",
+      "source": "example",
+      "kind": "example",
+      "combinators": 7,
+      "wires": 6,
+      "buckets": {
+        "latch": 0,
+        "mux_side": 0,
+        "mux_merge": 0,
+        "decider_other": 0,
+        "arithmetic_other": 3,
+        "constant_value": 1,
+        "placeholder_io": 3
       },
       "muxShare": 0
     },
@@ -3832,18 +3849,18 @@
     }
   ],
   "totals": {
-    "programs": 225,
-    "combinators": 875,
+    "programs": 226,
+    "combinators": 882,
     "buckets": {
       "latch": 204,
       "mux_side": 54,
       "mux_merge": 1,
       "decider_other": 9,
-      "arithmetic_other": 68,
-      "constant_value": 114,
-      "placeholder_io": 425
+      "arithmetic_other": 71,
+      "constant_value": 115,
+      "placeholder_io": 428
     },
-    "muxShareMean": 0.06088888888888889
+    "muxShareMean": 0.06061946902654867
   },
   "opportunities": [
     {
@@ -3855,7 +3872,7 @@
     {
       "id": "fold-arith-decider",
       "title": "Further arith/decider folding (constants, shared cmps)",
-      "evidence": "Non-mux arith=68, other deciders=9 (graph; blueprints omit 425 I/O pads).",
+      "evidence": "Non-mux arith=71, other deciders=9 (graph; blueprints omit 428 I/O pads).",
       "estimatedImpact": "medium"
     },
     {

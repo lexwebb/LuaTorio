@@ -82,7 +82,7 @@ A short path through the supported surface. Open the linked examples, or load
 4. **Helpers** — [`clamp_fn.lua`](examples/clamp_fn.lua): prefix `local function` (fully inlined).
 5. **Bags** — [`bag_arith.lua`](examples/bag_arith.lua): multi-signal `bag_arith` / `bag_filter`.
 6. **Table bags** — [`table_bag.lua`](examples/table_bag.lua): `{ ["signal-A"] = 10 }` and `bag["signal-A"]`.
-7. **Machine I/O** — [`logistics_io.lua`](examples/logistics_io.lua): read a logistics chest and drive requester requests.
+7. **Machine I/O** — [`logistics_io.lua`](examples/logistics_io.lua): read a logistics chest and drive requester requests; [`logistics_restock.lua`](examples/logistics_restock.lua) requests `target − stock` via `bag_arith`.
 
 Recursion is **not supported** — use `while` / `for` with memory instead
 ([decision](docs/superpowers/specs/2026-07-23-v4-recursion-design.md)).
@@ -118,6 +118,7 @@ Recursion is **not supported** — use `while` / `for` with memory instead
 | [`signal_count.lua`](examples/signal_count.lua) | Count nonzero inputs via `signal_count` → selector combinator |
 | [`place.lua`](examples/place.lua) | v5 absolute chest, lamp, and power-pole placement beside a circuit |
 | [`logistics_io.lua`](examples/logistics_io.lua) | v5.1 logistics-chest inventory read and requester circuit requests |
+| [`logistics_restock.lua`](examples/logistics_restock.lua) | Request `target − stock` via `bag_arith` + `input_from` / `output_to` |
 
 ## Language Reference
 

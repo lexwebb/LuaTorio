@@ -312,4 +312,16 @@ describe("simulate", () => {
     });
     expect(result.ticks.map((t) => t.outputs["signal-A"])).toEqual([1, 2, 3]);
   });
+
+  it("logistics_restock: need = target − stock via bag_arith + entityInputs", () => {
+    const graph = graphOf(loadExample("logistics_restock.lua"));
+    const placeId = graph.entityReads?.[0]?.placeId as string;
+    const result = simulate(graph, {
+      ticks: 4,
+      entityInputs: { [placeId]: { "iron-plate": 50, "copper-plate": 20 } },
+    });
+    // Clamped iron: max(0, 200-50) = 150; signal-B is raw stock.
+    expect(result.ticks[3]?.outputs["signal-A"]).toBe(150);
+    expect(result.ticks[3]?.outputs["signal-B"]).toBe(50);
+  });
 });

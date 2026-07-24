@@ -1984,6 +1984,185 @@ exports[`golden examples > logistics_io > compiles to a blueprint JSON plan matc
 }
 `;
 
+exports[`golden examples > logistics_restock > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "sections": {
+            "sections": [
+              {
+                "filters": [
+                  {
+                    "count": 200,
+                    "index": 1,
+                    "name": "iron-plate",
+                    "type": "virtual",
+                  },
+                  {
+                    "count": 100,
+                    "index": 2,
+                    "name": "copper-plate",
+                    "type": "virtual",
+                  },
+                ],
+                "index": 1,
+              },
+            ],
+          },
+        },
+        "entity_number": 1,
+        "name": "constant-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "signal-each",
+              "type": "virtual",
+            },
+            "first_signal_networks": {
+              "green": false,
+              "red": true,
+            },
+            "operation": "-",
+            "output_signal": {
+              "name": "signal-each",
+              "type": "virtual",
+            },
+            "second_signal": {
+              "name": "signal-each",
+              "type": "virtual",
+            },
+            "second_signal_networks": {
+              "green": true,
+              "red": false,
+            },
+          },
+        },
+        "entity_number": 2,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 2,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "iron-plate",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t4",
+              "type": "virtual",
+            },
+            "second_constant": 0,
+          },
+        },
+        "entity_number": 3,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 4,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "iron-plate",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t11",
+              "type": "virtual",
+            },
+            "second_constant": 0,
+          },
+        },
+        "entity_number": 4,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 6,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "read_contents": true,
+          "set_requests": false,
+        },
+        "entity_number": 5,
+        "name": "logistic-chest-storage",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "read_contents": false,
+          "set_requests": true,
+        },
+        "entity_number": 6,
+        "name": "logistic-chest-requester",
+        "position": {
+          "x": 4,
+          "y": 0,
+        },
+        "request_filters": {
+          "request_from_buffers": true,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "logistics_restock",
+    "wires": [
+      [
+        1,
+        1,
+        2,
+        1,
+      ],
+      [
+        2,
+        4,
+        3,
+        2,
+      ],
+      [
+        5,
+        5,
+        2,
+        1,
+      ],
+      [
+        5,
+        5,
+        4,
+        1,
+      ],
+      [
+        2,
+        3,
+        6,
+        5,
+      ],
+    ],
+  },
+}
+`;
+
 exports[`golden examples > mux > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {
