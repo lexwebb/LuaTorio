@@ -34,6 +34,8 @@ export type AnalyzedExpr =
   | { kind: "literal"; value: number; line: number; column: number }
   | { kind: "input"; signal: string; line: number; column: number }
   | { kind: "ref"; name: string; line: number; column: number }
+  | { kind: "entity_ref"; entityId: string; line: number; column: number }
+  | { kind: "entity_read"; entityId: string; line: number; column: number }
   | {
       kind: "binop";
       op: ArithOp;
@@ -160,14 +162,26 @@ export const PLACEABLE_ENTITIES = [
   "wooden-chest",
   "small-lamp",
   "medium-electric-pole",
+  "logistic-chest-passive-provider",
+  "logistic-chest-active-provider",
+  "logistic-chest-storage",
+  "logistic-chest-buffer",
+  "logistic-chest-requester",
 ] as const;
 
 export type PlaceableEntity = (typeof PLACEABLE_ENTITIES)[number];
 
 export interface AnalyzedPlace {
+  id: string;
   name: PlaceableEntity;
   x: number;
   y: number;
+  logistic?: {
+    read_contents?: boolean;
+    set_requests?: boolean;
+    request_from_buffers?: boolean;
+    request_filters?: Array<{ signal: string; count: number }>;
+  };
   line: number;
   column: number;
 }
@@ -221,6 +235,8 @@ export interface AnalyzedProgram {
   inputs: Array<{ signal: string; line: number; column: number }>;
   /** Explicit non-combinator entities, emitted at absolute tile coordinates. */
   places: AnalyzedPlace[];
+  /** Top-level machine-output bindings, lowered after local expressions. */
+  bindings: Array<{ kind: "output_to"; entityId: string; bag: AnalyzedExpr }>;
 }
 
 const ARITH_OPS: ReadonlySet<string> = new Set(["+", "-", "*", "/", "%"]);
@@ -235,10 +251,15 @@ interface AnalyzeContext {
   reassigned: Set<string>;
   /** Locals initialized with a bag expression — wire values, not scalar memory. */
   bagLocals: Set<string>;
+  /** Locals initialized with `place()` entity handles. */
+  entityLocals: Map<string, string>;
+  entityPlaces: Map<string, AnalyzedPlace>;
   statements: AnalyzedStatement[];
   outputs: AnalyzedProgram["outputs"];
   inputs: AnalyzedProgram["inputs"];
   places: AnalyzedPlace[];
+  bindings: AnalyzedProgram["bindings"];
+  nextEntityId: number;
   /** True after a top-level while/for (clocked mode). */
   seenLoop: boolean;
   /** True after a top-level assign or if (free-running stores). */
@@ -261,10 +282,17 @@ interface ExpressionOptions {
   mutableNames?: ReadonlySet<string>;
   substitutions?: ReadonlyMap<string, AnalyzedExpr>;
   inFunction?: boolean;
+  entityLocals?: ReadonlyMap<string, string>;
+  entityPlaces?: ReadonlyMap<string, AnalyzedPlace>;
 }
 
 function expressionOptions(ctx: AnalyzeContext): ExpressionOptions {
-  return { functions: ctx.functions, mutableNames: ctx.mutableNames };
+  return {
+    functions: ctx.functions,
+    mutableNames: ctx.mutableNames,
+    entityLocals: ctx.entityLocals,
+    entityPlaces: ctx.entityPlaces,
+  };
 }
 
 function locOf(node: Loc): { line: number; column: number } {
@@ -328,10 +356,14 @@ export function analyze(ast: Chunk): AnalyzedProgram {
     declared: new Set<string>(),
     reassigned: new Set<string>(),
     bagLocals: new Set<string>(),
+    entityLocals: new Map<string, string>(),
+    entityPlaces: new Map<string, AnalyzedPlace>(),
     statements: [],
     outputs: [],
     inputs: [],
     places: [],
+    bindings: [],
+    nextEntityId: 1,
     seenLoop: false,
     seenFreeRunningStore: false,
     functions,
@@ -350,7 +382,13 @@ export function analyze(ast: Chunk): AnalyzedProgram {
     throw new SemanticError("program must contain at least one output() call", line, column);
   }
 
-  return { statements: ctx.statements, outputs: ctx.outputs, inputs: ctx.inputs, places: ctx.places };
+  return {
+    statements: ctx.statements,
+    outputs: ctx.outputs,
+    inputs: ctx.inputs,
+    places: ctx.places,
+    bindings: ctx.bindings,
+  };
 }
 
 function collectFunctionDeclarations(statements: Statement[]): {
@@ -776,6 +814,18 @@ function forbidBagInScalar(
   column: number,
 ): void {
   switch (expr.kind) {
+    case "entity_ref":
+      throw new SemanticError(
+        "entity handles may only be passed to input_from(), output_to(), or configure()",
+        line,
+        column,
+      );
+    case "entity_read":
+      throw new SemanticError(
+        "entity inventory bags may only be sampled or passed to bag operations/output_to()",
+        line,
+        column,
+      );
     case "each_latch":
       throw new SemanticError(
         "each_latch(...) produces a bag and may only appear as a local initializer, output() value, or bag_arith() operand",
@@ -840,6 +890,7 @@ function forbidBagInScalar(
 
 function isBagExpr(expr: AnalyzedExpr, bagLocals: ReadonlySet<string>): boolean {
   switch (expr.kind) {
+    case "entity_read":
     case "each_latch":
     case "bag_const":
     case "bag_binop":
@@ -1159,6 +1210,9 @@ function analyzeAssignmentStatement(
       column,
     );
   }
+  if (ctx.entityLocals.has(name)) {
+    throw new SemanticError(`entity handle '${name}' cannot be reassigned`, line, column);
+  }
   markReassigned(name, ctx.reassigned, line, column);
 
   const expr = analyzeExpr(
@@ -1209,16 +1263,23 @@ function analyzeLocalStatement(statement: LocalStatement, ctx: AnalyzeContext): 
     );
   }
 
-  const expr = analyzeExpr(
-    initExpr,
-    ctx.declared,
-    ctx.inputs,
-    ctx.bagLocals,
-    expressionOptions(ctx),
-  );
+  let expr: AnalyzedExpr;
+  if (initExpr.type === "CallExpression" && describeCallee(initExpr.base) === "place") {
+    const place = analyzePlaceCall(initExpr, ctx, line, column);
+    ctx.entityLocals.set(name, place.id);
+    expr = { kind: "entity_ref", entityId: place.id, line, column };
+  } else {
+    expr = analyzeExpr(
+      initExpr,
+      ctx.declared,
+      ctx.inputs,
+      ctx.bagLocals,
+      expressionOptions(ctx),
+    );
+  }
   if (isBagExpr(expr, ctx.bagLocals)) {
     ctx.bagLocals.add(name);
-  } else {
+  } else if (expr.kind !== "entity_ref") {
     forbidBagInScalar(expr, ctx.bagLocals, line, column);
   }
   ctx.declared.add(name);
@@ -1231,7 +1292,7 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
 
   if (call.type !== "CallExpression") {
     throw new SemanticError(
-      'only output("signal", expr) and place("entity", x, y) calls are supported as statements',
+      'only output(), place(), output_to(), and configure() calls are supported as statements',
       line,
       column,
     );
@@ -1241,6 +1302,14 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
   rejectTickInExpression(calleeName, line, column);
   if (calleeName === "place") {
     analyzePlaceCall(call, ctx, line, column);
+    return;
+  }
+  if (calleeName === "output_to") {
+    analyzeOutputToCall(call, ctx, line, column);
+    return;
+  }
+  if (calleeName === "configure") {
+    analyzeConfigureCall(call, ctx, line, column);
     return;
   }
   if (calleeName !== "output") {
@@ -1298,7 +1367,7 @@ function analyzePlaceCall(
   ctx: AnalyzeContext,
   line: number,
   column: number,
-): void {
+): AnalyzedPlace {
   if (call.arguments.length !== 3) {
     throw new SemanticError("place(name, x, y) requires exactly 3 arguments", line, column);
   }
@@ -1318,7 +1387,111 @@ function analyzePlaceCall(
   if (x === undefined || y === undefined) {
     throw new SemanticError("place() x and y must be integer literals", line, column);
   }
-  ctx.places.push({ name: nameArg.value as PlaceableEntity, x, y, line, column });
+  const place: AnalyzedPlace = {
+    id: `__e${ctx.nextEntityId++}`,
+    name: nameArg.value as PlaceableEntity,
+    x,
+    y,
+    line,
+    column,
+  };
+  ctx.places.push(place);
+  ctx.entityPlaces.set(place.id, place);
+  return place;
+}
+
+function entityIdFromArg(
+  arg: Expression | undefined,
+  ctx: AnalyzeContext,
+  line: number,
+  column: number,
+  callee: string,
+): string {
+  if (arg?.type !== "Identifier") {
+    throw new SemanticError(`${callee}() requires an entity handle local`, line, column);
+  }
+  const entityId = ctx.entityLocals.get(arg.name);
+  if (entityId === undefined) {
+    throw new SemanticError(`${callee}() requires an entity handle local`, line, column);
+  }
+  return entityId;
+}
+
+function placeById(ctx: AnalyzeContext, entityId: string): AnalyzedPlace {
+  const place = ctx.places.find((candidate) => candidate.id === entityId);
+  if (place === undefined) {
+    throw new Error(`internal error: missing placed entity '${entityId}'`);
+  }
+  return place;
+}
+
+function analyzeOutputToCall(
+  call: CallExpression,
+  ctx: AnalyzeContext,
+  line: number,
+  column: number,
+): void {
+  if (call.arguments.length !== 2) {
+    throw new SemanticError("output_to(entity, bag) requires exactly 2 arguments", line, column);
+  }
+  const entityId = entityIdFromArg(call.arguments[0], ctx, line, column, "output_to");
+  const place = placeById(ctx, entityId);
+  if (place.name !== "logistic-chest-requester" && place.name !== "logistic-chest-buffer") {
+    throw new SemanticError("output_to() requires a logistic-chest-requester or logistic-chest-buffer", line, column);
+  }
+  const bagArg = call.arguments[1];
+  if (bagArg === undefined) {
+    throw new SemanticError("output_to(entity, bag) requires a bag expression", line, column);
+  }
+  const bag = analyzeExpr(bagArg, ctx.declared, ctx.inputs, ctx.bagLocals, expressionOptions(ctx));
+  if (!isBagExpr(bag, ctx.bagLocals)) {
+    throw new SemanticError("output_to() second argument must be a bag expression", line, column);
+  }
+  place.logistic = { ...place.logistic, set_requests: true };
+  ctx.bindings.push({ kind: "output_to", entityId, bag });
+}
+
+function analyzeConfigureCall(
+  call: CallExpression,
+  ctx: AnalyzeContext,
+  line: number,
+  column: number,
+): void {
+  if (call.arguments.length !== 2 || call.arguments[1]?.type !== "TableConstructorExpression") {
+    throw new SemanticError("configure(entity, { ... }) requires an entity handle and literal table", line, column);
+  }
+  const entityId = entityIdFromArg(call.arguments[0], ctx, line, column, "configure");
+  const place = placeById(ctx, entityId);
+  const logistic: NonNullable<AnalyzedPlace["logistic"]> = { ...place.logistic };
+  for (const field of call.arguments[1].fields) {
+    const { line: fieldLine, column: fieldColumn } = locOf(field);
+    if (field.type !== "TableKeyString") {
+      throw new SemanticError("configure() keys must be literal names", fieldLine, fieldColumn);
+    }
+    const key = field.key.name;
+    if (key === "requests") {
+      const requests = field.value.type === "TableConstructorExpression"
+        ? analyzeTableConstructor(field.value, fieldLine, fieldColumn)
+        : undefined;
+      if (requests?.kind !== "bag_const") {
+        throw new SemanticError("configure().requests must be a literal bag table", fieldLine, fieldColumn);
+      }
+      logistic.request_filters = requests.entries;
+      continue;
+    }
+    if (
+      key !== "read_contents" &&
+      key !== "set_requests" &&
+      key !== "request_from_buffers"
+    ) {
+      throw new SemanticError(`unsupported configure() key '${key}'`, fieldLine, fieldColumn);
+    }
+    if (field.value.type !== "BooleanLiteral") {
+      throw new SemanticError(`configure().${key} must be a boolean literal`, fieldLine, fieldColumn);
+    }
+    logistic[key] = field.value.value;
+  }
+  place.logistic = logistic;
 }
 
 function analyzeExpr(
@@ -1353,6 +1526,10 @@ function analyzeExpr(
       }
       if (!declared.has(expr.name)) {
         throw new SemanticError(`undefined variable '${expr.name}'`, line, column);
+      }
+      const entityId = options.entityLocals?.get(expr.name);
+      if (entityId !== undefined) {
+        return { kind: "entity_ref", entityId, line, column };
       }
       return { kind: "ref", name: expr.name, line, column };
     }
@@ -1605,7 +1782,23 @@ function analyzeCallExpr(
   }
 
   if (calleeName === "place") {
-    throw new SemanticError("place() must be a top-level statement, not used within an expression", line, column);
+    throw new SemanticError("place() may only be used as a local initializer or top-level statement", line, column);
+  }
+
+  if (calleeName === "input_from") {
+    if (expr.arguments.length !== 1) {
+      throw new SemanticError("input_from(entity) requires exactly 1 entity handle", line, column);
+    }
+    const handle = analyzeExpr(expr.arguments[0]!, declared, inputs, bagLocals, options);
+    if (handle.kind !== "entity_ref") {
+      throw new SemanticError("input_from() requires an entity handle", line, column);
+    }
+    const place = options.entityPlaces?.get(handle.entityId);
+    if (place === undefined) {
+      throw new SemanticError("input_from() requires an entity handle", line, column);
+    }
+    place.logistic = { ...place.logistic, read_contents: true };
+    return { kind: "entity_read", entityId: handle.entityId, line, column };
   }
 
   rejectTickInExpression(calleeName, line, column);

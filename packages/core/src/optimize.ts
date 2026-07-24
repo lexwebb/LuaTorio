@@ -78,6 +78,7 @@ function constantFold(module: IRModule): IRModule {
         nodes.push(node);
         break;
       case "input":
+      case "entity_read":
         nodes.push(node);
         break;
       case "binop": {
@@ -235,6 +236,8 @@ function structuralKey(node: IRNode): string {
       return `literal:${node.value}`;
     case "input":
       return `input:${node.signal}`;
+    case "entity_read":
+      return `entity_read:${node.entityId}`;
     case "binop":
       return `binop:${node.op}:${node.left}:${node.right}`;
     case "cmp":
@@ -280,6 +283,7 @@ function rewriteChildren(node: IRNode, alias: ReadonlyMap<string, string>): IRNo
   switch (node.kind) {
     case "literal":
     case "input":
+    case "entity_read":
       return node;
     case "binop":
     case "cmp":
@@ -367,6 +371,7 @@ function childIds(node: IRNode): string[] {
   switch (node.kind) {
     case "literal":
     case "input":
+    case "entity_read":
       return [];
     case "binop":
     case "cmp":
@@ -422,6 +427,7 @@ function dce(module: IRModule): IRModule {
   const stack = [
     ...module.outputs.map((output) => output.nodeId),
     ...module.inputs.map((input) => input.nodeId),
+    ...(module.places ?? []).flatMap((place) => place.circuit?.writeProducerIds ?? []),
   ];
 
   while (stack.length > 0) {

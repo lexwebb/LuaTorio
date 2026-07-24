@@ -1,13 +1,33 @@
 type ArithOp = "+" | "-" | "*" | "/" | "%";
 type CmpOp = "<" | ">" | "<=" | ">=" | "==" | "~=";
 
-export type PlaceableEntity = "wooden-chest" | "small-lamp" | "medium-electric-pole";
+export type PlaceableEntity =
+  | "wooden-chest"
+  | "small-lamp"
+  | "medium-electric-pole"
+  | "logistic-chest-passive-provider"
+  | "logistic-chest-active-provider"
+  | "logistic-chest-storage"
+  | "logistic-chest-buffer"
+  | "logistic-chest-requester";
 
 /** A non-combinator entity at an absolute Factorio tile coordinate. */
 export interface SpatialPlace {
+  id: string;
   name: PlaceableEntity;
   x: number;
   y: number;
+  logistic?: {
+    read_contents?: boolean;
+    set_requests?: boolean;
+    request_from_buffers?: boolean;
+    request_filters?: Array<{ signal: string; count: number }>;
+  };
+  /** Combinator entity ids to wire after layout. */
+  circuit?: {
+    readConsumerIds?: string[];
+    writeProducerIds?: string[];
+  };
 }
 
 /**
@@ -20,6 +40,8 @@ export interface SpatialPlace {
 export type IRNode =
   | { kind: "literal"; id: string; value: number }
   | { kind: "input"; id: string; signal: string }
+  /** Bag read from a placed entity; emits no combinator itself. */
+  | { kind: "entity_read"; id: string; entityId: string }
   | { kind: "binop"; id: string; op: ArithOp; left: string; right: string }
   | { kind: "cmp"; id: string; op: CmpOp; left: string; right: string }
   | { kind: "select"; id: string; cond: string; then: string; else: string }

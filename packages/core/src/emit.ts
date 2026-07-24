@@ -99,10 +99,42 @@ function toLibraryEntity(placed: PlacedEntity): Entity {
 }
 
 function toLibraryPlace(place: SpatialPlace, entity_number: number): Entity {
+  const logistic = place.logistic;
   return {
     entity_number,
     name: place.name,
     position: { x: place.x, y: place.y },
+    ...(logistic === undefined
+      ? {}
+      : {
+          control_behavior: {
+            read_contents: Boolean(logistic.read_contents),
+            set_requests: Boolean(logistic.set_requests),
+          } as NonNullable<Entity["control_behavior"]>,
+          ...(logistic.request_filters === undefined && logistic.request_from_buffers === undefined
+            ? {}
+            : {
+                request_filters: {
+                  ...(logistic.request_filters === undefined
+                    ? {}
+                    : {
+                        sections: [
+                          {
+                            index: 1,
+                            filters: logistic.request_filters.map((filter, index) => ({
+                              index: index + 1,
+                              name: filter.signal,
+                              count: filter.count,
+                            })),
+                          },
+                        ],
+                      }),
+                  ...(logistic.request_from_buffers === undefined
+                    ? {}
+                    : { request_from_buffers: logistic.request_from_buffers }),
+                },
+              }),
+        }),
   };
 }
 
@@ -154,11 +186,33 @@ function buildPlan(
   places: SpatialPlace[],
 ): Blueprint {
   const plan = createEmptyBlueprint();
+  const entityNumberById = new Map(
+    laidOut.entities.map((entity) => [entity.id, entity.entity_number]),
+  );
+  const firstPlaceNumber = laidOut.entities.length + 1;
   plan.blueprint.entities = [
     ...laidOut.entities.map(toLibraryEntity),
-    ...places.map((place, index) => toLibraryPlace(place, laidOut.entities.length + index + 1)),
+    ...places.map((place, index) => toLibraryPlace(place, firstPlaceNumber + index)),
   ];
-  plan.blueprint.wires = laidOut.wires;
+  const placeWires: FactorioWire[] = [];
+  for (const [index, place] of places.entries()) {
+    const placeNumber = firstPlaceNumber + index;
+    for (const consumerId of place.circuit?.readConsumerIds ?? []) {
+      const consumerNumber = entityNumberById.get(consumerId);
+      if (consumerNumber !== undefined) {
+        // Logistic chest red connector → combinator red input.
+        placeWires.push([placeNumber, 5, consumerNumber, 1]);
+      }
+    }
+    for (const producerId of place.circuit?.writeProducerIds ?? []) {
+      const producerNumber = entityNumberById.get(producerId);
+      if (producerNumber !== undefined) {
+        // Combinator red output → logistic chest red connector.
+        placeWires.push([producerNumber, 3, placeNumber, 5]);
+      }
+    }
+  }
+  plan.blueprint.wires = [...laidOut.wires, ...placeWires];
   if (name !== undefined) {
     plan.blueprint.label = name;
   }
@@ -179,7 +233,7 @@ export function emitBlueprint(laidOut: LaidOutCircuit, options?: EmitOptions): E
     stats: {
       combinators: stripped.entities.length,
       places: places.length,
-      wires: stripped.wires.length,
+      wires: plan.blueprint.wires?.length ?? 0,
     },
   };
 }

@@ -82,7 +82,7 @@ A short path through the supported surface. Open the linked examples, or load
 4. **Helpers** — [`clamp_fn.lua`](examples/clamp_fn.lua): prefix `local function` (fully inlined).
 5. **Bags** — [`bag_arith.lua`](examples/bag_arith.lua): multi-signal `bag_arith` / `bag_filter`.
 6. **Table bags** — [`table_bag.lua`](examples/table_bag.lua): `{ ["signal-A"] = 10 }` and `bag["signal-A"]`.
-7. **Placement** — [`place.lua`](examples/place.lua): `place("wooden-chest", x, y)` beside the circuit.
+7. **Machine I/O** — [`logistics_io.lua`](examples/logistics_io.lua): read a logistics chest and drive requester requests.
 
 Recursion is **not supported** — use `while` / `for` with memory instead
 ([decision](docs/superpowers/specs/2026-07-23-v4-recursion-design.md)).
@@ -117,6 +117,7 @@ Recursion is **not supported** — use `while` / `for` with memory instead
 | [`signal_at_asc.lua`](examples/signal_at_asc.lua) | Nth-smallest among present (`signal_at_asc`) — priority ranks |
 | [`signal_count.lua`](examples/signal_count.lua) | Count nonzero inputs via `signal_count` → selector combinator |
 | [`place.lua`](examples/place.lua) | v5 absolute chest, lamp, and power-pole placement beside a circuit |
+| [`logistics_io.lua`](examples/logistics_io.lua) | v5.1 logistics-chest inventory read and requester circuit requests |
 
 ## Language Reference
 
@@ -143,7 +144,10 @@ Builtins are **circuit primitives** (latches, EACH bags, rank/count). Domain mac
 | `tick()` | Syntactic barrier only (no IR); required as last statement of a while/for body |
 | `input("signal-name")` | Built-in; declares a circuit input, returns its value |
 | `output("signal-name", expr)` | Built-in; top-level statement only, declares a circuit output |
-| `place("entity", x, y)` | Top-level only; place an allowed non-combinator at absolute blueprint tile coordinates |
+| `place("entity", x, y)` | Top-level statement or entity-handle local; place an allowed non-combinator |
+| `input_from(entity)` | Read a placed logistics chest as a bag; wires chest contents into its consumers |
+| `output_to(entity, bag)` | Drive requester/buffer logistics requests from a bag |
+| `configure(entity, { … })` | Set logistics read/request flags and optional literal request filters |
 | `q = sr(q, set, reset)` | Cookbook SR latch: `Q' = (Q ∨ set) ∧ ¬reset` → 0/1; one decider |
 | `each_latch(level, signal, high, …)` | Sticky multi-signal hysteresis bag (EACH tags); `output(signal, bag)` |
 | `bag_const(signal, count, …)` | Constant multi-signal bag; signal/count pairs are literals |
@@ -201,13 +205,16 @@ Not yet supported: general Lua tables (beyond constant bags). Unsupported constr
   comparisons, or memory assignments. `bag_const`, `bag_arith`, and `bag_filter` explicitly
   encode red/green cookbook patterns and unblock v4 table constructors as constant bags.
 
-### `place()` API (v5.0)
+### `place()` API (v5.1)
 
-`place("wooden-chest" | "small-lamp" | "medium-electric-pole", x, y)` is a top-level statement.
-The entity name and signed integer tile coordinates must be literals. Positions are authoritative
-absolute blueprint coordinates and are emitted after the combinator graph is laid out; they do not
-move or reserve the combinator grid in this initial slice. LuaTorio generates no circuit wires,
-conditions, or power planning for placed entities. `simulate()` intentionally ignores them.
+`place("wooden-chest" | "small-lamp" | "medium-electric-pole" | logistics chest, x, y)` is still
+valid as a statement. In `local chest = place(...)`, it instead returns an immutable entity handle.
+`input_from(chest)` reads a logistics chest's contents as a bag and enables `read_contents`;
+`output_to(requester_or_buffer, bag)` enables `set_requests` and wires the bag producer to that
+chest. `configure(entity, { read_contents = bool, set_requests = bool,
+request_from_buffers = bool, requests = { ["iron-plate"] = 200 } })` overrides flags or supplies
+static request filters. Positions remain authoritative absolute blueprint coordinates and
+`simulate()` intentionally does not model machine/logistics I/O.
 
 ### Errors
 

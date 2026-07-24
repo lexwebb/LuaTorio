@@ -5,7 +5,7 @@ import type {
   AnalyzedProgram,
   AnalyzedStatement,
 } from "./analyze.js";
-import type { IRModule, IRNode } from "./ir.js";
+import type { IRModule, IRNode, SpatialPlace } from "./ir.js";
 
 /** Synthetic memory cell for clocked while/for sticky-run latch. */
 export const RUN_CELL = "__run";
@@ -74,6 +74,10 @@ function lowerExpr(
       ctx.inputs.push({ signal: expr.signal, nodeId });
       return nodeId;
     }
+    case "entity_ref":
+      throw new Error("internal error: entity handles cannot be lowered as signal values");
+    case "entity_read":
+      return pushNode(ctx, { kind: "entity_read", id: nextId(ctx), entityId: expr.entityId });
     case "ref": {
       const nodeId = env.get(expr.name);
       if (nodeId === undefined) {
@@ -420,6 +424,10 @@ export function lower(program: AnalyzedProgram): IRModule {
   for (const statement of program.statements) {
     switch (statement.kind) {
       case "local": {
+        if (statement.expr.kind === "entity_ref") {
+          // Entity handles are compile-time placement references, not circuit signals.
+          break;
+        }
         const initId = lowerExpr(statement.expr, env, ctx);
         if (memoryCells.has(statement.name)) {
           const memId = nextId(ctx);
@@ -457,7 +465,25 @@ export function lower(program: AnalyzedProgram): IRModule {
     nodeId: lowerExpr(output.expr, env, ctx),
   }));
 
-  const places = program.places.map(({ name, x, y }) => ({ name, x, y }));
+  const places: SpatialPlace[] = program.places.map(({ id, name, x, y, logistic }) => ({
+    id,
+    name,
+    x,
+    y,
+    ...(logistic !== undefined ? { logistic: { ...logistic } } : {}),
+  }));
+  for (const binding of program.bindings) {
+    if (binding.kind !== "output_to") continue;
+    const bagId = lowerExpr(binding.bag, env, ctx);
+    const place = places.find((candidate) => candidate.id === binding.entityId);
+    if (place === undefined) {
+      throw new Error(`internal error: missing placed entity '${binding.entityId}'`);
+    }
+    place.circuit = {
+      ...place.circuit,
+      writeProducerIds: [...(place.circuit?.writeProducerIds ?? []), bagId],
+    };
+  }
   return {
     nodes: ctx.nodes,
     outputs,

@@ -2,6 +2,7 @@ import { decodePlan, isBlueprint } from "@jensforstmann/factorio-blueprint-tools
 import { describe, expect, it } from "vitest";
 import { lowerToCombinators } from "./combinators.js";
 import { emitBlueprint } from "./emit.js";
+import { compile } from "./index.js";
 import type { LaidOutCircuit } from "./layout.js";
 import { layout } from "./layout.js";
 
@@ -89,5 +90,29 @@ describe("emitBlueprint", () => {
       (e: { name: string }) => e.name === "decider-combinator",
     );
     expect(decider.control_behavior.decider_conditions.conditions[0].comparator).toBe("≠");
+  });
+
+  it("emits logistics chest control behavior and chest circuit connectors", () => {
+    const { blueprint, stats } = compile(
+      `
+        local stock = place("logistic-chest-storage", 0, 0)
+        local requests = place("logistic-chest-requester", 4, 0)
+        local inv = input_from(stock)
+        local iron = inv["iron-plate"]
+        output_to(requests, { ["iron-plate"] = 200 })
+        configure(requests, { set_requests = true, request_from_buffers = true })
+        output("signal-A", iron)
+      `,
+      { json: true },
+    );
+    const plan = JSON.parse(blueprint);
+    const stock = plan.blueprint.entities.find((entity: { name: string }) => entity.name === "logistic-chest-storage");
+    const requester = plan.blueprint.entities.find((entity: { name: string }) => entity.name === "logistic-chest-requester");
+
+    expect(stock.control_behavior.read_contents).toBe(true);
+    expect(requester.control_behavior.set_requests).toBe(true);
+    expect(requester.request_filters.request_from_buffers).toBe(true);
+    expect(plan.blueprint.wires.some((wire: number[]) => wire[1] === 5 || wire[3] === 5)).toBe(true);
+    expect(stats.wires).toBe(plan.blueprint.wires.length);
   });
 });

@@ -2110,6 +2110,9 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
       case "input":
         entities.push(lowerInput(node));
         break;
+      case "entity_read":
+        // The placed chest is the source; circuit attachment is recorded after consumers emit.
+        break;
       case "binop": {
         if (absorbedBinopIds.has(node.id)) {
           break;
@@ -2335,6 +2338,22 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
   const known = new Set(entities.map((entity) => entity.id));
   const filteredWires = wires.filter((wire) => known.has(wire.from) && known.has(wire.to));
 
+  const entityReadByNodeId = new Map(
+    module.nodes
+      .filter((node): node is Extract<IRNode, { kind: "entity_read" }> => node.kind === "entity_read")
+      .map((node) => [node.id, node.entityId]),
+  );
+  for (const wire of filteredWires) {
+    const entityId = entityReadByNodeId.get(wire.from);
+    if (entityId === undefined) continue;
+    const place = module.places?.find((candidate) => candidate.id === entityId);
+    if (place === undefined) continue;
+    place.circuit = {
+      ...place.circuit,
+      readConsumerIds: [...(place.circuit?.readConsumerIds ?? []), wire.to],
+    };
+  }
+
   annotateEntityLabels(module, entities, filteredWires);
 
   return { entities, wires: filteredWires, outputs, inputs };
@@ -2347,6 +2366,7 @@ function nodesReferencing(id: string, module: IRModule): IRNode[] {
     switch (node.kind) {
       case "literal":
       case "input":
+      case "entity_read":
         break;
       case "binop":
       case "cmp":
@@ -2438,6 +2458,7 @@ function countNodeUses(module: IRModule): Map<string, number> {
     switch (node.kind) {
       case "literal":
       case "input":
+      case "entity_read":
         break;
       case "binop":
       case "cmp":

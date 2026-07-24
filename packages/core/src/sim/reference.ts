@@ -160,6 +160,9 @@ function evalExpr(
       });
       return scored[expr.index]?.value ?? 0;
     }
+    case "entity_ref":
+    case "entity_read":
+      throw new Error("reference: machine I/O is not simulated");
     default: {
       const unreachable: never = expr;
       throw new Error(`reference: bad expr '${JSON.stringify(unreachable)}'`);

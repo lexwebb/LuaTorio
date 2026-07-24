@@ -36,6 +36,12 @@ function placeGlyph(name: SpatialPlace["name"]): string {
   switch (name) {
     case "wooden-chest":
       return "▣";
+    case "logistic-chest-passive-provider":
+    case "logistic-chest-active-provider":
+    case "logistic-chest-storage":
+    case "logistic-chest-buffer":
+    case "logistic-chest-requester":
+      return "▤";
     case "small-lamp":
       return "◉";
     case "medium-electric-pole":
@@ -49,6 +55,12 @@ function placeShortLabel(name: SpatialPlace["name"]): string {
   switch (name) {
     case "wooden-chest":
       return "chest";
+    case "logistic-chest-passive-provider":
+    case "logistic-chest-active-provider":
+    case "logistic-chest-storage":
+    case "logistic-chest-buffer":
+    case "logistic-chest-requester":
+      return "logistics";
     case "small-lamp":
       return "lamp";
     case "medium-electric-pole":

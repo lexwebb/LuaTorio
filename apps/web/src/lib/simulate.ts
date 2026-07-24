@@ -43,7 +43,7 @@ export interface RunSimulateOptions {
   inputs: Record<string, number>;
 }
 
-/** Lower source through optimize; returns graph + optional spatial places. */
+/** Lower source through optimize; machine I/O places are returned but intentionally not simulated. */
 export function buildGraphAndPlaces(source: string): {
   graph: CircuitGraph;
   places: SpatialPlace[];

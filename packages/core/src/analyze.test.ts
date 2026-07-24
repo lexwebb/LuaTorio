@@ -18,6 +18,60 @@ describe("analyze", () => {
     ]);
   });
 
+  it("accepts logistics chest handles, reads, writes, and configuration", () => {
+    const program = analyze(
+      parse(`
+        local stock = place("logistic-chest-storage", 0, 0)
+        local requests = place("logistic-chest-requester", 4, 0)
+        local inv = input_from(stock)
+        local iron = inv["iron-plate"]
+        output_to(requests, { ["iron-plate"] = 200 })
+        configure(requests, { set_requests = true, request_from_buffers = true })
+        output("signal-A", iron)
+      `),
+    );
+
+    expect(program.places).toEqual([
+      expect.objectContaining({
+        id: "__e1",
+        name: "logistic-chest-storage",
+        logistic: { read_contents: true },
+      }),
+      expect.objectContaining({
+        id: "__e2",
+        name: "logistic-chest-requester",
+        logistic: { set_requests: true, request_from_buffers: true },
+      }),
+    ]);
+    expect(program.bindings).toEqual([
+      expect.objectContaining({
+        kind: "output_to",
+        entityId: "__e2",
+        bag: expect.objectContaining({ kind: "bag_const" }),
+      }),
+    ]);
+  });
+
+  it("rejects logistics writes to non-requester chests and entity arithmetic", () => {
+    expect(() =>
+      analyze(
+        parse(`
+          local stock = place("logistic-chest-storage", 0, 0)
+          output_to(stock, { ["iron-plate"] = 1 })
+          output("signal-A", 1)
+        `),
+      ),
+    ).toThrow(/requester.*buffer/i);
+    expect(() =>
+      analyze(
+        parse(`
+          local stock = place("logistic-chest-storage", 0, 0)
+          output("signal-A", stock + 1)
+        `),
+      ),
+    ).toThrow(/entity handles/i);
+  });
+
   it("rejects unknown and non-literal place() entities", () => {
     expect(() => analyze(parse(`place("iron-chest", 0, 0); output("signal-A", 1)`))).toThrow(
       /allowed entities.*wooden-chest.*small-lamp.*medium-electric-pole/i,
