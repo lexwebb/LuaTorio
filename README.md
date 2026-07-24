@@ -23,6 +23,10 @@ pnpm dev:web
 
 Deployed (GitHub Pages): [https://lexwebb.github.io/LuaTorio/](https://lexwebb.github.io/LuaTorio/)
 
+The editor shows **live diagnostics** (parse/analyze errors under the cursor) and **autocomplete**
+for LuaTorio builtins plus common signal / `place()` entity **string** names inside quotes.
+Signal args remain string literals — completions fill them; they are not language constants.
+
 One-time repo setting if Pages is not live yet: **Settings → Pages → Source: GitHub Actions**.
 Deploys run from [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push to `main`.
 
