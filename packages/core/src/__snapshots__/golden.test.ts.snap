@@ -83,6 +83,112 @@ exports[`golden examples > adder > compiles to a blueprint JSON plan matching it
 }
 `;
 
+exports[`golden examples > assembler_io > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "decider_conditions": {
+            "conditions": [
+              {
+                "comparator": "≠",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t3",
+                  "type": "virtual",
+                },
+              },
+              {
+                "comparator": "≠",
+                "compare_type": "and",
+                "constant": 0,
+                "first_signal": {
+                  "name": "__t3",
+                  "type": "virtual",
+                },
+              },
+            ],
+            "outputs": [
+              {
+                "constant": 1,
+                "signal": {
+                  "name": "__t8",
+                  "type": "virtual",
+                },
+              },
+            ],
+          },
+        },
+        "entity_number": 1,
+        "name": "decider-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "sections": {
+            "sections": [
+              {
+                "filters": [
+                  {
+                    "count": 1,
+                    "index": 1,
+                    "name": "iron-gear-wheel",
+                    "type": "virtual",
+                  },
+                ],
+                "index": 1,
+              },
+            ],
+          },
+        },
+        "entity_number": 2,
+        "name": "constant-combinator",
+        "position": {
+          "x": 2,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "circuit_condition": {
+            "comparator": ">",
+            "constant": 0,
+            "first_signal": {
+              "name": "signal-A",
+              "type": "virtual",
+            },
+          },
+          "circuit_enabled": true,
+          "set_recipe": true,
+        },
+        "entity_number": 3,
+        "name": "assembling-machine-2",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+        "recipe": "iron-gear-wheel",
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "assembler_io",
+    "wires": [
+      [
+        2,
+        3,
+        3,
+        5,
+      ],
+    ],
+  },
+}
+`;
+
 exports[`golden examples > bag_arith > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
 {
   "blueprint": {
@@ -2357,11 +2463,198 @@ exports[`golden examples > place > compiles to a blueprint JSON plan matching it
           "y": 2,
         },
       },
+      {
+        "control_behavior": {
+          "circuit_condition": {
+            "comparator": ">",
+            "constant": 0,
+            "first_signal": {
+              "name": "signal-G",
+              "type": "virtual",
+            },
+          },
+          "circuit_condition_enabled": true,
+          "read_contents": false,
+          "set_requests": true,
+        },
+        "entity_number": 5,
+        "name": "logistic-chest-requester",
+        "position": {
+          "x": 8,
+          "y": 0,
+        },
+        "request_filters": {
+          "sections": [
+            {
+              "filters": [
+                {
+                  "count": 50,
+                  "index": 1,
+                  "name": "iron-plate",
+                },
+              ],
+              "index": 1,
+            },
+          ],
+        },
+      },
     ],
     "icons": [],
     "item": "blueprint",
     "label": "place",
     "wires": [],
+  },
+}
+`;
+
+exports[`golden examples > place_extra > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "__t1",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t3",
+              "type": "virtual",
+            },
+            "second_constant": 1,
+          },
+        },
+        "entity_number": 1,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "entity_number": 2,
+        "name": "wooden-chest",
+        "position": {
+          "x": 6,
+          "y": 0,
+        },
+      },
+      {
+        "entity_number": 3,
+        "name": "iron-chest",
+        "position": {
+          "x": 8,
+          "y": 0,
+        },
+      },
+      {
+        "entity_number": 4,
+        "name": "steel-chest",
+        "position": {
+          "x": 10,
+          "y": 0,
+        },
+      },
+      {
+        "entity_number": 5,
+        "name": "small-lamp",
+        "position": {
+          "x": 6,
+          "y": 2,
+        },
+      },
+      {
+        "entity_number": 6,
+        "name": "small-electric-pole",
+        "position": {
+          "x": 4,
+          "y": 2,
+        },
+      },
+      {
+        "entity_number": 7,
+        "name": "medium-electric-pole",
+        "position": {
+          "x": 4,
+          "y": 4,
+        },
+      },
+      {
+        "entity_number": 8,
+        "name": "big-electric-pole",
+        "position": {
+          "x": 2,
+          "y": 4,
+        },
+      },
+      {
+        "entity_number": 9,
+        "name": "substation",
+        "position": {
+          "x": 0,
+          "y": 4,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "place_extra",
+    "wires": [],
+  },
+}
+`;
+
+exports[`golden examples > roboport_network > compiles to a blueprint JSON plan matching its golden snapshot 1`] = `
+{
+  "blueprint": {
+    "entities": [
+      {
+        "control_behavior": {
+          "arithmetic_conditions": {
+            "first_signal": {
+              "name": "iron-plate",
+              "type": "virtual",
+            },
+            "operation": "+",
+            "output_signal": {
+              "name": "__t2",
+              "type": "virtual",
+            },
+            "second_constant": 0,
+          },
+        },
+        "entity_number": 1,
+        "name": "arithmetic-combinator",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+      {
+        "control_behavior": {
+          "read_items_mode": 1,
+        },
+        "entity_number": 2,
+        "name": "roboport",
+        "position": {
+          "x": 0,
+          "y": 0,
+        },
+      },
+    ],
+    "icons": [],
+    "item": "blueprint",
+    "label": "roboport_network",
+    "wires": [
+      [
+        2,
+        5,
+        1,
+        1,
+      ],
+    ],
   },
 }
 `;

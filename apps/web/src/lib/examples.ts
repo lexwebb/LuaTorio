@@ -49,6 +49,9 @@ const EXAMPLE_META: Record<string, ExampleMeta> = {
   place: { label: "place() entities", group: "Placement" },
   logistics_io: { label: "Logistics chest I/O", group: "Placement" },
   logistics_restock: { label: "Logistics restock (target − stock)", group: "Placement" },
+  assembler_io: { label: "Assembler recipe I/O", group: "Placement" },
+  roboport_network: { label: "Roboport network bag", group: "Placement" },
+  place_extra: { label: "Extra place entities", group: "Placement" },
 };
 
 const GROUP_ORDER: ExampleGroup[] = [

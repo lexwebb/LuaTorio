@@ -82,7 +82,7 @@ A short path through the supported surface. Open the linked examples, or load
 4. **Helpers** — [`clamp_fn.lua`](examples/clamp_fn.lua): prefix `local function` (fully inlined).
 5. **Bags** — [`bag_arith.lua`](examples/bag_arith.lua): multi-signal `bag_arith` / `bag_filter`.
 6. **Table bags** — [`table_bag.lua`](examples/table_bag.lua): `{ ["signal-A"] = 10 }` and `bag["signal-A"]`.
-7. **Machine I/O** — [`logistics_io.lua`](examples/logistics_io.lua): read a logistics chest and drive requester requests; [`logistics_restock.lua`](examples/logistics_restock.lua) requests `target − stock` via `bag_arith`.
+7. **Machine I/O** — [`logistics_io.lua`](examples/logistics_io.lua) / [`logistics_restock.lua`](examples/logistics_restock.lua); assemblers [`assembler_io.lua`](examples/assembler_io.lua); roboport [`roboport_network.lua`](examples/roboport_network.lua).
 
 Recursion is **not supported** — use `while` / `for` with memory instead
 ([decision](docs/superpowers/specs/2026-07-23-v4-recursion-design.md)).
@@ -119,6 +119,9 @@ Recursion is **not supported** — use `while` / `for` with memory instead
 | [`place.lua`](examples/place.lua) | v5 absolute chest, lamp, and power-pole placement beside a circuit |
 | [`logistics_io.lua`](examples/logistics_io.lua) | v5.1 logistics-chest inventory read and requester circuit requests |
 | [`logistics_restock.lua`](examples/logistics_restock.lua) | Request `target − stock` via `bag_arith` + `input_from` / `output_to` |
+| [`assembler_io.lua`](examples/assembler_io.lua) | v5.2 assembler `set_recipe` / `circuit_enabled` + `output_to` |
+| [`roboport_network.lua`](examples/roboport_network.lua) | Roboport logistic network contents via `input_from` |
+| [`place_extra.lua`](examples/place_extra.lua) | Extra chests / poles from the expanded `place()` allowlist |
 
 ## Language Reference
 
@@ -206,17 +209,21 @@ Not yet supported: general Lua tables (beyond constant bags). Unsupported constr
   comparisons, or memory assignments. `bag_const`, `bag_arith`, and `bag_filter` explicitly
   encode red/green cookbook patterns and unblock v4 table constructors as constant bags.
 
-### `place()` API (v5.1)
+### `place()` API (v5.2)
 
-`place("wooden-chest" | "small-lamp" | "medium-electric-pole" | logistics chest, x, y)` is still
-valid as a statement. In `local chest = place(...)`, it instead returns an immutable entity handle.
-`input_from(chest)` reads a logistics chest's contents as a bag and enables `read_contents`;
-`output_to(requester_or_buffer, bag)` enables `set_requests` and wires the bag producer to that
-chest. `configure(entity, { read_contents = bool, set_requests = bool,
-request_from_buffers = bool, requests = { ["iron-plate"] = 200 } })` overrides flags or supplies
-static request filters. Positions remain authoritative absolute blueprint coordinates.
-`simulate({ entityInputs })` can inject multi-signal bags onto `input_from` places (by place
-id) so playground/tests exercise chest reads — still not a logistics-network sim.
+`place(name, x, y)` places allowlisted non-combinator entities (chests, poles, lamps, logistic
+chests, assembling machines / foundry, roboport). As a statement it is decorative; as
+`local e = place(...)` it returns an immutable entity handle.
+
+- `input_from(e)` → bag from logistic chest contents, assembler inventory, or roboport logistics
+  network (`read_items_mode = logistics`).
+- `output_to(e, bag)` → requester/buffer requests **or** assembler/foundry `set_recipe`.
+- `configure(e, {…})` → logistic flags / `circuit_condition`, or assembler `set_recipe` /
+  `circuit_enabled` / `recipe` / `circuit_condition`.
+
+Positions are absolute blueprint coordinates. `simulate({ entityInputs })` injects bags onto
+`input_from` places by place id — still not a logistics / crafting sim. Spec:
+`docs/superpowers/specs/2026-07-24-machine-io-v52-design.md`.
 
 ### Errors
 

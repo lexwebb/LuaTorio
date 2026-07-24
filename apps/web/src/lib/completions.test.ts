@@ -9,7 +9,10 @@ describe("signal-catalog", () => {
   });
 
   it("lists the place() allowlist", () => {
-    expect(PLACE_ENTITIES).toEqual(["wooden-chest", "small-lamp", "medium-electric-pole"]);
+    expect(PLACE_ENTITIES).toContain("wooden-chest");
+    expect(PLACE_ENTITIES).toContain("assembling-machine-2");
+    expect(PLACE_ENTITIES).toContain("roboport");
+    expect(PLACE_ENTITIES.length).toBeGreaterThanOrEqual(18);
   });
 });
 

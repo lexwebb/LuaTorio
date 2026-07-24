@@ -1,15 +1,64 @@
 type ArithOp = "+" | "-" | "*" | "/" | "%";
 type CmpOp = "<" | ">" | "<=" | ">=" | "==" | "~=";
 
-export type PlaceableEntity =
-  | "wooden-chest"
-  | "small-lamp"
-  | "medium-electric-pole"
-  | "logistic-chest-passive-provider"
-  | "logistic-chest-active-provider"
-  | "logistic-chest-storage"
-  | "logistic-chest-buffer"
-  | "logistic-chest-requester";
+/** Entities allowed in `place(name, x, y)`. Single source of truth for analyze + emit. */
+export const PLACEABLE_ENTITIES = [
+  "wooden-chest",
+  "iron-chest",
+  "steel-chest",
+  "small-lamp",
+  "small-electric-pole",
+  "medium-electric-pole",
+  "big-electric-pole",
+  "substation",
+  "logistic-chest-passive-provider",
+  "logistic-chest-active-provider",
+  "logistic-chest-storage",
+  "logistic-chest-buffer",
+  "logistic-chest-requester",
+  "assembling-machine-1",
+  "assembling-machine-2",
+  "assembling-machine-3",
+  "foundry",
+  "roboport",
+] as const;
+
+export type PlaceableEntity = (typeof PLACEABLE_ENTITIES)[number];
+
+const LOGISTIC_CHEST_SET = new Set<PlaceableEntity>([
+  "logistic-chest-passive-provider",
+  "logistic-chest-active-provider",
+  "logistic-chest-storage",
+  "logistic-chest-buffer",
+  "logistic-chest-requester",
+]);
+
+const ASSEMBLER_SET = new Set<PlaceableEntity>([
+  "assembling-machine-1",
+  "assembling-machine-2",
+  "assembling-machine-3",
+  "foundry",
+]);
+
+export function isLogisticChest(name: PlaceableEntity): boolean {
+  return LOGISTIC_CHEST_SET.has(name);
+}
+
+export function isAssembler(name: PlaceableEntity): boolean {
+  return ASSEMBLER_SET.has(name);
+}
+
+export function isRoboport(name: PlaceableEntity): boolean {
+  return name === "roboport";
+}
+
+/** Literal circuit condition for chest / assembler enable (ASCII comparators). */
+export interface PlaceCircuitCondition {
+  first_signal: string;
+  comparator: CmpOp;
+  constant?: number;
+  second_signal?: string;
+}
 
 /** A non-combinator entity at an absolute Factorio tile coordinate. */
 export interface SpatialPlace {
@@ -22,6 +71,19 @@ export interface SpatialPlace {
     set_requests?: boolean;
     request_from_buffers?: boolean;
     request_filters?: Array<{ signal: string; count: number }>;
+    circuit_condition_enabled?: boolean;
+    circuit_condition?: PlaceCircuitCondition;
+  };
+  assembler?: {
+    set_recipe?: boolean;
+    circuit_enabled?: boolean;
+    read_contents?: boolean;
+    recipe?: string;
+    circuit_condition?: PlaceCircuitCondition;
+  };
+  /** Roboport `read_items_mode`: 0 none, 1 logistics, 2 missing_requests. */
+  roboport?: {
+    read_items_mode?: number;
   };
   /** Combinator entity ids to wire after layout. */
   circuit?: {

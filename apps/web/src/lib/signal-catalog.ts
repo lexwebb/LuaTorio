@@ -30,6 +30,21 @@ export const SIGNAL_CATALOG: readonly string[] = [...new Set(SIGNAL_NAMES)].sort
 /** Matches packages/core PlaceableEntity allowlist. */
 export const PLACE_ENTITIES: readonly string[] = [
   "wooden-chest",
+  "iron-chest",
+  "steel-chest",
   "small-lamp",
+  "small-electric-pole",
   "medium-electric-pole",
+  "big-electric-pole",
+  "substation",
+  "logistic-chest-passive-provider",
+  "logistic-chest-active-provider",
+  "logistic-chest-storage",
+  "logistic-chest-buffer",
+  "logistic-chest-requester",
+  "assembling-machine-1",
+  "assembling-machine-2",
+  "assembling-machine-3",
+  "foundry",
+  "roboport",
 ] as const;

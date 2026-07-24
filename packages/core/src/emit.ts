@@ -1,10 +1,15 @@
-import type { Blueprint, Comparator, Entity } from "@jensforstmann/factorio-blueprint-tools";
+import type {
+  Blueprint,
+  Comparator,
+  Entity,
+  Signal,
+} from "@jensforstmann/factorio-blueprint-tools";
 import {
   COMPARATOR,
   createEmptyBlueprint,
   encodePlan,
 } from "@jensforstmann/factorio-blueprint-tools";
-import type { SpatialPlace } from "./ir.js";
+import type { PlaceCircuitCondition, SpatialPlace } from "./ir.js";
 import type { FactorioWire, LaidOutCircuit, PlacedEntity } from "./layout.js";
 import { isEmptyConstant } from "./sim/eval.js";
 
@@ -97,43 +102,110 @@ function toLibraryEntity(placed: PlacedEntity): Entity {
   };
 }
 
+function signalRef(name: string): Signal {
+  return { type: "virtual", name };
+}
+
+function toLibraryCircuitCondition(
+  condition: PlaceCircuitCondition,
+): NonNullable<NonNullable<Entity["control_behavior"]>["circuit_condition"]> {
+  const ascii =
+    condition.comparator === "=="
+      ? "="
+      : condition.comparator === "~="
+        ? "!="
+        : condition.comparator;
+  const comparator = LIBRARY_COMPARATOR[ascii];
+  if (comparator === undefined) {
+    throw new Error(
+      `internal error: unknown circuit_condition comparator '${condition.comparator}'`,
+    );
+  }
+  return {
+    first_signal: signalRef(condition.first_signal),
+    comparator,
+    ...(condition.constant !== undefined ? { constant: condition.constant } : {}),
+    ...(condition.second_signal !== undefined
+      ? { second_signal: signalRef(condition.second_signal) }
+      : {}),
+  };
+}
+
 function toLibraryPlace(place: SpatialPlace, entity_number: number): Entity {
   const logistic = place.logistic;
+  const assembler = place.assembler;
+  const roboport = place.roboport;
+
+  const control_behavior: NonNullable<Entity["control_behavior"]> = {};
+  let hasControl = false;
+
+  if (logistic !== undefined) {
+    // Always emit the two logistic flags when the blob exists (Factorio defaults differ).
+    control_behavior.read_contents = Boolean(logistic.read_contents);
+    (control_behavior as { set_requests?: boolean }).set_requests = Boolean(logistic.set_requests);
+    hasControl = true;
+    if (logistic.circuit_condition_enabled !== undefined) {
+      control_behavior.circuit_condition_enabled = Boolean(logistic.circuit_condition_enabled);
+    }
+    if (logistic.circuit_condition !== undefined) {
+      control_behavior.circuit_condition = toLibraryCircuitCondition(logistic.circuit_condition);
+    }
+  }
+
+  if (assembler !== undefined) {
+    if (assembler.set_recipe !== undefined) {
+      control_behavior.set_recipe = Boolean(assembler.set_recipe);
+      hasControl = true;
+    }
+    if (assembler.circuit_enabled !== undefined) {
+      control_behavior.circuit_enabled = Boolean(assembler.circuit_enabled);
+      hasControl = true;
+    }
+    if (assembler.read_contents !== undefined) {
+      control_behavior.read_contents = Boolean(assembler.read_contents);
+      hasControl = true;
+    }
+    if (assembler.circuit_condition !== undefined) {
+      control_behavior.circuit_condition = toLibraryCircuitCondition(assembler.circuit_condition);
+      hasControl = true;
+    }
+  }
+
+  if (roboport?.read_items_mode !== undefined) {
+    control_behavior.read_items_mode = roboport.read_items_mode;
+    hasControl = true;
+  }
+
   return {
     entity_number,
     name: place.name,
     position: { x: place.x, y: place.y },
-    ...(logistic === undefined
-      ? {}
-      : {
-          control_behavior: {
-            read_contents: Boolean(logistic.read_contents),
-            set_requests: Boolean(logistic.set_requests),
-          } as NonNullable<Entity["control_behavior"]>,
-          ...(logistic.request_filters === undefined && logistic.request_from_buffers === undefined
-            ? {}
-            : {
-                request_filters: {
-                  ...(logistic.request_filters === undefined
-                    ? {}
-                    : {
-                        sections: [
-                          {
-                            index: 1,
-                            filters: logistic.request_filters.map((filter, index) => ({
-                              index: index + 1,
-                              name: filter.signal,
-                              count: filter.count,
-                            })),
-                          },
-                        ],
-                      }),
-                  ...(logistic.request_from_buffers === undefined
-                    ? {}
-                    : { request_from_buffers: logistic.request_from_buffers }),
-                },
-              }),
-        }),
+    ...(assembler?.recipe !== undefined ? { recipe: assembler.recipe } : {}),
+    ...(hasControl ? { control_behavior } : {}),
+    ...(logistic !== undefined &&
+    (logistic.request_filters !== undefined || logistic.request_from_buffers !== undefined)
+      ? {
+          request_filters: {
+            ...(logistic.request_filters === undefined
+              ? {}
+              : {
+                  sections: [
+                    {
+                      index: 1,
+                      filters: logistic.request_filters.map((filter, index) => ({
+                        index: index + 1,
+                        name: filter.signal,
+                        count: filter.count,
+                      })),
+                    },
+                  ],
+                }),
+            ...(logistic.request_from_buffers === undefined
+              ? {}
+              : { request_from_buffers: logistic.request_from_buffers }),
+          },
+        }
+      : {}),
   };
 }
 

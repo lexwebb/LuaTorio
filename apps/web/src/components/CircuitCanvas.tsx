@@ -35,6 +35,8 @@ const DRAG_THRESHOLD_PX = 4;
 function placeGlyph(name: SpatialPlace["name"]): string {
   switch (name) {
     case "wooden-chest":
+    case "iron-chest":
+    case "steel-chest":
       return "▣";
     case "logistic-chest-passive-provider":
     case "logistic-chest-active-provider":
@@ -44,8 +46,18 @@ function placeGlyph(name: SpatialPlace["name"]): string {
       return "▤";
     case "small-lamp":
       return "◉";
+    case "small-electric-pole":
     case "medium-electric-pole":
+    case "big-electric-pole":
+    case "substation":
       return "⋔";
+    case "assembling-machine-1":
+    case "assembling-machine-2":
+    case "assembling-machine-3":
+    case "foundry":
+      return "⚙";
+    case "roboport":
+      return "⬡";
     default:
       return "□";
   }
@@ -54,6 +66,8 @@ function placeGlyph(name: SpatialPlace["name"]): string {
 function placeShortLabel(name: SpatialPlace["name"]): string {
   switch (name) {
     case "wooden-chest":
+    case "iron-chest":
+    case "steel-chest":
       return "chest";
     case "logistic-chest-passive-provider":
     case "logistic-chest-active-provider":
@@ -63,8 +77,19 @@ function placeShortLabel(name: SpatialPlace["name"]): string {
       return "logistics";
     case "small-lamp":
       return "lamp";
+    case "small-electric-pole":
     case "medium-electric-pole":
+    case "big-electric-pole":
+    case "substation":
       return "pole";
+    case "assembling-machine-1":
+    case "assembling-machine-2":
+    case "assembling-machine-3":
+      return "assembler";
+    case "foundry":
+      return "foundry";
+    case "roboport":
+      return "roboport";
     default:
       return name;
   }

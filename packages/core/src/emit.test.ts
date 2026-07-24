@@ -135,4 +135,69 @@ describe("emitBlueprint", () => {
     expect(emptyConstants).toHaveLength(0);
     expect(stats.wires).toBe(plan.blueprint.wires.length);
   });
+
+  it("emits assembler set_recipe, circuit enable, and recipe", () => {
+    const { blueprint } = compile(
+      `
+        local asm = place("assembling-machine-2", 0, 0)
+        configure(asm, {
+          set_recipe = true,
+          circuit_enabled = true,
+          circuit_condition = { signal = "signal-A", comparator = ">", constant = 0 },
+          recipe = "iron-gear-wheel",
+        })
+        output_to(asm, { ["iron-gear-wheel"] = 1 })
+        output("signal-B", 1)
+      `,
+      { json: true },
+    );
+    const plan = JSON.parse(blueprint);
+    const asm = plan.blueprint.entities.find(
+      (entity: { name: string }) => entity.name === "assembling-machine-2",
+    );
+    expect(asm.recipe).toBe("iron-gear-wheel");
+    expect(asm.control_behavior.set_recipe).toBe(true);
+    expect(asm.control_behavior.circuit_enabled).toBe(true);
+    expect(asm.control_behavior.circuit_condition.comparator).toBe(">");
+    expect(plan.blueprint.wires.some((wire: number[]) => wire[1] === 5 || wire[3] === 5)).toBe(
+      true,
+    );
+  });
+
+  it("emits roboport read_items_mode logistics for input_from", () => {
+    const { blueprint } = compile(
+      `
+        local port = place("roboport", 0, 0)
+        local net = input_from(port)
+        output("signal-A", net["iron-plate"])
+      `,
+      { json: true },
+    );
+    const plan = JSON.parse(blueprint);
+    const port = plan.blueprint.entities.find(
+      (entity: { name: string }) => entity.name === "roboport",
+    );
+    expect(port.control_behavior.read_items_mode).toBe(1);
+  });
+
+  it("emits logistic chest circuit_condition", () => {
+    const { blueprint } = compile(
+      `
+        local box = place("logistic-chest-requester", 0, 0)
+        configure(box, {
+          set_requests = true,
+          circuit_condition_enabled = true,
+          circuit_condition = { signal = "signal-G", comparator = ">", constant = 0 },
+        })
+        output("signal-A", 1)
+      `,
+      { json: true },
+    );
+    const plan = JSON.parse(blueprint);
+    const box = plan.blueprint.entities.find(
+      (entity: { name: string }) => entity.name === "logistic-chest-requester",
+    );
+    expect(box.control_behavior.circuit_condition_enabled).toBe(true);
+    expect(box.control_behavior.circuit_condition.first_signal.name).toBe("signal-G");
+  });
 });

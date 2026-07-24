@@ -73,8 +73,8 @@ describe("analyze", () => {
   });
 
   it("rejects unknown and non-literal place() entities", () => {
-    expect(() => analyze(parse(`place("iron-chest", 0, 0); output("signal-A", 1)`))).toThrow(
-      /allowed entities.*wooden-chest.*small-lamp.*medium-electric-pole/i,
+    expect(() => analyze(parse(`place("car", 0, 0); output("signal-A", 1)`))).toThrow(
+      /allowed entities.*wooden-chest.*assembling-machine-2.*roboport/i,
     );
     expect(() => analyze(parse(`place("wooden-chest", 1.5, 0); output("signal-A", 1)`))).toThrow(
       /integer literals/i,
@@ -737,5 +737,44 @@ describe("analyze", () => {
 
     expect(program.statements[0].line).toBe(1);
     expect(program.outputs[0].line).toBe(2);
+  });
+
+  it("accepts assembler output_to and configure", () => {
+    const program = analyze(
+      parse(`
+        local asm = place("assembling-machine-2", 0, 0)
+        configure(asm, { set_recipe = true, circuit_enabled = true, recipe = "iron-gear-wheel" })
+        output_to(asm, { ["iron-gear-wheel"] = 1 })
+        output("signal-A", 1)
+      `),
+    );
+    expect(program.places[0]?.assembler).toMatchObject({
+      set_recipe: true,
+      circuit_enabled: true,
+      recipe: "iron-gear-wheel",
+    });
+  });
+
+  it("accepts roboport input_from", () => {
+    const program = analyze(
+      parse(`
+        local port = place("roboport", 0, 0)
+        local net = input_from(port)
+        output("signal-A", net["iron-plate"])
+      `),
+    );
+    expect(program.places[0]?.roboport?.read_items_mode).toBe(1);
+  });
+
+  it("rejects input_from on poles", () => {
+    expect(() =>
+      analyze(
+        parse(`
+          local pole = place("medium-electric-pole", 0, 0)
+          local bag = input_from(pole)
+          output("signal-A", bag["signal-A"])
+        `),
+      ),
+    ).toThrow(/logistic chest, roboport, assembling machine/i);
   });
 });

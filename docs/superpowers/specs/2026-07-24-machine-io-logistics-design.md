@@ -76,7 +76,8 @@ Classic `input("sig")` pads still use `inputs`. Playground: one bag editor per `
 place (signal → count rows). This is a stand-in for chest contents on the wire — not a
 logistics network / requester inventory model.
 
-## Non-goals
+## Non-goals (see v5.2)
 
-Assemblers/recipes, roboport network contents, circuit_condition DSL, proximity auto-wire,
-logistics VM simulation.
+Assemblers/recipes, roboport network contents, and `circuit_condition` DSL moved to
+`docs/superpowers/specs/2026-07-24-machine-io-v52-design.md` (#80 / #82). Still out of scope:
+proximity auto-wire, logistics VM simulation.

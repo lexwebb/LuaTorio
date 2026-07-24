@@ -466,13 +466,17 @@ export function lower(program: AnalyzedProgram): IRModule {
     nodeId: lowerExpr(output.expr, env, ctx),
   }));
 
-  const places: SpatialPlace[] = program.places.map(({ id, name, x, y, logistic }) => ({
-    id,
-    name,
-    x,
-    y,
-    ...(logistic !== undefined ? { logistic: { ...logistic } } : {}),
-  }));
+  const places: SpatialPlace[] = program.places.map(
+    ({ id, name, x, y, logistic, assembler, roboport }) => ({
+      id,
+      name,
+      x,
+      y,
+      ...(logistic !== undefined ? { logistic: { ...logistic } } : {}),
+      ...(assembler !== undefined ? { assembler: { ...assembler } } : {}),
+      ...(roboport !== undefined ? { roboport: { ...roboport } } : {}),
+    }),
+  );
   for (const binding of program.bindings) {
     if (binding.kind !== "output_to") continue;
     const bagId = lowerExpr(binding.bag, env, ctx);

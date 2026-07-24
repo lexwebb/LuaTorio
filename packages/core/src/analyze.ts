@@ -11,6 +11,16 @@ import type {
   MemberExpression,
   Statement,
 } from "luaparse";
+import {
+  isAssembler,
+  isLogisticChest,
+  isRoboport,
+  PLACEABLE_ENTITIES,
+  type PlaceableEntity,
+  type PlaceCircuitCondition,
+} from "./ir.js";
+
+export { PLACEABLE_ENTITIES, type PlaceableEntity };
 
 export class SemanticError extends Error {
   readonly line: number;
@@ -158,19 +168,6 @@ export type AnalyzedAssign = {
   column: number;
 };
 
-export const PLACEABLE_ENTITIES = [
-  "wooden-chest",
-  "small-lamp",
-  "medium-electric-pole",
-  "logistic-chest-passive-provider",
-  "logistic-chest-active-provider",
-  "logistic-chest-storage",
-  "logistic-chest-buffer",
-  "logistic-chest-requester",
-] as const;
-
-export type PlaceableEntity = (typeof PLACEABLE_ENTITIES)[number];
-
 export interface AnalyzedPlace {
   id: string;
   name: PlaceableEntity;
@@ -181,6 +178,18 @@ export interface AnalyzedPlace {
     set_requests?: boolean;
     request_from_buffers?: boolean;
     request_filters?: Array<{ signal: string; count: number }>;
+    circuit_condition_enabled?: boolean;
+    circuit_condition?: PlaceCircuitCondition;
+  };
+  assembler?: {
+    set_recipe?: boolean;
+    circuit_enabled?: boolean;
+    read_contents?: boolean;
+    recipe?: string;
+    circuit_condition?: PlaceCircuitCondition;
+  };
+  roboport?: {
+    read_items_mode?: number;
   };
   line: number;
   column: number;
@@ -1450,9 +1459,13 @@ function analyzeOutputToCall(
   }
   const entityId = entityIdFromArg(call.arguments[0], ctx, line, column, "output_to");
   const place = placeById(ctx, entityId);
-  if (place.name !== "logistic-chest-requester" && place.name !== "logistic-chest-buffer") {
+  if (
+    place.name !== "logistic-chest-requester" &&
+    place.name !== "logistic-chest-buffer" &&
+    !isAssembler(place.name)
+  ) {
     throw new SemanticError(
-      "output_to() requires a logistic-chest-requester or logistic-chest-buffer",
+      "output_to() requires a logistic-chest-requester, logistic-chest-buffer, assembling machine, or foundry",
       line,
       column,
     );
@@ -1465,8 +1478,104 @@ function analyzeOutputToCall(
   if (!isBagExpr(bag, ctx.bagLocals)) {
     throw new SemanticError("output_to() second argument must be a bag expression", line, column);
   }
-  place.logistic = { ...place.logistic, set_requests: true };
+  if (isAssembler(place.name)) {
+    place.assembler = { ...place.assembler, set_recipe: true };
+  } else {
+    place.logistic = { ...place.logistic, set_requests: true };
+  }
   ctx.bindings.push({ kind: "output_to", entityId, bag });
+}
+
+const CMP_COMPARATORS: ReadonlySet<string> = new Set(["<", ">", "<=", ">=", "==", "~="]);
+
+function analyzeCircuitConditionTable(
+  expr: Expression,
+  line: number,
+  column: number,
+): PlaceCircuitCondition {
+  if (expr.type !== "TableConstructorExpression") {
+    throw new SemanticError(
+      "circuit_condition must be a literal table { signal, comparator, constant|other }",
+      line,
+      column,
+    );
+  }
+  let first_signal: string | undefined;
+  let comparator: PlaceCircuitCondition["comparator"] | undefined;
+  let constant: number | undefined;
+  let second_signal: string | undefined;
+  for (const field of expr.fields) {
+    const { line: fieldLine, column: fieldColumn } = locOf(field);
+    if (field.type !== "TableKeyString") {
+      throw new SemanticError(
+        "circuit_condition keys must be literal names",
+        fieldLine,
+        fieldColumn,
+      );
+    }
+    const key = field.key.name;
+    if (key === "signal") {
+      if (field.value.type !== "StringLiteral") {
+        throw new SemanticError(
+          "circuit_condition.signal must be a string literal",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      first_signal = field.value.value;
+      continue;
+    }
+    if (key === "comparator") {
+      if (field.value.type !== "StringLiteral" || !CMP_COMPARATORS.has(field.value.value)) {
+        throw new SemanticError(
+          'circuit_condition.comparator must be "<", ">", "<=", ">=", "==", or "~="',
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      comparator = field.value.value as PlaceCircuitCondition["comparator"];
+      continue;
+    }
+    if (key === "constant") {
+      const value = integerLiteral(field.value);
+      if (value === undefined) {
+        throw new SemanticError(
+          "circuit_condition.constant must be an integer literal",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      constant = value;
+      continue;
+    }
+    if (key === "other") {
+      if (field.value.type !== "StringLiteral") {
+        throw new SemanticError(
+          "circuit_condition.other must be a string literal signal name",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      second_signal = field.value.value;
+      continue;
+    }
+    throw new SemanticError(`unsupported circuit_condition key '${key}'`, fieldLine, fieldColumn);
+  }
+  if (first_signal === undefined || comparator === undefined) {
+    throw new SemanticError("circuit_condition requires signal and comparator", line, column);
+  }
+  if (constant !== undefined && second_signal !== undefined) {
+    throw new SemanticError("circuit_condition cannot set both constant and other", line, column);
+  }
+  if (constant === undefined && second_signal === undefined) {
+    throw new SemanticError("circuit_condition requires constant or other", line, column);
+  }
+  return {
+    first_signal,
+    comparator,
+    ...(constant !== undefined ? { constant } : {}),
+    ...(second_signal !== undefined ? { second_signal } : {}),
+  };
 }
 
 function analyzeConfigureCall(
@@ -1485,13 +1594,25 @@ function analyzeConfigureCall(
   const entityId = entityIdFromArg(call.arguments[0], ctx, line, column, "configure");
   const place = placeById(ctx, entityId);
   const logistic: NonNullable<AnalyzedPlace["logistic"]> = { ...place.logistic };
+  const assembler: NonNullable<AnalyzedPlace["assembler"]> = { ...place.assembler };
+  let touchedLogistic = false;
+  let touchedAssembler = false;
+
   for (const field of call.arguments[1].fields) {
     const { line: fieldLine, column: fieldColumn } = locOf(field);
     if (field.type !== "TableKeyString") {
       throw new SemanticError("configure() keys must be literal names", fieldLine, fieldColumn);
     }
     const key = field.key.name;
+
     if (key === "requests") {
+      if (!isLogisticChest(place.name)) {
+        throw new SemanticError(
+          "configure().requests is only valid on logistic chests",
+          fieldLine,
+          fieldColumn,
+        );
+      }
       const requests =
         field.value.type === "TableConstructorExpression"
           ? analyzeTableConstructor(field.value, fieldLine, fieldColumn)
@@ -1504,21 +1625,131 @@ function analyzeConfigureCall(
         );
       }
       logistic.request_filters = requests.entries;
+      touchedLogistic = true;
       continue;
     }
-    if (key !== "read_contents" && key !== "set_requests" && key !== "request_from_buffers") {
-      throw new SemanticError(`unsupported configure() key '${key}'`, fieldLine, fieldColumn);
+
+    if (key === "recipe") {
+      if (!isAssembler(place.name)) {
+        throw new SemanticError(
+          "configure().recipe is only valid on assembling machines / foundry",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      if (field.value.type !== "StringLiteral") {
+        throw new SemanticError(
+          "configure().recipe must be a string literal",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      assembler.recipe = field.value.value;
+      touchedAssembler = true;
+      continue;
     }
-    if (field.value.type !== "BooleanLiteral") {
-      throw new SemanticError(
-        `configure().${key} must be a boolean literal`,
-        fieldLine,
-        fieldColumn,
-      );
+
+    if (key === "circuit_condition") {
+      if (!isLogisticChest(place.name) && !isAssembler(place.name)) {
+        throw new SemanticError(
+          "configure().circuit_condition is only valid on logistic chests or assembling machines",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      const condition = analyzeCircuitConditionTable(field.value, fieldLine, fieldColumn);
+      if (isAssembler(place.name)) {
+        assembler.circuit_condition = condition;
+        touchedAssembler = true;
+      } else {
+        logistic.circuit_condition = condition;
+        logistic.circuit_condition_enabled = true;
+        touchedLogistic = true;
+      }
+      continue;
     }
-    logistic[key] = field.value.value;
+
+    if (key === "circuit_condition_enabled") {
+      if (!isLogisticChest(place.name)) {
+        throw new SemanticError(
+          "configure().circuit_condition_enabled is only valid on logistic chests",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      if (field.value.type !== "BooleanLiteral") {
+        throw new SemanticError(
+          "configure().circuit_condition_enabled must be a boolean literal",
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      logistic.circuit_condition_enabled = field.value.value;
+      touchedLogistic = true;
+      continue;
+    }
+
+    if (key === "set_recipe" || key === "circuit_enabled") {
+      if (!isAssembler(place.name)) {
+        throw new SemanticError(
+          `configure().${key} is only valid on assembling machines / foundry`,
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      if (field.value.type !== "BooleanLiteral") {
+        throw new SemanticError(
+          `configure().${key} must be a boolean literal`,
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      assembler[key] = field.value.value;
+      touchedAssembler = true;
+      continue;
+    }
+
+    if (key === "read_contents" || key === "set_requests" || key === "request_from_buffers") {
+      if (key === "read_contents" && isAssembler(place.name)) {
+        if (field.value.type !== "BooleanLiteral") {
+          throw new SemanticError(
+            "configure().read_contents must be a boolean literal",
+            fieldLine,
+            fieldColumn,
+          );
+        }
+        assembler.read_contents = field.value.value;
+        touchedAssembler = true;
+        continue;
+      }
+      if (!isLogisticChest(place.name)) {
+        throw new SemanticError(
+          `configure().${key} is only valid on logistic chests`,
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      if (field.value.type !== "BooleanLiteral") {
+        throw new SemanticError(
+          `configure().${key} must be a boolean literal`,
+          fieldLine,
+          fieldColumn,
+        );
+      }
+      logistic[key] = field.value.value;
+      touchedLogistic = true;
+      continue;
+    }
+
+    throw new SemanticError(`unsupported configure() key '${key}'`, fieldLine, fieldColumn);
   }
-  place.logistic = logistic;
+
+  if (touchedLogistic) {
+    place.logistic = logistic;
+  }
+  if (touchedAssembler) {
+    place.assembler = assembler;
+  }
 }
 
 function analyzeExpr(
@@ -1828,7 +2059,19 @@ function analyzeCallExpr(
     if (place === undefined) {
       throw new SemanticError("input_from() requires an entity handle", line, column);
     }
-    place.logistic = { ...place.logistic, read_contents: true };
+    if (isRoboport(place.name)) {
+      place.roboport = { ...place.roboport, read_items_mode: 1 };
+    } else if (isAssembler(place.name)) {
+      place.assembler = { ...place.assembler, read_contents: true };
+    } else if (isLogisticChest(place.name)) {
+      place.logistic = { ...place.logistic, read_contents: true };
+    } else {
+      throw new SemanticError(
+        "input_from() requires a logistic chest, roboport, assembling machine, or foundry",
+        line,
+        column,
+      );
+    }
     return { kind: "entity_read", entityId: handle.entityId, line, column };
   }
 
