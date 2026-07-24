@@ -1,6 +1,6 @@
 import type { Diagnostic } from "@codemirror/lint";
 import { Text } from "@codemirror/state";
-import { analyze, parse, ParseError, SemanticError } from "@luatorio/core";
+import { analyze, ParseError, parse, SemanticError } from "@luatorio/core";
 
 /**
  * Map LuaTorio parse/analyze failures to CodeMirror lint diagnostics.

@@ -377,9 +377,15 @@ describe("analyze", () => {
       [`local t = { iron = 1 }; output("signal-A", t)`, /bracketed string/i],
       [`local t = { ["signal-A"] = 1.5 }; output("signal-A", t)`, /integer literals/i],
       [`local t = { ["signal-A"] = 1, ["signal-A"] = 2 }; output("signal-A", t)`, /duplicate/i],
-      [`local key = input("signal-X"); local t = { [key] = 1 }; output("signal-A", t)`, /bracketed string/i],
+      [
+        `local key = input("signal-X"); local t = { [key] = 1 }; output("signal-A", t)`,
+        /bracketed string/i,
+      ],
       [`local t = { ["signal-A"] = 1 }; output("signal-A", t.signal_A)`, /dot access/i],
-      [`local t = { ["signal-A"] = 1 }; local key = "signal-A"; output("signal-A", t[key])`, /string literal/i],
+      [
+        `local t = { ["signal-A"] = 1 }; local key = "signal-A"; output("signal-A", t[key])`,
+        /string literal/i,
+      ],
       [`local t = { ["signal-A"] = 1 }; t["signal-A"] = 2; output("signal-A", t)`, /field writes/i],
     ];
     for (const [source, error] of rejects) {

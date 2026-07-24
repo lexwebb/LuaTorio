@@ -7,7 +7,7 @@ import {
   SIGNAL_EACH,
   SIGNAL_EVERYTHING,
 } from "./eval.js";
-import { bagGet, bagSet, emptyBag, bagToRecord } from "./signals.js";
+import { bagGet, bagSet, bagToRecord, emptyBag } from "./signals.js";
 
 function signalRef(name: string) {
   return { type: "virtual" as const, name };
@@ -90,9 +90,7 @@ describe("evalDecider wildcards", () => {
       outputSignal: "R",
       control_behavior: {
         decider_conditions: {
-          conditions: [
-            { first_signal: signalRef(SIGNAL_ANYTHING), comparator: ">", constant: 10 },
-          ],
+          conditions: [{ first_signal: signalRef(SIGNAL_ANYTHING), comparator: ">", constant: 10 }],
           outputs: [{ signal: signalRef("R"), constant: 1 }],
         },
       },

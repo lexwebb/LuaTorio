@@ -36,12 +36,13 @@ describe("simulate", () => {
     const graph = graphOf(loadExample("elseif_nested.lua"));
     const result = simulate(graph, {
       ticks: 4,
-      inputs: (tick) => [
-        { "signal-A": 1, "signal-B": 1, "signal-C": 1 },
-        { "signal-A": 1, "signal-B": 0, "signal-C": 1 },
-        { "signal-A": 0, "signal-B": 0, "signal-C": 1 },
-        { "signal-A": 0, "signal-B": 0, "signal-C": 0 },
-      ][tick] ?? {},
+      inputs: (tick) =>
+        [
+          { "signal-A": 1, "signal-B": 1, "signal-C": 1 },
+          { "signal-A": 1, "signal-B": 0, "signal-C": 1 },
+          { "signal-A": 0, "signal-B": 0, "signal-C": 1 },
+          { "signal-A": 0, "signal-B": 0, "signal-C": 0 },
+        ][tick] ?? {},
     });
 
     expect(result.ticks.map((tick) => tick.outputs["signal-X"])).toEqual([1, 2, 3, 3]);
@@ -252,9 +253,9 @@ describe("simulate", () => {
       entityOutputs: true,
       inputs: (tick) => ({ "signal-L": [0, 3, 3, 0, 2, 2, 0, 0][tick] ?? 0 }),
     });
-    expect(result.ticks.map((tick) => tick.entities?.[edge!.id]?.[edge!.outputSignal] ?? 0)).toEqual([
-      0, 1, 0, 0, 1, 0, 0, 0,
-    ]);
+    expect(
+      result.ticks.map((tick) => tick.entities?.[edge!.id]?.[edge!.outputSignal] ?? 0),
+    ).toEqual([0, 1, 0, 0, 1, 0, 0, 0]);
   });
 
   it("bag_test emits ANYTHING and EVERYTHING wildcard deciders", () => {
@@ -268,12 +269,16 @@ describe("simulate", () => {
     const tests = graph.entities.filter((entity) => entity.label?.startsWith("bag "));
     expect(tests[0]?.control_behavior.decider_conditions).toMatchObject({
       conditions: [
-        expect.objectContaining({ first_signal: expect.objectContaining({ name: "signal-anything" }) }),
+        expect.objectContaining({
+          first_signal: expect.objectContaining({ name: "signal-anything" }),
+        }),
       ],
     });
     expect(tests[1]?.control_behavior.decider_conditions).toMatchObject({
       conditions: [
-        expect.objectContaining({ first_signal: expect.objectContaining({ name: "signal-everything" }) }),
+        expect.objectContaining({
+          first_signal: expect.objectContaining({ name: "signal-everything" }),
+        }),
       ],
     });
     const result = simulate(graph, { ticks: 3 });

@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { CircuitEntity } from "../combinators.js";
 import { evalDecider, evalSelector } from "./eval.js";
-import { bagGet, emptyBag, bagSet, bagToRecord } from "./signals.js";
+import { bagGet, bagSet, bagToRecord, emptyBag } from "./signals.js";
 
-function decider(conditions: unknown[], outputs: unknown[], elseOutputs?: unknown[]): CircuitEntity {
+function decider(
+  conditions: unknown[],
+  outputs: unknown[],
+  elseOutputs?: unknown[],
+): CircuitEntity {
   return {
     id: "d",
     kind: "decider",
@@ -19,7 +23,10 @@ function decider(conditions: unknown[], outputs: unknown[], elseOutputs?: unknow
   };
 }
 
-function selector(control_behavior: Record<string, unknown>, outputSignal = "signal-N"): CircuitEntity {
+function selector(
+  control_behavior: Record<string, unknown>,
+  outputSignal = "signal-N",
+): CircuitEntity {
   return {
     id: "s",
     kind: "selector",

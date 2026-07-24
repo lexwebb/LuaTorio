@@ -59,9 +59,9 @@ describe("emitBlueprint", () => {
     const { blueprint, stats } = emitBlueprint(laidOut, { json: true });
     const plan = JSON.parse(blueprint);
     expect(stats.combinators).toBe(1);
-    expect(plan.blueprint.entities.every((e: { name: string }) => e.name === "arithmetic-combinator")).toBe(
-      true,
-    );
+    expect(
+      plan.blueprint.entities.every((e: { name: string }) => e.name === "arithmetic-combinator"),
+    ).toBe(true);
   });
 
   it("sets the blueprint label from options.name", () => {
@@ -106,13 +106,19 @@ describe("emitBlueprint", () => {
       { json: true },
     );
     const plan = JSON.parse(blueprint);
-    const stock = plan.blueprint.entities.find((entity: { name: string }) => entity.name === "logistic-chest-storage");
-    const requester = plan.blueprint.entities.find((entity: { name: string }) => entity.name === "logistic-chest-requester");
+    const stock = plan.blueprint.entities.find(
+      (entity: { name: string }) => entity.name === "logistic-chest-storage",
+    );
+    const requester = plan.blueprint.entities.find(
+      (entity: { name: string }) => entity.name === "logistic-chest-requester",
+    );
 
     expect(stock.control_behavior.read_contents).toBe(true);
     expect(requester.control_behavior.set_requests).toBe(true);
     expect(requester.request_filters.request_from_buffers).toBe(true);
-    expect(plan.blueprint.wires.some((wire: number[]) => wire[1] === 5 || wire[3] === 5)).toBe(true);
+    expect(plan.blueprint.wires.some((wire: number[]) => wire[1] === 5 || wire[3] === 5)).toBe(
+      true,
+    );
     expect(stats.wires).toBe(plan.blueprint.wires.length);
   });
 });

@@ -286,9 +286,7 @@ export function fromBlueprint(
       throw new BlueprintImportError("entity missing entity_number or name");
     }
     if (!SUPPORTED_NAMES.has(name)) {
-      throw new BlueprintImportError(
-        `unsupported entity '${name}' (logistic/other — see gaps)`,
-      );
+      throw new BlueprintImportError(`unsupported entity '${name}' (logistic/other — see gaps)`);
     }
     const kind = kindFromName(name);
     const id = String(entityNumber);

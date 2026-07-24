@@ -12,9 +12,7 @@
             "sections": [
               {
                 "index": 1,
-                "filters": [
-                  { "index": 1, "count": 6, "type": "virtual", "name": "signal-A" }
-                ]
+                "filters": [{ "index": 1, "count": 6, "type": "virtual", "name": "signal-A" }]
               }
             ]
           }
@@ -40,9 +38,6 @@
         "control_behavior": { "sections": { "sections": [] } }
       }
     ],
-    "wires": [
-      [1, 2, 2, 2],
-      [2, 4, 3, 2]
-    ]
+    "wires": [[1, 2, 2, 2], [2, 4, 3, 2]]
   }
 }

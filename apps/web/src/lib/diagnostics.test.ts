@@ -8,7 +8,7 @@ describe("diagnose", () => {
   });
 
   it("returns a parse diagnostic with a document range", () => {
-    const diagnostics = diagnose("local!!!\noutput(\"signal-A\", 1)");
+    const diagnostics = diagnose('local!!!\noutput("signal-A", 1)');
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.severity).toBe("error");
     expect(diagnostics[0]?.message.length).toBeGreaterThan(0);

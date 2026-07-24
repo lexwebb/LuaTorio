@@ -1,12 +1,13 @@
-import {
-  type Completion,
-  type CompletionContext,
-  type CompletionResult,
-} from "@codemirror/autocomplete";
+import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { PLACE_ENTITIES, SIGNAL_CATALOG } from "./signal-catalog.js";
 
 const BUILTIN_COMPLETIONS: Completion[] = [
-  { label: "input", type: "function", detail: "Read a circuit input signal", info: 'input("signal-A")' },
+  {
+    label: "input",
+    type: "function",
+    detail: "Read a circuit input signal",
+    info: 'input("signal-A")',
+  },
   {
     label: "output",
     type: "function",
@@ -19,7 +20,12 @@ const BUILTIN_COMPLETIONS: Completion[] = [
     detail: "Place a non-combinator entity",
     info: 'place("wooden-chest", x, y)',
   },
-  { label: "tick", type: "function", detail: "Clocked loop barrier", info: "Last statement in while/for body" },
+  {
+    label: "tick",
+    type: "function",
+    detail: "Clocked loop barrier",
+    info: "Last statement in while/for body",
+  },
   { label: "sr", type: "function", detail: "Cookbook SR latch", info: "q = sr(q, set, reset)" },
   {
     label: "each_latch",
@@ -88,7 +94,12 @@ const BAG_FILTER_MODES = ["include", "exclude", "limit"] as const;
 const BAG_TEST_KINDS = ["any", "every"] as const;
 const BAG_ARITH_OPS = ["+", "-", "*", "/", "%"] as const;
 
-export type StringCompletionKind = "signal" | "place" | "bag_filter_mode" | "bag_test_kind" | "bag_arith_op";
+export type StringCompletionKind =
+  | "signal"
+  | "place"
+  | "bag_filter_mode"
+  | "bag_test_kind"
+  | "bag_arith_op";
 
 /**
  * Cheap leftward scan: are we inside a string that is a known call's signal/entity/mode arg?
@@ -216,7 +227,7 @@ export function luatorioCompletions(context: CompletionContext): CompletionResul
       return null;
     }
     const from = context.pos - stringCtx.prefix.length;
-    return { from, options, validFor: /^[\w\-]*$/u };
+    return { from, options, validFor: /^[\w-]*$/u };
   }
   return builtinCompletionResult(context);
 }

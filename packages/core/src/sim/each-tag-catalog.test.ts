@@ -235,8 +235,7 @@ describe("EACH-tag catalog (Reddit pattern)", () => {
     // Mid-buffer with prior selection: hold A (empty→set, then raise stock)
     const hold = simulate(graph, {
       ticks: 4,
-      inputs: (tick) =>
-        tick < 2 ? { [ITEM_A]: 0, [ITEM_B]: 20 } : { [ITEM_A]: 5, [ITEM_B]: 20 },
+      inputs: (tick) => (tick < 2 ? { [ITEM_A]: 0, [ITEM_B]: 20 } : { [ITEM_A]: 5, [ITEM_B]: 20 }),
       entityOutputs: true,
     });
     expect(hold.ticks[3]?.entities?.dec).toEqual({ [RECIPE_A]: 1 });

@@ -1657,7 +1657,11 @@ function lowerEdge(node: Extract<IRNode, { kind: "edge" }>): {
         },
       },
     ],
-    wires: [greenWire(node.value, previousId), redWire(node.value, node.id), greenWire(previousId, node.id)],
+    wires: [
+      greenWire(node.value, previousId),
+      redWire(node.value, node.id),
+      greenWire(previousId, node.id),
+    ],
   };
 }
 
@@ -2340,7 +2344,9 @@ export function lowerToCombinators(module: IRModule): CircuitGraph {
 
   const entityReadByNodeId = new Map(
     module.nodes
-      .filter((node): node is Extract<IRNode, { kind: "entity_read" }> => node.kind === "entity_read")
+      .filter(
+        (node): node is Extract<IRNode, { kind: "entity_read" }> => node.kind === "entity_read",
+      )
       .map((node) => [node.id, node.entityId]),
   );
   for (const wire of filteredWires) {

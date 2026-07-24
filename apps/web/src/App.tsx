@@ -5,7 +5,7 @@ import { ExamplePicker } from "./components/ExamplePicker.js";
 import { Output } from "./components/Output.js";
 import { Toolbar } from "./components/Toolbar.js";
 import { type CompileOutcome, runCompile } from "./lib/compile.js";
-import { examples, defaultExampleSource } from "./lib/examples.js";
+import { defaultExampleSource, examples } from "./lib/examples.js";
 import { decodeShareHash, encodeShareHash, type ViewMode } from "./lib/share.js";
 
 const DEFAULT_SOURCE = defaultExampleSource();

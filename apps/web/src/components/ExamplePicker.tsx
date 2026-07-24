@@ -1,5 +1,5 @@
 import type { ChangeEvent } from "react";
-import { examplesByGroup, type Example } from "../lib/examples.js";
+import { type Example, examplesByGroup } from "../lib/examples.js";
 
 export interface ExamplePickerProps {
   examples: Example[];

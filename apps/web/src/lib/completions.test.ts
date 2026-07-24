@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  detectStringCompletionContext,
-  stringCompletionOptions,
-} from "./completions.js";
+import { detectStringCompletionContext, stringCompletionOptions } from "./completions.js";
 import { PLACE_ENTITIES, SIGNAL_CATALOG } from "./signal-catalog.js";
 
 describe("signal-catalog", () => {
@@ -12,11 +9,7 @@ describe("signal-catalog", () => {
   });
 
   it("lists the place() allowlist", () => {
-    expect(PLACE_ENTITIES).toEqual([
-      "wooden-chest",
-      "small-lamp",
-      "medium-electric-pole",
-    ]);
+    expect(PLACE_ENTITIES).toEqual(["wooden-chest", "small-lamp", "medium-electric-pole"]);
   });
 });
 

@@ -104,7 +104,9 @@ function lowerExpr(
       return pushNode(ctx, { kind: "select", id: nextId(ctx), cond, then: thenId, else: elseId });
     }
     case "sr":
-      throw new Error("internal error: sr() must be lowered via assignment, not as a bare expression");
+      throw new Error(
+        "internal error: sr() must be lowered via assignment, not as a bare expression",
+      );
     case "signal_count": {
       const args = expr.args.map((arg) => lowerExpr(arg, env, ctx));
       return pushNode(ctx, { kind: "signal_count", id: nextId(ctx), args });
@@ -293,8 +295,7 @@ function lowerAssignStore(
       set: setId,
       reset: resetId,
     });
-    const storeValue =
-      enableId !== undefined ? wrapWithEnable(enableId, srId, memId, ctx) : srId;
+    const storeValue = enableId !== undefined ? wrapWithEnable(enableId, srId, memId, ctx) : srId;
     pushNode(ctx, { kind: "store", id: nextId(ctx), cell: statement.name, value: storeValue });
     return;
   }

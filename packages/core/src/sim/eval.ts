@@ -437,10 +437,7 @@ export function evalSelector(entity: CircuitEntity, net: EvalNet): SignalBag {
   const out = emptyBag();
   const cb = entity.control_behavior as Record<string, unknown>;
   const inputs = toColored(net);
-  const bag = selectNetworks(
-    inputs,
-    cb.networks ?? cb.signal_networks ?? cb.first_signal_networks,
-  );
+  const bag = selectNetworks(inputs, cb.networks ?? cb.signal_networks ?? cb.first_signal_networks);
   const operation = typeof cb.operation === "string" ? cb.operation : "select";
 
   switch (operation) {

@@ -2,11 +2,7 @@
   "source": "https://forums.factorio.com/viewtopic.php?t=124776",
   "topicId": 124776,
   "generatedAt": "2026-07-23T21:44:23.857Z",
-  "pages": [
-    0,
-    20,
-    40
-  ],
+  "pages": [0, 20, 40],
   "scraped": 40,
   "unique": 37,
   "decoded": 37,
@@ -29,10 +25,7 @@
           "selector": 0,
           "other": 5
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -44,9 +37,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Divide everything from [item=red-wire] by everything from [item=green-wire].\nCan be used for all the other arithmetic operations as well."
@@ -70,10 +61,7 @@
           "selector": 0,
           "other": 4
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -85,9 +73,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "This combinator outputs all signals from[item=green-wire]whose values are lower or equal than the corresponding signals on[item=red-wire]\nThe other combinator outputs all signals from[item=red-wire]whose values are lower than the correspond"
@@ -111,10 +97,7 @@
           "selector": 0,
           "other": 4
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -126,9 +109,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "This combinator outputs all signals from[item=green-wire]whose values are greater than or equal to the corresponding signals on[item=red-wire]\nThe other combinator outputs all signals from[item=red-wire]whose values are greater than the cor"
@@ -152,10 +133,7 @@
           "selector": 0,
           "other": 14
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -167,9 +145,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Arbitrary signals on[item=red-wire]\nFilter definition on[item=green-wire]\nOutput only signals from[item=red-wire]also present on[item=green-wire]\nValues on[item=green-wire]don't matter, don't need to be 1."
@@ -193,10 +169,7 @@
           "selector": 0,
           "other": 14
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -208,9 +181,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Arbitrary signals on[item=red-wire]\nFilter definition on[item=green-wire]\nOutput only signals from[item=red-wire]not present on[item=green-wire]\nValues on[item=green-wire]don't matter, don't need to be 1."
@@ -234,11 +205,7 @@
           "selector": 0,
           "other": 13
         },
-        "otherNames": [
-          "display-panel",
-          "fast-inserter",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "fast-inserter", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -250,9 +217,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Maximum allowed items",
@@ -278,10 +243,7 @@
           "selector": 0,
           "other": 6
         },
-        "otherNames": [
-          "display-panel",
-          "small-lamp"
-        ],
+        "otherNames": ["display-panel", "small-lamp"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -317,11 +279,7 @@
           "selector": 0,
           "other": 9
         },
-        "otherNames": [
-          "display-panel",
-          "fast-inserter",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "fast-inserter", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -357,10 +315,7 @@
           "selector": 0,
           "other": 6
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 1,
@@ -396,10 +351,7 @@
           "selector": 0,
           "other": 11
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -411,9 +363,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 1,
           "selectorOps": [],
-          "wildcards": [
-            "signal-everything"
-          ]
+          "wildcards": ["signal-everything"]
         },
         "descriptions": [
           "While [virtual-signal=signal-S] is true, pass values from [item=red-wire], so the output follows the input.\nWhile [virtual-signal=signal-S] is false, the output is provided by the other combinator.",
@@ -438,10 +388,7 @@
           "selector": 1,
           "other": 12
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -452,12 +399,8 @@
           "redGreenSplit": 3,
           "dualColorEntities": 2,
           "feedbackWires": 0,
-          "selectorOps": [
-            "stack-size"
-          ],
-          "wildcards": [
-            "signal-each"
-          ]
+          "selectorOps": ["stack-size"],
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Filter stackable items from an arbitrary number of signals.",
@@ -482,10 +425,7 @@
           "selector": 1,
           "other": 13
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 1,
@@ -496,13 +436,8 @@
           "redGreenSplit": 1,
           "dualColorEntities": 2,
           "feedbackWires": 1,
-          "selectorOps": [
-            "select"
-          ],
-          "wildcards": [
-            "signal-anything",
-            "signal-everything"
-          ]
+          "selectorOps": ["select"],
+          "wildcards": ["signal-anything", "signal-everything"]
         },
         "descriptions": []
       }
@@ -524,10 +459,7 @@
           "selector": 2,
           "other": 13
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 1,
@@ -538,10 +470,7 @@
           "redGreenSplit": 0,
           "dualColorEntities": 3,
           "feedbackWires": 1,
-          "selectorOps": [
-            "count",
-            "select"
-          ],
+          "selectorOps": ["count", "select"],
           "wildcards": []
         },
         "descriptions": []
@@ -564,9 +493,7 @@
           "selector": 0,
           "other": 24
         },
-        "otherNames": [
-          "display-panel"
-        ],
+        "otherNames": ["display-panel"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -578,10 +505,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-anything",
-            "signal-each"
-          ]
+          "wildcards": ["signal-anything", "signal-each"]
         },
         "descriptions": []
       }
@@ -621,10 +545,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 1,
           "selectorOps": [],
-          "wildcards": [
-            "signal-everything",
-            "signal-anything"
-          ]
+          "wildcards": ["signal-everything", "signal-anything"]
         },
         "descriptions": [
           "This is a counter that counts the ticks while there are items on the belt ([virtual-signal=signal-anything]) AND it don't receives any pulses from the belt ([virtual-signal=signal-everything]).\n\nA sufficiently high negative counter value [v"
@@ -648,10 +569,7 @@
           "selector": 0,
           "other": 16
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -663,9 +581,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Simulated fluid content",
@@ -691,12 +607,7 @@
           "selector": 0,
           "other": 20
         },
-        "otherNames": [
-          "display-panel",
-          "steel-chest",
-          "straight-rail",
-          "train-stop"
-        ],
+        "otherNames": ["display-panel", "steel-chest", "straight-rail", "train-stop"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -708,9 +619,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Train capacity.\n4 [item=iron-ore] wagons: 4*40*50=8000\n4 [item=iron-plate] wagons: 4*40*100=16000",
@@ -736,10 +645,7 @@
           "selector": 0,
           "other": 19
         },
-        "otherNames": [
-          "asteroid-collector",
-          "display-panel"
-        ],
+        "otherNames": ["asteroid-collector", "display-panel"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -751,13 +657,9 @@
           "dualColorEntities": 2,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
-        "descriptions": [
-          "Maximum allowed items"
-        ]
+        "descriptions": ["Maximum allowed items"]
       }
     },
     {
@@ -777,10 +679,7 @@
           "selector": 0,
           "other": 13
         },
-        "otherNames": [
-          "display-panel",
-          "small-lamp"
-        ],
+        "otherNames": ["display-panel", "small-lamp"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -792,9 +691,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Delay 1 tick",
@@ -819,10 +716,7 @@
           "selector": 0,
           "other": 14
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -834,9 +728,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 1,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "If there is some input on [item=green-wire]and [virtual-signal=signal-R]eset is false, pass the input from[item=green-wire]",
@@ -861,11 +753,7 @@
           "selector": 0,
           "other": 24
         },
-        "otherNames": [
-          "display-panel",
-          "roboport",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "roboport", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 1,
@@ -877,9 +765,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 2,
           "selectorOps": [],
-          "wildcards": [
-            "signal-everything"
-          ]
+          "wildcards": ["signal-everything"]
         },
         "descriptions": [
           "simulate logistics network content",
@@ -906,11 +792,7 @@
           "selector": 0,
           "other": 31
         },
-        "otherNames": [
-          "bulk-inserter",
-          "display-panel",
-          "infinity-chest"
-        ],
+        "otherNames": ["bulk-inserter", "display-panel", "infinity-chest"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -922,10 +804,7 @@
           "dualColorEntities": 5,
           "feedbackWires": 1,
           "selectorOps": [],
-          "wildcards": [
-            "signal-anything",
-            "signal-each"
-          ]
+          "wildcards": ["signal-anything", "signal-each"]
         },
         "descriptions": []
       }
@@ -948,10 +827,7 @@
           "selector": 0,
           "other": 12
         },
-        "otherNames": [
-          "display-panel",
-          "small-lamp"
-        ],
+        "otherNames": ["display-panel", "small-lamp"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -963,11 +839,7 @@
           "dualColorEntities": 7,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-anything",
-            "signal-everything",
-            "signal-each"
-          ]
+          "wildcards": ["signal-anything", "signal-everything", "signal-each"]
         },
         "descriptions": []
       }
@@ -989,9 +861,7 @@
           "selector": 0,
           "other": 9
         },
-        "otherNames": [
-          "display-panel"
-        ],
+        "otherNames": ["display-panel"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1003,9 +873,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": []
       }
@@ -1028,10 +896,7 @@
           "selector": 0,
           "other": 2
         },
-        "otherNames": [
-          "roboport",
-          "substation"
-        ],
+        "otherNames": ["roboport", "substation"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 1,
@@ -1043,9 +908,7 @@
           "dualColorEntities": 4,
           "feedbackWires": 2,
           "selectorOps": [],
-          "wildcards": [
-            "signal-everything"
-          ]
+          "wildcards": ["signal-everything"]
         },
         "descriptions": [
           "While [virtual-signal=signal-S] is true, pass values from [item=red-wire], so the output follows the input.\nWhile [virtual-signal=signal-S] is false, the output is provided by the other combinator.",
@@ -1072,10 +935,7 @@
           "selector": 0,
           "other": 2
         },
-        "otherNames": [
-          "medium-electric-pole",
-          "roboport"
-        ],
+        "otherNames": ["medium-electric-pole", "roboport"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1087,9 +947,7 @@
           "dualColorEntities": 3,
           "feedbackWires": 2,
           "selectorOps": [],
-          "wildcards": [
-            "signal-everything"
-          ]
+          "wildcards": ["signal-everything"]
         },
         "descriptions": [
           "this is needed for the counter to count",
@@ -1116,10 +974,7 @@
           "selector": 0,
           "other": 2
         },
-        "otherNames": [
-          "roboport",
-          "small-electric-pole"
-        ],
+        "otherNames": ["roboport", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 1,
@@ -1131,9 +986,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 2,
           "selectorOps": [],
-          "wildcards": [
-            "signal-everything"
-          ]
+          "wildcards": ["signal-everything"]
         },
         "descriptions": [
           "simulate logistics network content",
@@ -1161,10 +1014,7 @@
           "selector": 0,
           "other": 2
         },
-        "otherNames": [
-          "small-electric-pole",
-          "small-lamp"
-        ],
+        "otherNames": ["small-electric-pole", "small-lamp"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1176,11 +1026,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each",
-            "signal-anything",
-            "signal-everything"
-          ]
+          "wildcards": ["signal-each", "signal-anything", "signal-everything"]
         },
         "descriptions": [
           "Sends [virtual-signal=signal-P] signal each time the value in the red [item=red-wire] wire increases.\nDelay: 2 ticks\n\nCan be switched to negative [virtual-signal=down-right-arrow] front by replacing > (GT) compare with < (LT).",
@@ -1205,9 +1051,7 @@
           "selector": 0,
           "other": 15
         },
-        "otherNames": [
-          "display-panel"
-        ],
+        "otherNames": ["display-panel"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1241,11 +1085,7 @@
           "selector": 0,
           "other": 15
         },
-        "otherNames": [
-          "display-panel",
-          "electric-energy-interface",
-          "medium-electric-pole"
-        ],
+        "otherNames": ["display-panel", "electric-energy-interface", "medium-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1282,10 +1122,7 @@
           "selector": 0,
           "other": 14
         },
-        "otherNames": [
-          "display-panel",
-          "small-electric-pole"
-        ],
+        "otherNames": ["display-panel", "small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1297,9 +1134,7 @@
           "dualColorEntities": 2,
           "feedbackWires": 1,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "While [virtual-signal=signal-S] is true, pass values from [item=red-wire], so the output follows the input.\nWhile [virtual-signal=signal-S] is false, the output is provided by the other combinator.",
@@ -1324,9 +1159,7 @@
           "selector": 0,
           "other": 1
         },
-        "otherNames": [
-          "small-electric-pole"
-        ],
+        "otherNames": ["small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1338,9 +1171,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Simulated fluid content",
@@ -1379,9 +1210,7 @@
           "dualColorEntities": 0,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Define the reprocessing recipe for each type and quality of asteroid chunk.",
@@ -1418,11 +1247,7 @@
           "dualColorEntities": 5,
           "feedbackWires": 3,
           "selectorOps": [],
-          "wildcards": [
-            "signal-everything",
-            "signal-anything",
-            "signal-each"
-          ]
+          "wildcards": ["signal-everything", "signal-anything", "signal-each"]
         },
         "descriptions": [
           "A memory cell that only holds data from the previous cell. If the master condition is not met, projects the last value it has held. If the master set condition is met, updates its value to the one held by the previous cell.",
@@ -1451,10 +1276,7 @@
           "selector": 0,
           "other": 2
         },
-        "otherNames": [
-          "medium-electric-pole",
-          "small-lamp"
-        ],
+        "otherNames": ["medium-electric-pole", "small-lamp"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1466,16 +1288,9 @@
           "dualColorEntities": 2,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-anything",
-            "signal-each"
-          ]
+          "wildcards": ["signal-anything", "signal-each"]
         },
-        "descriptions": [
-          "range\nM-R = Lower Bound",
-          "Max value",
-          "inputs"
-        ]
+        "descriptions": ["range\nM-R = Lower Bound", "Max value", "inputs"]
       }
     },
     {
@@ -1495,9 +1310,7 @@
           "selector": 0,
           "other": 1
         },
-        "otherNames": [
-          "small-electric-pole"
-        ],
+        "otherNames": ["small-electric-pole"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1509,9 +1322,7 @@
           "dualColorEntities": 1,
           "feedbackWires": 0,
           "selectorOps": [],
-          "wildcards": [
-            "signal-each"
-          ]
+          "wildcards": ["signal-each"]
         },
         "descriptions": [
           "Arbitrary signals are on [item=red-wire].\nFilter definition is on [item=green-wire].\nOutput only signals from[item=red-wire] that are also present on[item=green-wire].\nValues on [item=green-wire] don't matter, don't need to be 1."
@@ -1535,10 +1346,7 @@
           "selector": 1,
           "other": 7
         },
-        "otherNames": [
-          "bulk-inserter",
-          "display-panel"
-        ],
+        "otherNames": ["bulk-inserter", "display-panel"],
         "features": {
           "elseOutputs": 0,
           "multiOutput": 0,
@@ -1549,12 +1357,8 @@
           "redGreenSplit": 0,
           "dualColorEntities": 1,
           "feedbackWires": 0,
-          "selectorOps": [
-            "select"
-          ],
-          "wildcards": [
-            "signal-anything"
-          ]
+          "selectorOps": ["select"],
+          "wildcards": ["signal-anything"]
         },
         "descriptions": [
           "When the selected \"max\" signal comes out, set the filter to that signal if it is over a count. This is \"more than 4 * 45 of a given kind of single component\" but you may need other logic to deal with special cases like \"automall that can bu",

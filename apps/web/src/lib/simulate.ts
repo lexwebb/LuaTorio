@@ -1,17 +1,17 @@
 import {
   analyze,
+  type CircuitGraph,
+  type LaidOutCircuit,
   layout,
   lower,
   lowerToCombinators,
   optimize,
-  parse,
   ParseError,
+  parse,
   SemanticError,
-  simulate,
-  type CircuitGraph,
-  type LaidOutCircuit,
   type SimulateResult,
   type SpatialPlace,
+  simulate,
 } from "@luatorio/core";
 
 export interface SimIdle {
@@ -61,9 +61,7 @@ export function buildGraph(source: string): CircuitGraph {
 }
 
 /** Input signal names for the Simulate panel, or a failure if source does not lower. */
-export function probeSimInputs(
-  source: string,
-): { status: "ok"; signals: string[] } | SimFailure {
+export function probeSimInputs(source: string): { status: "ok"; signals: string[] } | SimFailure {
   try {
     const graph = buildGraph(source);
     return { status: "ok", signals: graph.inputs.map((port) => port.signal) };

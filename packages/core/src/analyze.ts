@@ -308,7 +308,11 @@ function describeAssignmentTarget(target: Identifier | MemberExpression | IndexE
   return target.type === "Identifier" ? target.name : "<expression>";
 }
 
-function rejectBagWrite(target: Identifier | MemberExpression | IndexExpression, line: number, column: number): void {
+function rejectBagWrite(
+  target: Identifier | MemberExpression | IndexExpression,
+  line: number,
+  column: number,
+): void {
   if (target.type === "MemberExpression" || target.type === "IndexExpression") {
     throw new SemanticError(
       "bag field writes are not supported in v4.0; create a new bag with bag_arith()/bag_filter()",
@@ -397,7 +401,10 @@ function collectFunctionDeclarations(statements: Statement[]): {
 } {
   const functions = new Map<string, FunctionInfo>();
   let firstNonFunction = 0;
-  while (firstNonFunction < statements.length && statements[firstNonFunction]?.type === "FunctionDeclaration") {
+  while (
+    firstNonFunction < statements.length &&
+    statements[firstNonFunction]?.type === "FunctionDeclaration"
+  ) {
     const declaration = statements[firstNonFunction] as FunctionDeclaration;
     const { line, column } = locOf(declaration);
     const identifier = declaration.identifier;
@@ -431,7 +438,11 @@ function collectFunctionDeclarations(statements: Statement[]): {
   for (const statement of statements.slice(firstNonFunction)) {
     if (statement.type === "FunctionDeclaration") {
       const { line, column } = locOf(statement);
-      throw new SemanticError("function declarations must form a prefix of the program", line, column);
+      throw new SemanticError(
+        "function declarations must form a prefix of the program",
+        line,
+        column,
+      );
     }
   }
   return { functions, body: statements.slice(firstNonFunction) };
@@ -461,7 +472,10 @@ function collectMutableNames(statements: Statement[]): Set<string> {
   return mutable;
 }
 
-function directFunctionCalls(value: unknown, functions: ReadonlyMap<string, FunctionInfo>): string[] {
+function directFunctionCalls(
+  value: unknown,
+  functions: ReadonlyMap<string, FunctionInfo>,
+): string[] {
   const result: string[] = [];
   const visit = (node: unknown): void => {
     if (typeof node !== "object" || node === null) return;
@@ -550,12 +564,12 @@ function validateFunctionBodies(
         );
       }
       const variable = statement.variables.length === 1 ? statement.variables[0] : undefined;
-      if (
-        variable === undefined ||
-        statement.init.length !== 1 ||
-        locals.has(variable.name)
-      ) {
-        throw new SemanticError("function local declarations must be unique single bindings", line, column);
+      if (variable === undefined || statement.init.length !== 1 || locals.has(variable.name)) {
+        throw new SemanticError(
+          "function local declarations must be unique single bindings",
+          line,
+          column,
+        );
       }
       locals.add(variable.name);
     }
@@ -563,7 +577,10 @@ function validateFunctionBodies(
     const visit = (node: unknown): void => {
       if (typeof node !== "object" || node === null) return;
       const record = node as Record<string, unknown>;
-      if (record.type === "CallExpression" && (record.base as { type?: string } | undefined)?.type === "Identifier") {
+      if (
+        record.type === "CallExpression" &&
+        (record.base as { type?: string } | undefined)?.type === "Identifier"
+      ) {
         const { name } = record.base as { name: string };
         const { line, column } = locOf(record as Loc);
         if (name === "input" || name === "output" || name === "tick" || name === "sr") {
@@ -572,7 +589,12 @@ function validateFunctionBodies(
       }
       if (record.type === "Identifier") {
         const { name } = record as { name: string };
-        if (!locals.has(name) && !functions.has(name) && !builtinNames.has(name) && mutableNames.has(name)) {
+        if (
+          !locals.has(name) &&
+          !functions.has(name) &&
+          !builtinNames.has(name) &&
+          mutableNames.has(name)
+        ) {
           const { line, column } = locOf(record as Loc);
           throw new SemanticError(`function may not capture mutable local '${name}'`, line, column);
         }
@@ -1060,9 +1082,7 @@ function analyzeBranchBody(
     if (statement.type === "IfStatement") {
       const { line, column } = locOf(statement);
       const { cond, thenAssigns, elseAssigns } = analyzeIfClauses(statement, ctx, inductionVar);
-      assigns.push(
-        ...desugarConditionalAssigns(cond, thenAssigns, elseAssigns, line, column),
-      );
+      assigns.push(...desugarConditionalAssigns(cond, thenAssigns, elseAssigns, line, column));
       continue;
     }
 
@@ -1269,13 +1289,7 @@ function analyzeLocalStatement(statement: LocalStatement, ctx: AnalyzeContext): 
     ctx.entityLocals.set(name, place.id);
     expr = { kind: "entity_ref", entityId: place.id, line, column };
   } else {
-    expr = analyzeExpr(
-      initExpr,
-      ctx.declared,
-      ctx.inputs,
-      ctx.bagLocals,
-      expressionOptions(ctx),
-    );
+    expr = analyzeExpr(initExpr, ctx.declared, ctx.inputs, ctx.bagLocals, expressionOptions(ctx));
   }
   if (isBagExpr(expr, ctx.bagLocals)) {
     ctx.bagLocals.add(name);
@@ -1292,7 +1306,7 @@ function analyzeCallStatement(statement: CallStatement, ctx: AnalyzeContext): vo
 
   if (call.type !== "CallExpression") {
     throw new SemanticError(
-      'only output(), place(), output_to(), and configure() calls are supported as statements',
+      "only output(), place(), output_to(), and configure() calls are supported as statements",
       line,
       column,
     );
@@ -1437,7 +1451,11 @@ function analyzeOutputToCall(
   const entityId = entityIdFromArg(call.arguments[0], ctx, line, column, "output_to");
   const place = placeById(ctx, entityId);
   if (place.name !== "logistic-chest-requester" && place.name !== "logistic-chest-buffer") {
-    throw new SemanticError("output_to() requires a logistic-chest-requester or logistic-chest-buffer", line, column);
+    throw new SemanticError(
+      "output_to() requires a logistic-chest-requester or logistic-chest-buffer",
+      line,
+      column,
+    );
   }
   const bagArg = call.arguments[1];
   if (bagArg === undefined) {
@@ -1458,7 +1476,11 @@ function analyzeConfigureCall(
   column: number,
 ): void {
   if (call.arguments.length !== 2 || call.arguments[1]?.type !== "TableConstructorExpression") {
-    throw new SemanticError("configure(entity, { ... }) requires an entity handle and literal table", line, column);
+    throw new SemanticError(
+      "configure(entity, { ... }) requires an entity handle and literal table",
+      line,
+      column,
+    );
   }
   const entityId = entityIdFromArg(call.arguments[0], ctx, line, column, "configure");
   const place = placeById(ctx, entityId);
@@ -1470,24 +1492,29 @@ function analyzeConfigureCall(
     }
     const key = field.key.name;
     if (key === "requests") {
-      const requests = field.value.type === "TableConstructorExpression"
-        ? analyzeTableConstructor(field.value, fieldLine, fieldColumn)
-        : undefined;
+      const requests =
+        field.value.type === "TableConstructorExpression"
+          ? analyzeTableConstructor(field.value, fieldLine, fieldColumn)
+          : undefined;
       if (requests?.kind !== "bag_const") {
-        throw new SemanticError("configure().requests must be a literal bag table", fieldLine, fieldColumn);
+        throw new SemanticError(
+          "configure().requests must be a literal bag table",
+          fieldLine,
+          fieldColumn,
+        );
       }
       logistic.request_filters = requests.entries;
       continue;
     }
-    if (
-      key !== "read_contents" &&
-      key !== "set_requests" &&
-      key !== "request_from_buffers"
-    ) {
+    if (key !== "read_contents" && key !== "set_requests" && key !== "request_from_buffers") {
       throw new SemanticError(`unsupported configure() key '${key}'`, fieldLine, fieldColumn);
     }
     if (field.value.type !== "BooleanLiteral") {
-      throw new SemanticError(`configure().${key} must be a boolean literal`, fieldLine, fieldColumn);
+      throw new SemanticError(
+        `configure().${key} must be a boolean literal`,
+        fieldLine,
+        fieldColumn,
+      );
     }
     logistic[key] = field.value.value;
   }
@@ -1558,7 +1585,7 @@ function analyzeExpr(
       return analyzeBagSample(expr, declared, inputs, bagLocals, options);
     case "MemberExpression":
       throw new SemanticError(
-        "bag dot access is not supported in v4.0; use bag[\"signal-name\"]",
+        'bag dot access is not supported in v4.0; use bag["signal-name"]',
         line,
         column,
       );
@@ -1591,14 +1618,14 @@ function analyzeTableConstructor(
     }
     const count = tableIntegerLiteral(field.value);
     if (count === undefined) {
+      throw new SemanticError("bag table values must be integer literals", fieldLine, fieldColumn);
+    }
+    if (signals.has(field.key.value)) {
       throw new SemanticError(
-        "bag table values must be integer literals",
+        `bag table duplicate signal '${field.key.value}'`,
         fieldLine,
         fieldColumn,
       );
-    }
-    if (signals.has(field.key.value)) {
-      throw new SemanticError(`bag table duplicate signal '${field.key.value}'`, fieldLine, fieldColumn);
     }
     signals.add(field.key.value);
     entries.push({ signal: field.key.value, count });
@@ -1782,7 +1809,11 @@ function analyzeCallExpr(
   }
 
   if (calleeName === "place") {
-    throw new SemanticError("place() may only be used as a local initializer or top-level statement", line, column);
+    throw new SemanticError(
+      "place() may only be used as a local initializer or top-level statement",
+      line,
+      column,
+    );
   }
 
   if (calleeName === "input_from") {
@@ -1979,7 +2010,11 @@ function analyzeCallExpr(
 
   if (calleeName === "bag_arith") {
     if (expr.arguments.length !== 3) {
-      throw new SemanticError("bag_arith(op, left, right) requires exactly 3 arguments", line, column);
+      throw new SemanticError(
+        "bag_arith(op, left, right) requires exactly 3 arguments",
+        line,
+        column,
+      );
     }
     const opArg = expr.arguments[0]!;
     if (opArg.type !== "StringLiteral" || !ARITH_OPS.has(opArg.value)) {

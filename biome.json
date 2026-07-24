@@ -4,7 +4,8 @@
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100
+    "lineWidth": 100,
+    "lineEnding": "lf"
   },
   "linter": {
     "enabled": true,
@@ -27,6 +28,7 @@
   "overrides": [
     {
       "includes": [
+        "packages/core/src/analyze.ts",
         "packages/core/src/combinators.ts",
         "packages/core/src/combinators.test.ts",
         "packages/core/src/ir.ts",

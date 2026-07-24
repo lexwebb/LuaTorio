@@ -16,8 +16,14 @@ describe("user functions", () => {
     const source = readFileSync(join(examplesDir, "clamp_fn.lua"), "utf8");
     const graph = lowerToCombinators(optimize(lower(analyze(parse(source)))));
 
-    expect(simulate(graph, { ticks: 1, inputs: { "signal-A": 1 } }).ticks[0]?.outputs["signal-B"]).toBe(2);
-    expect(simulate(graph, { ticks: 1, inputs: { "signal-A": 42 } }).ticks[0]?.outputs["signal-B"]).toBe(42);
-    expect(simulate(graph, { ticks: 1, inputs: { "signal-A": 150 } }).ticks[0]?.outputs["signal-B"]).toBe(100);
+    expect(
+      simulate(graph, { ticks: 1, inputs: { "signal-A": 1 } }).ticks[0]?.outputs["signal-B"],
+    ).toBe(2);
+    expect(
+      simulate(graph, { ticks: 1, inputs: { "signal-A": 42 } }).ticks[0]?.outputs["signal-B"],
+    ).toBe(42);
+    expect(
+      simulate(graph, { ticks: 1, inputs: { "signal-A": 150 } }).ticks[0]?.outputs["signal-B"],
+    ).toBe(100);
   });
 });

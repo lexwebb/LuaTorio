@@ -1,6 +1,6 @@
+import { analyze } from "../analyze.js";
 import type { CircuitGraph } from "../combinators.js";
 import { lowerToCombinators } from "../combinators.js";
-import { analyze } from "../analyze.js";
 import { lower } from "../lower.js";
 import { optimize } from "../optimize.js";
 import { parse } from "../parse.js";
@@ -115,7 +115,6 @@ export function profileGraph(graph: CircuitGraph): {
     muxShare: muxRelated / real,
   };
 }
-
 
 function compileGraph(source: string): CircuitGraph {
   return lowerToCombinators(optimize(lower(analyze(parse(source)))));

@@ -1,7 +1,7 @@
 import { autocompletion } from "@codemirror/autocomplete";
 import { StreamLanguage } from "@codemirror/language";
 import { lua } from "@codemirror/legacy-modes/mode/lua";
-import { lintGutter, linter } from "@codemirror/lint";
+import { linter, lintGutter } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { basicSetup, EditorView } from "codemirror";
 import { useEffect, useRef } from "react";
@@ -15,10 +15,7 @@ export interface EditorProps {
 
 const luaLanguage = StreamLanguage.define(lua);
 
-const luatorioLinter = linter(
-  (view) => diagnose(view.state.doc.toString()),
-  { delay: 250 },
-);
+const luatorioLinter = linter((view) => diagnose(view.state.doc.toString()), { delay: 250 });
 
 /** CodeMirror 6 editor with Lua highlight, live diagnostics, and LuaTorio completions. */
 export function Editor({ value, onChange }: EditorProps) {

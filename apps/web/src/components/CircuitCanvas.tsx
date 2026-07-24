@@ -436,11 +436,11 @@ export function CircuitCanvas({
             );
           })}
 
-          {places.map((place, index) => {
+          {places.map((place) => {
             const { x, y } = toScreen(place.x, place.y);
             return (
               <div
-                key={`place:${place.name}:${place.x}:${place.y}:${index}`}
+                key={place.id}
                 className="circuit-place-marker"
                 style={{ left: x, top: y, width: TILE, height: TILE }}
                 title={`${place.name} @ (${place.x}, ${place.y}) — not simulated`}
