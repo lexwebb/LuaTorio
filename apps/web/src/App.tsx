@@ -5,10 +5,10 @@ import { ExamplePicker } from "./components/ExamplePicker.js";
 import { Output } from "./components/Output.js";
 import { Toolbar } from "./components/Toolbar.js";
 import { type CompileOutcome, runCompile } from "./lib/compile.js";
-import { examples } from "./lib/examples.js";
+import { examples, defaultExampleSource } from "./lib/examples.js";
 import { decodeShareHash, encodeShareHash, type ViewMode } from "./lib/share.js";
 
-const DEFAULT_SOURCE = examples[0]?.source ?? 'local x = input("signal-A")\noutput("signal-B", x)';
+const DEFAULT_SOURCE = defaultExampleSource();
 
 export function App() {
   const [source, setSource] = useState(
@@ -61,8 +61,9 @@ export function App() {
         <div>
           <h1>LuaTorio</h1>
           <p>
-            Write LuaTorio source, compile a Factorio blueprint, and simulate the circuit — entirely
-            in your browser.
+            Write LuaTorio source — arithmetic, memory, inlined helpers, multi-signal bags, and
+            <code> place()</code> — then compile a Factorio blueprint and simulate the circuit in
+            your browser.
           </p>
           <span className="playground-disclaimer">
             Fan-made playground — not affiliated with Wube Software. Combinator icons © Wube (see

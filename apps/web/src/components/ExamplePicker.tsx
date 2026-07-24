@@ -1,5 +1,5 @@
 import type { ChangeEvent } from "react";
-import type { Example } from "../lib/examples.js";
+import { examplesByGroup, type Example } from "../lib/examples.js";
 
 export interface ExamplePickerProps {
   examples: Example[];
@@ -8,6 +8,8 @@ export interface ExamplePickerProps {
 
 /** Dropdown that loads a bundled `examples/*.lua` source into the editor when chosen. */
 export function ExamplePicker({ examples, onSelect }: ExamplePickerProps) {
+  const groups = examplesByGroup();
+
   function handleChange(event: ChangeEvent<HTMLSelectElement>) {
     const example = examples.find((candidate) => candidate.id === event.target.value);
     if (example) {
@@ -23,10 +25,14 @@ export function ExamplePicker({ examples, onSelect }: ExamplePickerProps) {
         <option value="" disabled>
           Load an example…
         </option>
-        {examples.map((example) => (
-          <option key={example.id} value={example.id}>
-            {example.label}
-          </option>
+        {groups.map(({ group, examples: groupExamples }) => (
+          <optgroup key={group} label={group}>
+            {groupExamples.map((example) => (
+              <option key={example.id} value={example.id}>
+                {example.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
     </label>

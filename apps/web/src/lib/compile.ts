@@ -10,7 +10,7 @@ export interface CompileSuccess {
   blueprint: string;
   /** Pretty-printable JSON serialization of the same blueprint plan. */
   json: string;
-  stats: { combinators: number; wires: number };
+  stats: { combinators: number; places: number; wires: number };
 }
 
 export interface CompileFailure {

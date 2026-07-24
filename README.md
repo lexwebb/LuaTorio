@@ -64,8 +64,24 @@ import { compile } from "@luatorio/core";
 
 const { blueprint, stats } = compile(`output("signal-B", input("signal-A") + 1)`);
 console.log(blueprint); // paste into Factorio's blueprint import dialog
-console.log(stats); // { combinators: 3, wires: 2 }
+console.log(stats); // { combinators: 3, places: 0, wires: 2 }
 ```
+
+## What you can write today
+
+A short path through the supported surface. Open the linked examples, or load
+[`examples/tour.lua`](examples/tour.lua) in the playground for a single mixed program.
+
+1. **Arithmetic** — [`adder.lua`](examples/adder.lua): `output("signal-C", a + b)`.
+2. **Memory** — [`counter.lua`](examples/counter.lua): `x = x + 1` becomes a latch.
+3. **Control** — [`elseif_nested.lua`](examples/elseif_nested.lua): `if` / `elseif` mux next-state.
+4. **Helpers** — [`clamp_fn.lua`](examples/clamp_fn.lua): prefix `local function` (fully inlined).
+5. **Bags** — [`bag_arith.lua`](examples/bag_arith.lua): multi-signal `bag_arith` / `bag_filter`.
+6. **Table bags** — [`table_bag.lua`](examples/table_bag.lua): `{ ["signal-A"] = 10 }` and `bag["signal-A"]`.
+7. **Placement** — [`place.lua`](examples/place.lua): `place("wooden-chest", x, y)` beside the circuit.
+
+Recursion is **not supported** — use `while` / `for` with memory instead
+([decision](docs/superpowers/specs/2026-07-23-v4-recursion-design.md)).
 
 ## Examples
 
@@ -74,6 +90,7 @@ console.log(stats); // { combinators: 3, wires: 2 }
 
 | File | Demonstrates |
 |---|---|
+| [`tour.lua`](examples/tour.lua) | Mixed tour: function + table bags + `place()` |
 | [`adder.lua`](examples/adder.lua) | Two inputs, arithmetic (`+`) |
 | [`clamp.lua`](examples/clamp.lua) | Clamping a value into a range via `and`/`or` |
 | [`clamp_fn.lua`](examples/clamp_fn.lua) | v3 reusable `local function` clamp, inlined at calls |
@@ -84,14 +101,16 @@ console.log(stats); // { combinators: 3, wires: 2 }
 | [`conditional-counter.lua`](examples/conditional-counter.lua) | v2 if/else: muxed next-state (`if c then x+1 else x-1`) |
 | [`elseif_nested.lua`](examples/elseif_nested.lua) | v2 `elseif` priority and nested `if` next-state muxes |
 | [`while_count.lua`](examples/while_count.lua) | v2 clocked while: count up to `signal-L` (`tick()` barrier) |
+| [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
 | [`sr_latch.lua`](examples/sr_latch.lua) | Cookbook SR via `sr(q, set, reset)` — one decider latch |
+| [`edge.lua`](examples/edge.lua) | Rising-edge pulse via `edge(level)` |
 | [`each_latch.lua`](examples/each_latch.lua) | EACH-tag sticky hysteresis bag — 1 constant + 1 decider |
 | [`bag_arith.lua`](examples/bag_arith.lua) | Cookbook 1 math: pairwise `EACH / EACH` bags over red/green |
 | [`bag_filter.lua`](examples/bag_filter.lua) | Cookbook 3–5: include, exclude, and per-channel limit bags |
+| [`bag_wildcards.lua`](examples/bag_wildcards.lua) | `bag_test` ANYTHING / EVERYTHING predicates |
 | [`table_bag.lua`](examples/table_bag.lua) | v4 constant bag table syntax and named scalar samples |
 | [`signal_at.lua`](examples/signal_at.lua) | Pick Nth-largest input via `signal_at` → selector `select` |
 | [`signal_at_asc.lua`](examples/signal_at_asc.lua) | Nth-smallest among present (`signal_at_asc`) — priority ranks |
-| [`for_sum.lua`](examples/for_sum.lua) | v2 clocked for: sum `1..10` one iteration per tick |
 | [`signal_count.lua`](examples/signal_count.lua) | Count nonzero inputs via `signal_count` → selector combinator |
 | [`place.lua`](examples/place.lua) | v5 absolute chest, lamp, and power-pole placement beside a circuit |
 

@@ -11,6 +11,7 @@ import {
   type CircuitGraph,
   type LaidOutCircuit,
   type SimulateResult,
+  type SpatialPlace,
 } from "@luatorio/core";
 
 export interface SimIdle {
@@ -21,6 +22,8 @@ export interface SimSuccess {
   status: "success";
   graph: CircuitGraph;
   laidOut: LaidOutCircuit;
+  /** Absolute-coordinate `place()` entities (not part of the combinator graph). */
+  places: SpatialPlace[];
   result: SimulateResult;
   inputSignals: string[];
   outputSignals: string[];
@@ -40,9 +43,21 @@ export interface RunSimulateOptions {
   inputs: Record<string, number>;
 }
 
+/** Lower source through optimize; returns graph + optional spatial places. */
+export function buildGraphAndPlaces(source: string): {
+  graph: CircuitGraph;
+  places: SpatialPlace[];
+} {
+  const module = optimize(lower(analyze(parse(source))));
+  return {
+    graph: lowerToCombinators(module),
+    places: module.places ?? [],
+  };
+}
+
 /** Lower source to a combinator graph (optimized), same path as compile before layout/emit. */
 export function buildGraph(source: string): CircuitGraph {
-  return lowerToCombinators(optimize(lower(analyze(parse(source)))));
+  return buildGraphAndPlaces(source).graph;
 }
 
 /** Input signal names for the Simulate panel, or a failure if source does not lower. */
@@ -70,7 +85,7 @@ export function probeSimInputs(
  */
 export function runSimulate(source: string, opts: RunSimulateOptions): SimOutcome {
   try {
-    const graph = buildGraph(source);
+    const { graph, places } = buildGraphAndPlaces(source);
     const laidOut = layout(graph, { arrangement: "layered" });
     const result = simulate(graph, {
       ticks: Math.max(1, Math.min(opts.ticks, 256)),
@@ -81,6 +96,7 @@ export function runSimulate(source: string, opts: RunSimulateOptions): SimOutcom
       status: "success",
       graph,
       laidOut,
+      places,
       result,
       inputSignals: graph.inputs.map((port) => port.signal),
       outputSignals: graph.outputs.map((port) => port.signal),

@@ -1,4 +1,9 @@
-import { type LaidOutCircuit, type PlacedEntity, signalLabelMap } from "@luatorio/core";
+import {
+  type LaidOutCircuit,
+  type PlacedEntity,
+  type SpatialPlace,
+  signalLabelMap,
+} from "@luatorio/core";
 import {
   type PointerEvent as ReactPointerEvent,
   useCallback,
@@ -11,6 +16,8 @@ import { CombinatorInspector } from "./CombinatorInspector.js";
 
 export interface CircuitCanvasProps {
   laidOut: LaidOutCircuit;
+  /** Absolute-coordinate `place()` entities (ignored by simulate). */
+  places?: SpatialPlace[];
   selectedId: string | undefined;
   onSelect: (id: string | undefined) => void;
   /** Per-entity output bags at the scrubbed tick. */
@@ -24,6 +31,32 @@ const PAD = 56;
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 3.5;
 const DRAG_THRESHOLD_PX = 4;
+
+function placeGlyph(name: SpatialPlace["name"]): string {
+  switch (name) {
+    case "wooden-chest":
+      return "▣";
+    case "small-lamp":
+      return "◉";
+    case "medium-electric-pole":
+      return "⋔";
+    default:
+      return "□";
+  }
+}
+
+function placeShortLabel(name: SpatialPlace["name"]): string {
+  switch (name) {
+    case "wooden-chest":
+      return "chest";
+    case "small-lamp":
+      return "lamp";
+    case "medium-electric-pole":
+      return "pole";
+    default:
+      return name;
+  }
+}
 
 function iconSrc(entity: PlacedEntity): string {
   const base = `${import.meta.env.BASE_URL}factorio-icons/`;
@@ -76,26 +109,47 @@ interface ViewState {
  */
 export function CircuitCanvas({
   laidOut,
+  places = [],
   selectedId,
   onSelect,
   entityBags,
   activeIds,
 }: CircuitCanvasProps) {
-  const { width, height, byNumber } = useMemo(() => {
+  const { width, height, minX, minY, byNumber } = useMemo(() => {
     let maxX = 0;
     let maxY = 0;
+    let nextMinX = 0;
+    let nextMinY = 0;
     const map = new Map<number, PlacedEntity>();
     for (const entity of laidOut.entities) {
       map.set(entity.entity_number, entity);
       maxX = Math.max(maxX, entity.position.x);
       maxY = Math.max(maxY, entity.position.y);
+      nextMinX = Math.min(nextMinX, entity.position.x);
+      nextMinY = Math.min(nextMinY, entity.position.y);
+    }
+    for (const place of places) {
+      maxX = Math.max(maxX, place.x);
+      maxY = Math.max(maxY, place.y);
+      nextMinX = Math.min(nextMinX, place.x);
+      nextMinY = Math.min(nextMinY, place.y);
     }
     return {
-      width: PAD * 2 + (maxX + 1) * TILE + 8,
-      height: PAD * 2 + (maxY + 1) * TILE + 48,
+      width: PAD * 2 + (maxX - nextMinX + 1) * TILE + 8,
+      height: PAD * 2 + (maxY - nextMinY + 1) * TILE + 48,
+      minX: nextMinX,
+      minY: nextMinY,
       byNumber: map,
     };
-  }, [laidOut]);
+  }, [laidOut, places]);
+
+  const toScreen = useCallback(
+    (tileX: number, tileY: number) => ({
+      x: PAD + (tileX - minX) * TILE,
+      y: PAD + (tileY - minY) * TILE,
+    }),
+    [minX, minY],
+  );
 
   const stageRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLDivElement>(null);
@@ -184,7 +238,9 @@ export function CircuitCanvas({
       return;
     }
     const onEntity =
-      event.target instanceof Element && event.target.closest(".circuit-entity-button") !== null;
+      event.target instanceof Element &&
+      (event.target.closest(".circuit-entity-button") !== null ||
+        event.target.closest(".circuit-place-marker") !== null);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -283,6 +339,7 @@ export function CircuitCanvas({
         </div>
         <span className="sim-muted circuit-viewport-hint">
           Scroll to zoom · drag to pan · click combinator
+          {places.length > 0 ? " · place() markers are not simulated" : ""}
         </span>
       </div>
 
@@ -318,10 +375,12 @@ export function CircuitCanvas({
                 return null;
               }
               const isRed = ca === 1 || ca === 3;
-              const x1 = PAD + from.position.x * TILE + TILE / 2;
-              const y1 = PAD + from.position.y * TILE + TILE / 2;
-              const x2 = PAD + to.position.x * TILE + TILE / 2;
-              const y2 = PAD + to.position.y * TILE + TILE / 2;
+              const fromScreen = toScreen(from.position.x, from.position.y);
+              const toScreenPos = toScreen(to.position.x, to.position.y);
+              const x1 = fromScreen.x + TILE / 2;
+              const y1 = fromScreen.y + TILE / 2;
+              const x2 = toScreenPos.x + TILE / 2;
+              const y2 = toScreenPos.y + TILE / 2;
               return (
                 <path
                   key={`${a}:${ca}-${b}:${cb}`}
@@ -336,8 +395,7 @@ export function CircuitCanvas({
           </svg>
 
           {laidOut.entities.map((entity) => {
-            const x = PAD + entity.position.x * TILE;
-            const y = PAD + entity.position.y * TILE;
+            const { x, y } = toScreen(entity.position.x, entity.position.y);
             const active = entity.id === selectedId;
             const pulsing = activeIds?.has(entity.id) === true;
             return (
@@ -365,6 +423,28 @@ export function CircuitCanvas({
               </button>
             );
           })}
+
+          {places.map((place, index) => {
+            const { x, y } = toScreen(place.x, place.y);
+            return (
+              <div
+                key={`place:${place.name}:${place.x}:${place.y}:${index}`}
+                className="circuit-place-marker"
+                style={{ left: x, top: y, width: TILE, height: TILE }}
+                title={`${place.name} @ (${place.x}, ${place.y}) — not simulated`}
+              >
+                <span className="circuit-place-glyph" aria-hidden="true">
+                  {placeGlyph(place.name)}
+                </span>
+                <span className="circuit-entity-caption">
+                  <span className="circuit-entity-caption-role">{placeShortLabel(place.name)}</span>
+                  <span className="circuit-entity-caption-id">
+                    ({place.x},{place.y})
+                  </span>
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -380,6 +460,9 @@ export function CircuitCanvas({
         ) : (
           <p className="sim-muted">
             Click a combinator — labels are Lua names (i, run, signal-L); __t… are internal wires.
+            {places.length > 0
+              ? " Place markers show absolute tile positions and are ignored by simulate()."
+              : ""}
           </p>
         )}
       </div>

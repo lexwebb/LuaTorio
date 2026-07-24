@@ -636,6 +636,29 @@ body {
   box-shadow: 0 0 0 2px rgba(255, 182, 77, 0.7);
 }
 
+.circuit-place-marker {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 4px;
+  border: 1.5px dashed #6a5f4e;
+  border-radius: 4px;
+  background: #15120e;
+  color: #cfc3a8;
+  z-index: 1;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.circuit-place-glyph {
+  font-size: 1.35rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
 .circuit-entity-button img {
   pointer-events: none;
   image-rendering: pixelated;

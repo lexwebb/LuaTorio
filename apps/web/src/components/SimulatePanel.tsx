@@ -282,6 +282,7 @@ export function SimulatePanel({ source, runToken }: SimulatePanelProps) {
 
       <CircuitCanvas
         laidOut={outcome.laidOut}
+        places={outcome.places}
         selectedId={selectedId}
         onSelect={setSelectedId}
         entityBags={entityBags}
